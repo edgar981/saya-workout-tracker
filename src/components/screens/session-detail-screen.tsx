@@ -1,15 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, Trash2 } from "lucide-react";
 
 import { SetLines } from "@/components/history/set-lines";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { loadSessionDetail, type SessionExerciseView } from "@/lib/db/queries";
+import { discardSession, loadSessionDetail, type SessionExerciseView } from "@/lib/db/queries";
 import { cn } from "@/lib/utils";
 
 function formatFecha(iso: string): string {
@@ -27,6 +28,9 @@ function formatFecha(iso: string): string {
  * comprueba aparte. Ninguno de los dos vacíos se oculta: una instancia sin
  * series es el registro de que no lo hiciste.
  */
+/** Ventana en la que el borrado queda armado tras el primer toque. */
+const ARMED_MS = 5000;
+
 type Estado = "realizado" | "iniciado_sin_registro" | "no_realizado";
 
 function estadoDe(item: SessionExerciseView): Estado {
@@ -39,6 +43,15 @@ export default function SessionDetailScreen() {
   const sessionId = params.sessionId;
 
   const detail = useLiveQuery(() => loadSessionDetail(sessionId), [sessionId]);
+
+  const router = useRouter();
+  const [armed, setArmed] = useState(false);
+
+  useEffect(() => {
+    if (!armed) return;
+    const t = setTimeout(() => setArmed(false), ARMED_MS);
+    return () => clearTimeout(t);
+  }, [armed]);
 
   if (detail === undefined) {
     return <p className="text-muted-foreground p-6 text-sm">Cargando…</p>;
@@ -55,6 +68,14 @@ export default function SessionDetailScreen() {
   }
 
   const { session, routineDay, tags, bodyweight, items } = detail;
+
+  // Borrado duro en cascada (D8), reusando discardSession — no una segunda
+  // función de borrado. Editar una sesión pasada sigue fuera de alcance porque
+  // reescribe datos en silencio; eliminarla completa es limpio.
+  const eliminar = async () => {
+    await discardSession(sessionId);
+    router.replace("/historial");
+  };
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-4 p-4">
@@ -164,6 +185,28 @@ export default function SessionDetailScreen() {
           );
         })}
       </div>
+
+      <Separator />
+
+      {/* Acción destructiva, discreta y al final: poco frecuente. */}
+      {session.activa === 1 ? (
+        // La sesión activa tiene su propio camino de descarte (en el cierre).
+        // Borrarla desde aquí dejaría a la app apuntando a una sesión inexistente.
+        <Button asChild variant="outline" size="sm" className="self-start">
+          <Link href="/sesion">Sesión en curso · abrir para cerrarla o descartarla</Link>
+        </Button>
+      ) : (
+        // Guarda de doble toque, como el descarte del cierre. Sin modal.
+        <Button
+          variant={armed ? "destructive" : "ghost"}
+          size="sm"
+          className={armed ? "self-start" : "text-muted-foreground self-start"}
+          onClick={() => (armed ? void eliminar() : setArmed(true))}
+        >
+          <Trash2 />
+          {armed ? "Tocar de nuevo para eliminar" : "Eliminar sesión"}
+        </Button>
+      )}
     </main>
   );
 }
