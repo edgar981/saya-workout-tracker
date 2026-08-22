@@ -4,12 +4,19 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
-import { ChevronLeft, ChevronRight, Flag } from "lucide-react";
+import { ChevronLeft, ChevronRight, Flag, Plus, X } from "lucide-react";
 
+import { ExercisePicker } from "@/components/exercise-picker";
 import { ExerciseCard } from "@/components/session/exercise-card";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { getActiveSession, loadSessionView, type SessionView } from "@/lib/db/queries";
+import {
+  addAdHocExercise,
+  getActiveSession,
+  loadSessionView,
+  type SessionView,
+} from "@/lib/db/queries";
 import { cn } from "@/lib/utils";
 
 const INDEX_KEY = (sessionId: string) => `saya:ejercicio:${sessionId}`;
@@ -41,37 +48,28 @@ export default function SessionScreen() {
     return <p className="text-muted-foreground p-6 text-sm">Sin sesión activa.</p>;
   }
 
-  // key por sesión: así el índice del ejercicio se inicializa de forma perezosa
-  // desde localStorage en el primer render y no hace falta sincronizarlo con un
-  // efecto.
   return <ActiveSession key={view.session.id} view={view} />;
 }
 
 function ActiveSession({ view }: { view: SessionView }) {
   const sessionId = view.session.id;
   const [index, setIndex] = useState(() => readIndex(sessionId));
+  const [showPicker, setShowPicker] = useState(false);
 
-  // El ejercicio en el que ibas también sobrevive a que iOS mate el proceso.
-  // No va en Dexie porque no es un dato del entrenamiento, es estado de UI.
   useEffect(() => {
     window.localStorage.setItem(INDEX_KEY(sessionId), String(index));
   }, [sessionId, index]);
 
   const { items } = view;
-
-  if (items.length === 0) {
-    return (
-      <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-4 p-4">
-        <p className="text-muted-foreground text-sm">Esta sesión no tiene ejercicios.</p>
-        <Button asChild variant="outline">
-          <Link href="/sesion/cerrar">Ir al cierre</Link>
-        </Button>
-      </main>
-    );
-  }
-
-  const safeIndex = Math.min(index, items.length - 1);
+  const safeIndex = items.length === 0 ? 0 : Math.min(index, items.length - 1);
   const item = items[safeIndex];
+
+  const agregar = async (exerciseId: string) => {
+    await addAdHocExercise(sessionId, exerciseId);
+    setShowPicker(false);
+    // Saltar al recién agregado: queda al final de la lista visual.
+    setIndex(items.length);
+  };
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col p-4">
@@ -79,12 +77,12 @@ function ActiveSession({ view }: { view: SessionView }) {
         <h1 className="text-sm font-semibold">{view.routineDay?.nombre ?? "Sesión libre"}</h1>
         <span className="text-muted-foreground text-xs">{view.session.fecha}</span>
         <span className="text-muted-foreground ml-auto text-xs tabular-nums">
-          {safeIndex + 1} / {items.length}
+          {items.length === 0 ? "0 / 0" : `${safeIndex + 1} / ${items.length}`}
         </span>
       </header>
 
-      {/* Salto directo. En el gym no siempre haces los ejercicios en orden
-          porque la máquina está ocupada. */}
+      {/* Salto directo, en orden_visual. Este orden NO cambia según lo que vayas
+          ejecutando: una lista que se reacomoda sola entre series desorienta. */}
       <nav className="-mx-4 mb-3 flex gap-1.5 overflow-x-auto px-4 pb-1">
         {items.map((other, i) => (
           <button
@@ -100,16 +98,59 @@ function ActiveSession({ view }: { view: SessionView }) {
                 : other.sets.length > 0
                   ? "bg-secondary text-secondary-foreground border-transparent"
                   : "text-muted-foreground",
+              other.isAdHoc && i !== safeIndex && "border-dashed",
             )}
           >
             {i + 1}
           </button>
         ))}
+        <button
+          type="button"
+          onClick={() => setShowPicker((v) => !v)}
+          aria-label="Agregar ejercicio a la sesión"
+          className="text-muted-foreground size-8 shrink-0 rounded-md border border-dashed"
+        >
+          +
+        </button>
       </nav>
+
+      {showPicker && (
+        <div className="mb-3 flex flex-col gap-2 rounded-lg border p-3">
+          <div className="flex items-center gap-2">
+            <Label htmlFor="filtro-adhoc">Agregar ejercicio del catálogo</Label>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              className="ml-auto"
+              onClick={() => setShowPicker(false)}
+              aria-label="Cerrar"
+            >
+              <X />
+            </Button>
+          </div>
+          <ExercisePicker
+            inputId="filtro-adhoc"
+            onPick={(exercise) => void agregar(exercise.id)}
+          />
+          <p className="text-muted-foreground text-xs">
+            Solo del catálogo. Crear un ejercicio obliga a fijar su unidad, y eso se snapshotea en
+            cada serie — se decide en frío, en Catálogo.
+          </p>
+        </div>
+      )}
 
       <Separator className="mb-4" />
 
-      <ExerciseCard key={item.sessionExercise.id} item={item} sessionId={sessionId} />
+      {items.length === 0 || !item ? (
+        <div className="flex flex-col gap-3">
+          <p className="text-muted-foreground text-sm">Esta sesión no tiene ejercicios.</p>
+          <Button variant="outline" onClick={() => setShowPicker(true)}>
+            <Plus /> Ejercicio
+          </Button>
+        </div>
+      ) : (
+        <ExerciseCard key={item.sessionExercise.id} item={item} sessionId={sessionId} />
+      )}
 
       <div className="mt-6 flex items-center gap-2 pb-2">
         <Button

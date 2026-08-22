@@ -1,7 +1,7 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { ChevronDown, MessageSquare, Plus, Repeat } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ChevronDown, MessageSquare, Plus, Repeat, Trash2 } from "lucide-react";
 
 import { LastPerformance } from "@/components/session/last-performance";
 import { SetGroup } from "@/components/session/set-group";
@@ -9,9 +9,16 @@ import { SubstitutePicker } from "@/components/session/substitute-picker";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { addSet, updateSessionExerciseNote, type SessionExerciseView } from "@/lib/db/queries";
+import {
+  addSet,
+  deleteSessionExercise,
+  updateSessionExerciseNote,
+  type SessionExerciseView,
+} from "@/lib/db/queries";
 import type { SetLog } from "@/lib/db/types";
 import { useAutosave } from "@/lib/use-autosave";
+
+const ARMED_MS = 5000;
 
 function groupBySetIndex(sets: SetLog[]): [number, SetLog[]][] {
   const groups = new Map<number, SetLog[]>();
@@ -34,17 +41,24 @@ export function ExerciseCard({
   const [showNote, setShowNote] = useState(!!item.sessionExercise.nota);
   const [showExtra, setShowExtra] = useState(false);
   const [note, setNote] = useState(item.sessionExercise.nota ?? "");
+  const [armed, setArmed] = useState(false);
   const pendingNote = useRef<string | null>(null);
   const { schedule, flush } = useAutosave();
 
+  useEffect(() => {
+    if (!armed) return;
+    const t = setTimeout(() => setArmed(false), ARMED_MS);
+    return () => clearTimeout(t);
+  }, [armed]);
+
   const groups = groupBySetIndex(item.sets);
-  const { exercise, slot } = item;
+  const { exercise, slot, sessionExercise } = item;
 
   const commitNote = () => {
     const value = pendingNote.current;
     pendingNote.current = null;
     if (value !== null) {
-      void updateSessionExerciseNote(item.sessionExercise.id, value.trim() === "" ? null : value);
+      void updateSessionExerciseNote(sessionExercise.id, value.trim() === "" ? null : value);
     }
   };
 
@@ -70,13 +84,18 @@ export function ExerciseCard({
         </div>
 
         <div className="flex flex-wrap items-center gap-1.5">
-          {/* Derivado, no almacenado: el slot planeaba otra cosa. */}
           {item.isSubstitution && item.slotExercise && (
             <Badge variant="secondary">sustituye a {item.slotExercise.nombre}</Badge>
           )}
-          {/* target_sets/target_reps vienen null del seed: DECISIONES.md §4 no
-              registra los objetivos por ejercicio y no se inventan. */}
-          {slot?.target_sets !== null && slot?.target_reps !== null && slot && (
+          {item.isAdHoc && <Badge variant="outline">fuera de plantilla</Badge>}
+          {/* Derivado, nunca editable. Se muestra para que la secuencia real sea
+              legible sin reacomodar la lista. */}
+          {sessionExercise.orden_ejecucion !== null && (
+            <Badge variant="outline" className="tabular-nums">
+              ejecutado {sessionExercise.orden_ejecucion}º
+            </Badge>
+          )}
+          {slot && slot.target_sets !== null && slot.target_reps !== null && (
             <Badge variant="outline">
               objetivo {slot.target_sets} × {slot.target_reps}
             </Badge>
@@ -95,15 +114,13 @@ export function ExerciseCard({
       />
 
       {groups.length === 0 ? (
-        <p className="text-muted-foreground py-2 text-sm">
-          Sin series todavía.
-        </p>
+        <p className="text-muted-foreground py-2 text-sm">Sin series todavía.</p>
       ) : (
         <div className="flex flex-col gap-2">
           {groups.map(([setIndex, sets]) => (
             <SetGroup
               key={setIndex}
-              sessionExerciseId={item.sessionExercise.id}
+              sessionExerciseId={sessionExercise.id}
               setIndex={setIndex}
               sets={sets}
               stackLabel={exercise.stack_label}
@@ -115,7 +132,7 @@ export function ExerciseCard({
       <div className="flex gap-2">
         <Button
           className="flex-1"
-          onClick={() => void addSet(item.sessionExercise.id, { esExtra: false, side: "AUTO" })}
+          onClick={() => void addSet(sessionExercise.id, { esExtra: false, side: "AUTO" })}
         >
           <Plus /> Serie
         </Button>
@@ -126,15 +143,13 @@ export function ExerciseCard({
 
       {showExtra && (
         <div className="flex gap-2 rounded-lg border p-2">
-          {/* Serie fuera de plantilla. El lado es explícito porque el caso real
-              (`4L`) es exactamente ese: unas repes extra de un solo lado. */}
           {(["AUTO", "L", "R"] as const).map((side) => (
             <Button
               key={side}
               variant="secondary"
               className="flex-1"
               onClick={() => {
-                void addSet(item.sessionExercise.id, { esExtra: true, side });
+                void addSet(sessionExercise.id, { esExtra: true, side });
                 setShowExtra(false);
               }}
             >
@@ -164,6 +179,21 @@ export function ExerciseCard({
           />
         )}
       </div>
+
+      {/* Borra la instancia y sus series en una sola transacción. Sin cascada
+          en Dexie, borrar solo la instancia dejaría SetLog huérfanos que la
+          verificación de conteos del import no vería. Guarda de doble toque. */}
+      <Button
+        variant={armed ? "destructive" : "ghost"}
+        size="sm"
+        className={armed ? "" : "text-muted-foreground"}
+        onClick={() => (armed ? void deleteSessionExercise(sessionExercise.id) : setArmed(true))}
+      >
+        <Trash2 />
+        {armed
+          ? `Tocar de nuevo: borra ${item.sets.length} series`
+          : "Quitar de la sesión"}
+      </Button>
     </div>
   );
 }

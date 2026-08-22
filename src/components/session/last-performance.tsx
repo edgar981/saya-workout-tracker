@@ -1,6 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useLiveQuery } from "dexie-react-hooks";
+import { ChevronRight } from "lucide-react";
 
 import { getLastPerformance } from "@/lib/db/queries";
 import type { SetLog } from "@/lib/db/types";
@@ -64,13 +66,21 @@ export function LastPerformance({
   }
 
   return (
-    <div className="bg-muted/50 rounded-lg px-3 py-2">
-      <p className="text-muted-foreground text-[11px] font-medium tracking-wide uppercase">
-        Última vez · {formatFecha(last.session.fecha)}
-      </p>
-      <p className="mt-0.5 text-sm tabular-nums">
-        {summarize(last.sets, stackLabel).join("  ·  ")}
-      </p>
-    </div>
+    // Enlace al historial completo del ejercicio: es el punto donde vas a querer
+    // más contexto que la última sesión.
+    <Link
+      href={`/ejercicio/${exerciseId}`}
+      className="bg-muted/50 hover:bg-muted flex items-center gap-2 rounded-lg px-3 py-2"
+    >
+      <div className="min-w-0 flex-1">
+        <p className="text-muted-foreground text-[11px] font-medium tracking-wide uppercase">
+          Última vez · {formatFecha(last.session.fecha)}
+        </p>
+        <p className="mt-0.5 text-sm tabular-nums">
+          {summarize(last.sets, stackLabel).join("  ·  ")}
+        </p>
+      </div>
+      <ChevronRight className="text-muted-foreground size-4 shrink-0" />
+    </Link>
   );
 }

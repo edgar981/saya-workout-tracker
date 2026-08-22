@@ -22,7 +22,7 @@ import type {
  * el que valida el import — un archivo de otra versión se rechaza entero en vez
  * de migrarse al vuelo.
  */
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 export const TABLE_NAMES = [
   "exercises",
@@ -61,6 +61,48 @@ class WorkoutDB extends Dexie {
       sessionTags: "id, nombre",
       bodyweightLogs: "id, fecha",
     });
+
+    // ── v2 ──────────────────────────────────────────────────────────────────
+    // Solo se redeclaran las dos tablas que cambian. Las otras seis se heredan.
+    this.version(2)
+      .stores({
+        routineSlots:
+          "id, routine_day_id, [routine_day_id+orden], *alternative_exercise_ids, activo",
+        sessionExercises: "id, session_id, exercise_id, [session_id+orden_visual]",
+      })
+      .upgrade(async (tx) => {
+        await tx
+          .table<RoutineSlot>("routineSlots")
+          .toCollection()
+          .modify((slot) => {
+            slot.activo = true;
+          });
+
+        const sessions = await tx.table<Session>("sessions").toArray();
+        const iniciadaPorSesion = new Map(sessions.map((s) => [s.id, s.iniciada_en]));
+
+        const setLogs = await tx.table<SetLog>("setLogs").toArray();
+        const conSeries = new Set(setLogs.map((s) => s.session_exercise_id));
+
+        await tx
+          .table("sessionExercises")
+          .toCollection()
+          .modify((se: SessionExercise & { orden?: number }) => {
+            const ordenViejo = se.orden ?? 0;
+            se.orden_visual = ordenViejo;
+
+            // OJO al leer esto dentro de seis meses: para las sesiones
+            // anteriores a v2 el orden de ejecución NO es un dato observado.
+            // No existía forma de medirlo, así que se HEREDA del orden de
+            // plantilla. Solo las sesiones registradas de v2 en adelante
+            // tienen aquí una secuencia real.
+            se.orden_ejecucion = conSeries.has(se.id) ? ordenViejo : null;
+
+            se.creado_en = iniciadaPorSesion.get(se.session_id) ?? "1970-01-01T00:00:00.000Z";
+
+            delete se.orden;
+          });
+      });
   }
 }
 

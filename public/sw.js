@@ -13,8 +13,17 @@
  *     contenido.
  */
 
-const CACHE = "saya-shell-v1";
-const APP_SHELL = ["/", "/sesion", "/sesion/cerrar", "/datos", "/manifest.webmanifest"];
+const CACHE = "saya-shell-v3";
+const APP_SHELL = [
+  "/",
+  "/sesion",
+  "/sesion/cerrar",
+  "/datos",
+  "/plantillas",
+  "/catalogo",
+  "/historial",
+  "/manifest.webmanifest",
+];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(

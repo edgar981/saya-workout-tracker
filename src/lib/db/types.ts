@@ -35,6 +35,10 @@ export interface Exercise {
   /** solo si STACK_POSITION */
   stack_label: string | null;
   laterality_default: Laterality;
+  /**
+   * Borrado suave. Nunca se borra duro un Exercise: el histórico lo referencia
+   * por `SessionExercise.exercise_id` y borrarlo dejaría el puntero colgando.
+   */
   activo: boolean;
 }
 
@@ -53,6 +57,16 @@ export interface RoutineSlot {
   target_reps: number | null;
   /** multiEntry */
   alternative_exercise_ids: string[];
+  /**
+   * Borrado suave (v2). Un slot está referenciado por el histórico vía
+   * `SessionExercise.routine_slot_id`; borrarlo de verdad haría que las
+   * sesiones viejas dejaran de mostrar el badge de sustitución — el pasado
+   * cambiaría porque editaste el futuro.
+   *
+   * Las plantillas renderizan solo `activo === true`. El histórico resuelve
+   * contra todos.
+   */
+  activo: boolean;
 }
 
 export interface Session {
@@ -76,10 +90,30 @@ export interface Session {
 export interface SessionExercise {
   id: string;
   session_id: string;
+  /** null si se agregó ad-hoc, fuera de plantilla */
   routine_slot_id: string | null;
   /** El que REALMENTE se hizo. Difiere del slot cuando hubo sustitución. */
   exercise_id: string;
-  orden: number;
+  /**
+   * Posición en pantalla. Viene del slot y es FIJA durante la sesión: la lista
+   * no se reacomoda sola entre series porque sería desorientador.
+   */
+  orden_visual: number;
+  /**
+   * Secuencia real en que se ejecutó. Derivado, nunca editado a mano: se asigna
+   * en la PRIMERA escritura de serie de la instancia.
+   *
+   * BORDE (§1.2): borrar TODAS las series de una instancia NO devuelve este
+   * campo a null — renumerar movería el de las demás. Por eso la invariante es
+   * `orden_ejecucion !== null` significa "se empezó", NO "tiene series". Toda
+   * consulta que lo use como proxy de ejecución debe verificar `sets.length`
+   * aparte. De ahí los tres estados del historial: realizado (con series),
+   * iniciado sin registro (0 series, orden_ejecucion !== null) y no realizado
+   * (0 series, orden_ejecucion === null).
+   */
+  orden_ejecucion: number | null;
+  /** ISO. Desempate para las instancias ad-hoc. */
+  creado_en: string;
   nota: string | null;
 }
 

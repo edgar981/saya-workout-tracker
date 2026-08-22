@@ -3,12 +3,14 @@
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { useLiveQuery } from "dexie-react-hooks";
-import { ChevronLeft, Download, Upload } from "lucide-react";
+import { ChevronLeft, Download, Stethoscope, Upload } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
 import { exportNow, importBackup, type ImportOutcome } from "@/lib/db/backup";
 import { SCHEMA_VERSION, TABLE_NAMES, db } from "@/lib/db/db";
+import { checkIntegrity, type IntegrityReport } from "@/lib/db/integrity";
 
 type Status =
   | { kind: "idle" }
@@ -19,6 +21,7 @@ type Status =
 
 export default function DataScreen() {
   const [status, setStatus] = useState<Status>({ kind: "idle" });
+  const [integridad, setIntegridad] = useState<IntegrityReport | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
 
   const counts = useLiveQuery(async () => {
@@ -106,6 +109,51 @@ export default function DataScreen() {
           <Upload /> Restaurar desde archivo
         </Button>
       </div>
+
+      <Separator />
+
+      <div className="flex flex-col gap-2">
+        <p className="text-muted-foreground text-xs">
+          El manifiesto del export verifica conteos, y un huérfano no altera ningún conteo: la fila
+          sigue ahí, solo apunta a algo que ya no existe. Esto lo hace detectable. Solo reporta, no
+          repara.
+        </p>
+        <Button
+          variant="outline"
+          size="lg"
+          onClick={async () => setIntegridad(await checkIntegrity())}
+        >
+          <Stethoscope /> Verificar integridad
+        </Button>
+      </div>
+
+      {integridad && (
+        <div
+          className={cn(
+            "rounded-lg border p-3 text-sm",
+            integridad.total > 0 && "border-destructive/50",
+          )}
+        >
+          {integridad.total === 0 ? (
+            <p className="font-medium">Sin problemas de integridad.</p>
+          ) : (
+            <>
+              <p className="text-destructive font-medium">
+                {integridad.total} problemas de integridad.
+              </p>
+              <ul className="text-muted-foreground mt-1 flex flex-col gap-0.5 text-xs">
+                <li>SetLog sin instancia: {integridad.setLogsSinInstancia.length}</li>
+                <li>SessionExercise sin sesión: {integridad.sessionExercisesSinSesion.length}</li>
+                <li>SessionExercise sin slot: {integridad.sessionExercisesSinSlot.length}</li>
+                <li>
+                  SessionExercise sin ejercicio: {integridad.sessionExercisesSinEjercicio.length}
+                </li>
+                <li>Sesiones activas duplicadas: {integridad.sesionesActivasDeMas}</li>
+              </ul>
+            </>
+          )}
+        </div>
+      )}
 
       {status.kind === "working" && (
         <p className="text-muted-foreground text-sm">{status.label}</p>

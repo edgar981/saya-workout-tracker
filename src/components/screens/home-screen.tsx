@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useLiveQuery } from "dexie-react-hooks";
-import { ChevronRight, Database } from "lucide-react";
+import { BookOpen, ChevronRight, Database, History, ListChecks } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { db } from "@/lib/db/db";
@@ -73,7 +73,22 @@ export default function HomeScreen() {
         ))}
       </div>
 
-      <div className="mt-auto pb-2">
+      <div className="mt-auto flex flex-col items-start gap-1 pb-2">
+        <Button asChild variant="ghost" size="sm" className="text-muted-foreground">
+          <Link href="/historial">
+            <History /> Historial
+          </Link>
+        </Button>
+        <Button asChild variant="ghost" size="sm" className="text-muted-foreground">
+          <Link href="/plantillas">
+            <ListChecks /> Plantillas
+          </Link>
+        </Button>
+        <Button asChild variant="ghost" size="sm" className="text-muted-foreground">
+          <Link href="/catalogo">
+            <BookOpen /> Catálogo
+          </Link>
+        </Button>
         <Button asChild variant="ghost" size="sm" className="text-muted-foreground">
           <Link href="/datos">
             <Database /> Respaldo y restauración

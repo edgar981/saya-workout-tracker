@@ -147,6 +147,7 @@ export const SEED_ROUTINE_SLOTS: RoutineSlot[] = SEED_ROUTINE_DAYS.flatMap((day)
     target_sets: null,
     target_reps: null,
     alternative_exercise_ids: slot.alternatives ?? [],
+    activo: true,
   })),
 );
 
