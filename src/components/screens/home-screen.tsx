@@ -8,7 +8,7 @@ import { BookOpen, ChevronRight, Database, History, ListChecks } from "lucide-re
 
 import { Button } from "@/components/ui/button";
 import { db } from "@/lib/db/db";
-import { getActiveSession, startSession } from "@/lib/db/queries";
+import { countActiveSlots, getActiveSession, startSession } from "@/lib/db/queries";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -23,7 +23,9 @@ export default function HomeScreen() {
     return Promise.all(
       list.map(async (day) => ({
         day,
-        ejercicios: await db.routineSlots.where("routine_day_id").equals(day.id).count(),
+        // Solo slots activos: el conteo debe coincidir con la plantilla real
+        // (que ya filtra por activo en /plantillas). Ver §1.
+        ejercicios: await countActiveSlots(day.id),
       })),
     );
   }, []);

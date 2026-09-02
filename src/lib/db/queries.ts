@@ -609,6 +609,16 @@ export async function listRoutineDays(): Promise<RoutineDay[]> {
   return db.routineDays.orderBy("orden").toArray();
 }
 
+/**
+ * Conteo de slots ACTIVOS de un día, para el selector del home. IndexedDB no
+ * indexa booleanos, así que se filtra en memoria (soloActivos), no con
+ * .count() sobre el índice — que contaría también los dados de baja.
+ */
+export async function countActiveSlots(routineDayId: string): Promise<number> {
+  const slots = await db.routineSlots.where("routine_day_id").equals(routineDayId).toArray();
+  return soloActivos(slots).length;
+}
+
 /** Solo slots activos: las plantillas renderizan `activo === true`. */
 export async function loadDaySlots(routineDayId: string): Promise<SlotView[]> {
   const slots = soloActivos(

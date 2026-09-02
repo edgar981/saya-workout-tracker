@@ -11,6 +11,12 @@
  *   - assets de /_next/static: cache primero. Los nombres llevan hash, así que
  *     un archivo cacheado nunca queda obsoleto — cambia el nombre, no el
  *     contenido.
+ *
+ * Actualización CONTROLADA (§5): la app está en uso real. Un SW nuevo NO se
+ * auto-activa (sin skipWaiting en install): queda "waiting" hasta que la app se
+ * lo pida por mensaje, y la app solo lo pide cuando no hay sesión activa. Así
+ * una versión nueva —y cualquier migración de Dexie que traiga al recargar— no
+ * entra a mitad de entrenamiento.
  */
 
 const CACHE = "saya-shell-v3";
@@ -26,15 +32,16 @@ const APP_SHELL = [
 ];
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches
-      .open(CACHE)
-      // addAll es atómico: si un recurso falla, no se instala nada. En el
-      // primer arranque eso es preferible a un shell a medias.
-      .then((cache) => cache.addAll(APP_SHELL))
-      .then(() => self.skipWaiting())
-      .catch(() => self.skipWaiting()),
-  );
+  // Sin skipWaiting: un SW nuevo se instala pero espera. En el primer install
+  // (sin SW previo que lo bloquee) igual se activa de inmediato, así que el
+  // primer arranque no cambia. La activación de una ACTUALIZACIÓN la dispara la
+  // app con el mensaje SKIP_WAITING, no el install.
+  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(APP_SHELL)));
+});
+
+// La app pide activar el SW en espera solo cuando decide (sin sesión activa).
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "SKIP_WAITING") self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {

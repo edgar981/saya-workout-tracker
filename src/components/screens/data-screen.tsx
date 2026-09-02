@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { useLiveQuery } from "dexie-react-hooks";
-import { ChevronLeft, Download, Stethoscope, Upload } from "lucide-react";
+import { ChevronLeft, Download, Layers, Stethoscope, Upload } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { exportNow, importBackup, type ImportOutcome } from "@/lib/db/backup";
 import { SCHEMA_VERSION, TABLE_NAMES, db } from "@/lib/db/db";
 import { checkIntegrity, type IntegrityReport } from "@/lib/db/integrity";
+import { diagnoseSegmentSides, type SegmentDiagnostic } from "@/lib/db/segment-diagnostic";
 
 type Status =
   | { kind: "idle" }
@@ -22,6 +23,7 @@ type Status =
 export default function DataScreen() {
   const [status, setStatus] = useState<Status>({ kind: "idle" });
   const [integridad, setIntegridad] = useState<IntegrityReport | null>(null);
+  const [segmentos, setSegmentos] = useState<SegmentDiagnostic | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
 
   const counts = useLiveQuery(async () => {
@@ -151,6 +153,74 @@ export default function DataScreen() {
                 <li>Sesiones activas duplicadas: {integridad.sesionesActivasDeMas}</li>
               </ul>
             </>
+          )}
+        </div>
+      )}
+
+      <Separator />
+
+      <div className="flex flex-col gap-2">
+        <p className="text-muted-foreground text-xs">
+          Diagnóstico (solo lectura): busca series registradas con segmentos
+          (segment_index &gt; 0). Sirve para distinguir giant sets legítimos de
+          lados guardados como segmentos antes de que existiera el campo de lado.
+          No convierte nada.
+        </p>
+        <Button
+          variant="outline"
+          size="lg"
+          onClick={async () => setSegmentos(await diagnoseSegmentSides())}
+        >
+          <Layers /> Diagnóstico: lados en segmentos
+        </Button>
+      </div>
+
+      {segmentos && (
+        <div className="rounded-lg border p-3 text-sm">
+          {segmentos.exercises.length === 0 ? (
+            <p className="font-medium">Ninguna serie usa segmentos.</p>
+          ) : (
+            <div className="flex flex-col gap-3">
+              <p className="text-muted-foreground text-xs">
+                {segmentos.totalSetLogsConSegmento} filas con segment_index &gt; 0.
+              </p>
+              {segmentos.exercises.map((ex) => (
+                <div key={ex.exerciseId} className="flex flex-col gap-1 border-t pt-2 first:border-t-0 first:pt-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">{ex.nombre}</span>
+                    <span className="text-muted-foreground text-xs">{ex.unitType}</span>
+                    <span
+                      className={
+                        ex.todosDosSegmentos
+                          ? "text-foreground ml-auto text-xs"
+                          : "text-muted-foreground ml-auto text-xs"
+                      }
+                    >
+                      {ex.todosDosSegmentos
+                        ? "candidato a lados (2 seg/serie)"
+                        : `giant set (hasta ${ex.maxSegmentosEnUnaSerie} seg) — excluir`}
+                    </span>
+                  </div>
+                  <span className="text-muted-foreground text-xs">
+                    {ex.gruposConSegmentos} series con segmentos
+                  </span>
+                  <ul className="text-muted-foreground flex flex-col gap-0.5 font-mono text-[11px]">
+                    {ex.grupos.map((g, i) => (
+                      <li key={i}>
+                        {g.fecha} · serie {g.setIndex}
+                        {g.esExtra ? " (extra)" : ""}:{" "}
+                        {g.segments
+                          .map(
+                            (seg) =>
+                              `seg${seg.segment_index}=${seg.reps}×${seg.weight_value ?? "—"}${seg.side ? `/${seg.side}` : ""}`,
+                          )
+                          .join("  ")}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
           )}
         </div>
       )}
