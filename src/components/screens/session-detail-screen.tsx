@@ -7,10 +7,13 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { ChevronLeft, Trash2 } from "lucide-react";
 
 import { SetLines } from "@/components/history/set-lines";
+import { VerdictBadge } from "@/components/history/verdict-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { discardSession, loadSessionDetail, type SessionExerciseView } from "@/lib/db/queries";
+import { loadSessionVerdicts } from "@/lib/db/verdicts";
+import type { VerdictCategory } from "@/lib/verdict";
 import { cn } from "@/lib/utils";
 
 function formatFecha(iso: string): string {
@@ -22,12 +25,6 @@ function formatFecha(iso: string): string {
   });
 }
 
-/**
- * Tres estados de una instancia (§4). El proxy de ejecución es orden_ejecucion,
- * pero "se empezó" no es "tiene series" (types.ts §1.2), así que sets.length se
- * comprueba aparte. Ninguno de los dos vacíos se oculta: una instancia sin
- * series es el registro de que no lo hiciste.
- */
 /** Ventana en la que el borrado queda armado tras el primer toque. */
 const ARMED_MS = 5000;
 
@@ -38,11 +35,21 @@ function estadoDe(item: SessionExerciseView): Estado {
   return item.sessionExercise.orden_ejecucion !== null ? "iniciado_sin_registro" : "no_realizado";
 }
 
+const TALLY_ORDER: { key: VerdictCategory; label: string }[] = [
+  { key: "mejor", label: "mejor" },
+  { key: "igual", label: "igual" },
+  { key: "peor", label: "peor" },
+  { key: "sin_comparacion", label: "sin comparación" },
+];
+
 export default function SessionDetailScreen() {
   const params = useParams<{ sessionId: string }>();
   const sessionId = params.sessionId;
 
   const detail = useLiveQuery(() => loadSessionDetail(sessionId), [sessionId]);
+  // Solo el detalle de historial importa este loader; la sesión activa nunca lo
+  // toca. Devuelve {} para sesiones activas (veredicto solo en cerradas).
+  const verdicts = useLiveQuery(() => loadSessionVerdicts(sessionId), [sessionId]) ?? {};
 
   const router = useRouter();
   const [armed, setArmed] = useState(false);
@@ -69,9 +76,14 @@ export default function SessionDetailScreen() {
 
   const { session, routineDay, tags, bodyweight, items } = detail;
 
-  // Borrado duro en cascada (D8), reusando discardSession — no una segunda
-  // función de borrado. Editar una sesión pasada sigue fuera de alcance porque
-  // reescribe datos en silencio; eliminarla completa es limpio.
+  // Resumen del veredicto (§3): tally por categoría, solo en sesiones cerradas
+  // con al menos un ejercicio comparado.
+  const tally: Record<VerdictCategory, number> = { mejor: 0, igual: 0, peor: 0, sin_comparacion: 0 };
+  for (const id in verdicts) tally[verdicts[id].verdict.category]++;
+  const totalVeredictos = Object.keys(verdicts).length;
+  const showSummary = totalVeredictos > 0;
+  const tallyEntries = TALLY_ORDER.filter((t) => tally[t.key] > 0);
+
   const eliminar = async () => {
     await discardSession(sessionId);
     router.replace("/historial");
@@ -94,9 +106,42 @@ export default function SessionDetailScreen() {
         </div>
       </header>
 
-      {(tags.length > 0 || bodyweight || (session.nota && session.nota.trim() !== "")) && (
+      {/* Resumen + tags juntos: "peor en 4 + dormí mal" se lee distinto que
+          "peor en 4" a secas. Los tags empiezan a servir aquí (§3). */}
+      {showSummary && (
         <div className="flex flex-col gap-2 rounded-lg border p-3">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm tabular-nums">
+            {tallyEntries.map((t) => (
+              <span
+                key={t.key}
+                className={cn(
+                  "font-medium",
+                  t.key === "mejor" ? "text-emerald-700 dark:text-emerald-400" : "text-muted-foreground",
+                )}
+              >
+                {tally[t.key]} {t.label}
+              </span>
+            ))}
+          </div>
           {tags.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {tags.map((tag) => (
+                <Badge key={tag.id} variant="secondary" className="text-[10px]">
+                  {tag.nombre}
+                </Badge>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Contexto: peso corporal, nota, y los tags cuando NO hay resumen (sesión
+          activa, o cerrada sin ejercicios comparados) — para no perderlos. */}
+      {(bodyweight ||
+        (session.nota && session.nota.trim() !== "") ||
+        (!showSummary && tags.length > 0)) && (
+        <div className="flex flex-col gap-2 rounded-lg border p-3">
+          {!showSummary && tags.length > 0 && (
             <div className="flex flex-wrap gap-1">
               {tags.map((tag) => (
                 <Badge key={tag.id} variant="secondary" className="text-[10px]">
@@ -126,6 +171,7 @@ export default function SessionDetailScreen() {
           const estado = estadoDe(item);
           const atenuado = estado !== "realizado";
           const slot = item.slot;
+          const veredicto = verdicts[item.sessionExercise.id];
 
           return (
             <div
@@ -164,6 +210,10 @@ export default function SessionDetailScreen() {
                 )}
               </div>
 
+              {/* Veredicto por ejercicio: solo instancias con series de sesiones
+                  cerradas (el loader ya filtra ambas). Discreto. */}
+              {veredicto && <VerdictBadge item={veredicto} />}
+
               {estado === "realizado" && (
                 <SetLines sets={item.sets} stackLabel={item.exercise.stack_label} />
               )}
@@ -190,13 +240,10 @@ export default function SessionDetailScreen() {
 
       {/* Acción destructiva, discreta y al final: poco frecuente. */}
       {session.activa === 1 ? (
-        // La sesión activa tiene su propio camino de descarte (en el cierre).
-        // Borrarla desde aquí dejaría a la app apuntando a una sesión inexistente.
         <Button asChild variant="outline" size="sm" className="self-start">
           <Link href="/sesion">Sesión en curso · abrir para cerrarla o descartarla</Link>
         </Button>
       ) : (
-        // Guarda de doble toque, como el descarte del cierre. Sin modal.
         <Button
           variant={armed ? "destructive" : "ghost"}
           size="sm"

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
@@ -31,6 +31,9 @@ export default function CloseScreen() {
   const [weightUnit, setWeightUnit] = useState<"KG" | "LB">("KG");
   const [armed, setArmed] = useState(false);
   const [saving, setSaving] = useState(false);
+  // Al cerrar/descartar navegamos nosotros; el efecto de abajo no debe rebotar
+  // al home cuando la sesión activa desaparece por nuestra propia acción.
+  const navegando = useRef(false);
 
   useEffect(() => {
     if (!armed) return;
@@ -39,7 +42,7 @@ export default function CloseScreen() {
   }, [armed]);
 
   useEffect(() => {
-    if (session === null) router.replace("/");
+    if (session === null && !navegando.current) router.replace("/");
   }, [session, router]);
 
   if (session === undefined) {
@@ -58,6 +61,7 @@ export default function CloseScreen() {
 
   const close = async () => {
     setSaving(true);
+    navegando.current = true;
     await closeSession(session.id, {
       nota: note.trim() === "" ? null : note.trim(),
       tagIds: selected,
@@ -66,10 +70,14 @@ export default function CloseScreen() {
       bodyweight: parsedWeight === null ? null : { valor: parsedWeight, unidad: weightUnit },
     });
     window.localStorage.removeItem(`saya:ejercicio:${session.id}`);
-    router.replace("/");
+    // Al cerrar, ir al detalle de ESTA sesión: es donde vive el veredicto y
+    // evita dejar al usuario sin salida. El descarte sí va al home (no hay
+    // sesión que mostrar).
+    router.replace(`/historial/${session.id}`);
   };
 
   const discard = async () => {
+    navegando.current = true;
     await discardSession(session.id);
     window.localStorage.removeItem(`saya:ejercicio:${session.id}`);
     router.replace("/");
