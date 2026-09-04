@@ -136,14 +136,22 @@ export function ExerciseCard({
         >
           <Plus /> Serie
         </Button>
-        <Button variant="outline" onClick={() => setShowExtra((v) => !v)}>
+        <Button
+          variant="outline"
+          onClick={() => {
+            // Unilateral: elegir con qué lado empieza la extra (el opuesto se
+            // agrega después). Bilateral: agrega una fila directo, sin menú.
+            if (exercise.laterality_default === "UNILATERAL") setShowExtra((v) => !v);
+            else void addSet(sessionExercise.id, { esExtra: true, side: "AUTO" });
+          }}
+        >
           <Plus /> Extra
         </Button>
       </div>
 
-      {showExtra && (
+      {showExtra && exercise.laterality_default === "UNILATERAL" && (
         <div className="flex gap-2 rounded-lg border p-2">
-          {(["AUTO", "L", "R"] as const).map((side) => (
+          {(["L", "R"] as const).map((side) => (
             <Button
               key={side}
               variant="secondary"
@@ -153,7 +161,7 @@ export function ExerciseCard({
                 setShowExtra(false);
               }}
             >
-              {side === "AUTO" ? "Ambos" : side === "L" ? "Izquierdo" : "Derecho"}
+              {side === "L" ? "Izquierdo" : "Derecho"}
             </Button>
           ))}
         </div>

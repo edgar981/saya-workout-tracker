@@ -5,7 +5,7 @@ import { Plus, X } from "lucide-react";
 import { SetRow } from "@/components/session/set-row";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { addSegment, deleteSetGroup } from "@/lib/db/queries";
+import { addOppositeSide, addSegment, deleteSetGroup } from "@/lib/db/queries";
 import type { SetLog } from "@/lib/db/types";
 
 /**
@@ -31,6 +31,12 @@ export function SetGroup({
   const segments = new Set(sets.map((s) => s.segment_index));
   const isGiant = segments.size > 1;
   const esExtra = sets.some((s) => s.es_extra);
+
+  // Serie unilateral con un solo lado: se puede agregar el opuesto (heredando
+  // el peso). No aplica a bilaterales (sin lado), ni a giant sets, ni cuando ya
+  // están los dos lados.
+  const sidesPresent = new Set(sets.map((s) => s.side).filter((x): x is "L" | "R" => x !== null));
+  const missingSide = !isGiant && sidesPresent.size === 1 ? (sidesPresent.has("L") ? "R" : "L") : null;
 
   return (
     <div className="rounded-lg border p-2.5">
@@ -72,6 +78,17 @@ export function SetGroup({
           </div>
         ))}
       </div>
+
+      {missingSide && (
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => void addOppositeSide(sessionExerciseId, setIndex)}
+          className="mt-2 h-8 w-full"
+        >
+          <Plus /> Agregar lado {missingSide === "L" ? "izquierdo" : "derecho"}
+        </Button>
+      )}
 
       <Button
         variant="ghost"

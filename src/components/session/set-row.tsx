@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Trash2 } from "lucide-react";
+import { TriangleAlert, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -63,6 +63,11 @@ export function SetRow({ set, stackLabel }: { set: SetLog; stackLabel: string | 
   const suffix = unitSuffix(set.weight_unit, set.weight_basis, set.added_unit, stackLabel);
   const isAdded = set.weight_unit === "BODYWEIGHT_PLUS";
 
+  // §3: serie con reps y SIN peso en un ejercicio que sí requiere peso. Se marca
+  // en vivo (estado local, no el persistido) para que te agarre frente a la
+  // máquina. BODYWEIGHT nunca se marca: no tener peso es su estado correcto.
+  const faltaPeso = showWeight && parseReps(reps) > 0 && parseWeight(weight) === null;
+
   return (
     <div className="flex items-center gap-2">
       {set.side && (
@@ -97,6 +102,12 @@ export function SetRow({ set, stackLabel }: { set: SetLog; stackLabel: string | 
             className="w-full text-center"
           />
           <span className="text-muted-foreground shrink-0 text-xs">{suffix}</span>
+          {faltaPeso && (
+            <TriangleAlert
+              className="size-4 shrink-0 text-amber-500"
+              aria-label="Serie con reps y sin peso"
+            />
+          )}
         </div>
       ) : (
         <div className="text-muted-foreground flex-1 text-center text-xs">peso corporal</div>

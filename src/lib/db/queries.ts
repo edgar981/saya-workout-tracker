@@ -435,10 +435,14 @@ export async function addSet(
   const nextIndex = existing.length === 0 ? 1 : Math.max(...existing.map((s) => s.set_index)) + 1;
   const prefill = await computePrefill(sessionExerciseId, exercise, nextIndex);
 
+  // Unilateral: "Serie" (AUTO) crea UN solo lado (L). El opuesto se agrega
+  // aparte, heredando el peso del lado ya registrado (§2). Antes creaba ambos a
+  // la vez con el mismo prefill; en la primera serie ese prefill es null, así
+  // que ambos nacían sin peso y llenar uno dejaba el otro en null.
   const sides: (Side | null)[] =
     opts.side === "AUTO"
       ? exercise.laterality_default === "UNILATERAL"
-        ? ["L", "R"]
+        ? ["L"]
         : [null]
       : [opts.side];
 
@@ -480,6 +484,42 @@ export async function addSegment(sessionExerciseId: string, setIndex: number): P
     ...source,
     id: newId(),
     segment_index: nextSegment,
+  });
+}
+
+/**
+ * Crea el lado que falta de una serie unilateral, dentro del MISMO set_index,
+ * heredando el weight_value del lado ya registrado (§2). El peso es el mismo por
+ * definición física — misma máquina, misma carga. Las reps NO se heredan: el
+ * punto de registrar por lado es que difieren (6L / 7R). Si el lado existente no
+ * tiene peso, el nuevo nace sin peso: no se inventa valor.
+ */
+export async function addOppositeSide(
+  sessionExerciseId: string,
+  setIndex: number,
+): Promise<void> {
+  const rows = (await db.setLogs.where("session_exercise_id").equals(sessionExerciseId).toArray())
+    .filter((s) => s.set_index === setIndex);
+  if (rows.length === 0) return;
+
+  const sides = new Set(rows.map((r) => r.side));
+  const hasL = sides.has("L");
+  const hasR = sides.has("R");
+  // Solo cuando hay exactamente un lado (L xor R). Ni bilateral, ni ya completo.
+  if (hasL === hasR) return;
+
+  const present: Side = hasL ? "L" : "R";
+  const missing: Side = hasL ? "R" : "L";
+  const src = rows.find((r) => r.side === present);
+  if (!src) return;
+
+  await db.setLogs.add({
+    ...src,
+    id: newId(),
+    side: missing,
+    reps: 0,
+    weight_value: src.weight_value,
+    segment_index: 0,
   });
 }
 

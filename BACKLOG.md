@@ -10,6 +10,17 @@ Autoridad sobre schema y alcance: `DECISIONES.md`.
 
 ## Disparador cumplido — en curso
 
+Trabajado en el prompt de captura de peso unilateral (2026-08-28):
+
+- **Hueco de captura: series unilaterales sin peso.** Disparador: el diagnóstico
+  de §3 encontró `weight_value` null en un lado de `Single Arm Cable Push Down`;
+  el usuario confirmó que fue olvido. → (a) "Serie" unilateral ahora crea un solo
+  lado y el opuesto se agrega heredando el peso; (b) indicador en `/sesion` de
+  serie con reps y sin peso (nunca en historial, nunca en `BODYWEIGHT`); (c) el
+  render toma el peso del primer lado con valor, no de `rows[0]`. Los nulls ya
+  escritos se quedan: son historia, no se reparan.
+- Con (c) queda **resuelto** el "Fix de §3" que estaba pendiente abajo.
+
 Trabajado en el prompt de correcciones y backlog (2026-08-22):
 
 - **Conteo de ejercicios por día en el home ignoraba `activo`** (§1). Disparador: el
@@ -30,24 +41,24 @@ Trabajado en el prompt de correcciones y backlog (2026-08-22):
 
 ---
 
-## Disparador cumplido — pendiente de ejecutar
+## Artefactos conocidos — no se tocan
 
-- **§4 Fase 2 — convertir segmentos a lados en `Cable Lateral Raises`.**
-  Disparador cumplido (el usuario va a poner el ejercicio en `UNILATERAL`).
-  Bloqueado por: (1) el usuario confirma el reporte de la fase 1, (2) exporta desde
-  `/datos`, (3) decide **cuál `segment_index` es el lado izquierdo** — no se adivina.
-  Es un script puntual read-write ejecutable desde `/datos`, **sin `version(3)`**.
-  Verificar con `checkIntegrity` antes y después.
+- **`Cable Lateral Raises`, 2026-08-28.** Dos series registradas con
+  `segment_index 0/1` como sustituto de lados, antes de que el ejercicio fuera
+  `UNILATERAL`. **No se convierten**: dos filas de una sola sesión no justifican un
+  script de mutación sobre la única copia de los datos. De aquí en adelante se
+  registran como lados. La **fase 2 de conversión de segmentos queda CANCELADA**.
 
 ---
 
 ## Disparador escrito, no cumplido
 
-- **Fix de §3 — peso de "ÚLTIMA VEZ" con lados asimétricos.**
-  Disparador: decisión sobre el comportamiento deseado cuando L y R difieren (o
-  uno está vacío). Hoy `summarize` en `last-performance.tsx` toma el peso de
-  `rows[0]` (lado L). Opciones: tomar el peso del primer lado con valor, o mostrar
-  ambos si difieren. Es cambio de una función de presentación, sin tocar datos.
+- **Propagación de peso vs creación secuencial en unilaterales.**
+  Disparador: si el flujo de dos taps ("Serie" crea el lado L, "Agregar lado
+  opuesto" crea el R) molesta tras una sesión real de Day 5. Alternativa: volver
+  a crear ambos lados juntos y propagar el peso al escribirlo en un lado hacia el
+  opuesto vacío. Es una decisión de UX que solo se puede juzgar usándolo frente a
+  la máquina — esperar a esa sesión antes de cambiar nada.
 
 - **Snapshot de `stack_label` (`version(3)`).**
   Disparador: cuando se registre el primer ejercicio `STACK_POSITION`. Hoy ninguno
@@ -78,6 +89,13 @@ Trabajado en el prompt de correcciones y backlog (2026-08-22):
 - **Sync a Postgres.**
   Disparador: un segundo dispositivo, o el fin de la validación de 4 semanas. Hoy
   Dexie es la única fuente de verdad y el respaldo es el export/import manual.
+
+- **Giant sets sin uso — revisar si la función sobra.**
+  Disparador: al entrar a capa 2. El diagnóstico de segmentos encontró 2 filas con
+  `segment_index > 0` en toda la base, ninguna un giant set real, pese a que el
+  archivo de Notes original sí los tenía (wrist curls, forearm curls). Si al llegar
+  a capa 2 sigue sin usarse, evaluar si `addSegment` y el render de giant sets
+  sobran.
 
 - **Capa 2: progresión, e1RM, volumen por grupo muscular, balance por lado.**
   Disparador: registrar un mesociclo completo sin volver a Notes (criterio de

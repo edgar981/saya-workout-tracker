@@ -41,6 +41,10 @@ export function groupSetLines(sets: SetLog[], stackLabel: string | null): SetLin
       const isGiant = new Set(rows.map((r) => r.segment_index)).size > 1;
       const esExtra = rows.some((r) => r.es_extra);
       const rep = rows[0];
+      // §4: mismo patrón que "ÚLTIMA VEZ" — el peso sale del primer lado CON
+      // valor, no de rows[0] (siempre L). El resto (reps, isBodyweight) no
+      // depende del lado porque el snapshot de unidad es el mismo en todas.
+      const conPeso = rows.find((r) => r.weight_value !== null) ?? rep;
 
       let repsText: string;
       let total: number | null = null;
@@ -58,7 +62,7 @@ export function groupSetLines(sets: SetLog[], stackLabel: string | null): SetLin
         setIndex,
         repsText,
         total,
-        weightText: formatSetWeight(rep, stackLabel),
+        weightText: formatSetWeight(conPeso, stackLabel),
         isBodyweight: rep.weight_unit === "BODYWEIGHT",
         esExtra,
       };

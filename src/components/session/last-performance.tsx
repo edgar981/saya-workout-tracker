@@ -32,7 +32,11 @@ function summarize(sets: SetLog[], stackLabel: string | null): string[] {
       const reps = rows
         .map((r) => (r.side ? `${r.reps}${r.side}` : String(r.reps)))
         .join(rows.some((r) => r.segment_index > 0) ? "+" : "/");
-      return `${reps} × ${formatSetWeight(rows[0], stackLabel)}`;
+      // §4: el peso se toma del primer lado CON valor, no de rows[0] (que tras
+      // compareSets es siempre L). Si L está en null y R tiene valor, mostrar el
+      // valor real, no "—". Si ninguno tiene, entonces sí "—".
+      const conPeso = rows.find((r) => r.weight_value !== null) ?? rows[0];
+      return `${reps} × ${formatSetWeight(conPeso, stackLabel)}`;
     });
 }
 
