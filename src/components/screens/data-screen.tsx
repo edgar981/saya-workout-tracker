@@ -8,6 +8,7 @@ import { ChevronLeft, Download, Layers, Stethoscope, Upload } from "lucide-react
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import { BackupPanel } from "@/components/backup-panel";
 import { exportNow, importBackup, type ImportOutcome } from "@/lib/db/backup";
 import { SCHEMA_VERSION, TABLE_NAMES, db } from "@/lib/db/db";
 import { checkIntegrity, type IntegrityReport } from "@/lib/db/integrity";
@@ -84,6 +85,22 @@ export default function DataScreen() {
           </div>
         ))}
       </div>
+
+      <BackupPanel
+        onRestoreStart={() =>
+          setStatus({ kind: "working", label: "Respaldando el estado actual antes de restaurar…" })
+        }
+        onRestoreDone={(outcome) =>
+          setStatus(outcome.ok ? { kind: "imported", outcome } : { kind: "failed", outcome })
+        }
+      />
+
+      <Separator />
+
+      <p className="text-muted-foreground text-xs">
+        Export/import a archivo. El servidor no lo reemplaza: es la copia que no depende de que el
+        backend esté vivo.
+      </p>
 
       <Button size="lg" onClick={() => void doExport()}>
         <Download /> Exportar

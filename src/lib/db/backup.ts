@@ -77,9 +77,7 @@ export type ImportOutcome =
   | { ok: true; autoExportFilename: string; counts: Record<TableName, number> }
   | { ok: false; autoExportFilename: string | null; error: string };
 
-function parseBackup(raw: string): BackupFile {
-  const parsed = JSON.parse(raw) as unknown;
-
+function parseBackup(parsed: unknown): BackupFile {
   if (typeof parsed !== "object" || parsed === null) {
     throw new Error("El archivo no contiene un objeto JSON.");
   }
@@ -105,8 +103,9 @@ function parseBackup(raw: string): BackupFile {
 }
 
 /**
- * Semántica de REEMPLAZO TOTAL, nunca merge. Un merge contra una base a medio
- * migrar es justo el estado del que estás tratando de escapar.
+ * ÚNICO camino de restauración. Semántica de REEMPLAZO TOTAL, nunca merge. Un
+ * merge contra una base a medio migrar es justo el estado del que estás tratando
+ * de escapar.
  *
  * Secuencia obligatoria:
  *   1. auto-export del estado actual, antes de tocar nada;
@@ -115,9 +114,14 @@ function parseBackup(raw: string): BackupFile {
  *   4. verificar conteos contra el manifiesto; si no cuadran, throw → Dexie
  *      revierte la transacción entera.
  *
- * La guarda no es un modal: es el auto-export del paso 1.
+ * La guarda no es un modal: es el auto-export del paso 1. Esa es la invariante —
+ * Dexie no se muta si antes no se pudo bajar el estado actual.
+ *
+ * Llegan aquí por igual la restauración desde ARCHIVO y la restauración desde el
+ * SERVIDOR: las dos con un BackupFile ya validado por parseBackup. No hay un
+ * segundo camino de restauración.
  */
-export async function importBackup(file: File): Promise<ImportOutcome> {
+export async function restoreFromBackup(backup: BackupFile): Promise<ImportOutcome> {
   // 1 ──────────────────────────────────────────────────────────────────────
   let autoExportFilename: string;
   try {
@@ -127,22 +131,11 @@ export async function importBackup(file: File): Promise<ImportOutcome> {
       ok: false,
       autoExportFilename: null,
       error:
-        "No se pudo generar el respaldo previo, así que no se importó nada. El import solo corre si antes se pudo bajar el estado actual.",
+        "No se pudo generar el respaldo previo, así que no se restauró nada. La restauración solo corre si antes se pudo bajar el estado actual.",
     };
   }
 
   // 2 ──────────────────────────────────────────────────────────────────────
-  let backup: BackupFile;
-  try {
-    backup = parseBackup(await file.text());
-  } catch (err) {
-    return {
-      ok: false,
-      autoExportFilename,
-      error: err instanceof Error ? err.message : "El archivo no se pudo leer.",
-    };
-  }
-
   if (backup.manifest.schema_version !== SCHEMA_VERSION) {
     return {
       ok: false,
@@ -184,4 +177,42 @@ export async function importBackup(file: File): Promise<ImportOutcome> {
   }
 
   return { ok: true, autoExportFilename, counts: backup.manifest.counts };
+}
+
+/**
+ * Restauración desde ARCHIVO. Parsea (JSON + forma) y delega en el único camino.
+ * Si el archivo no parsea no se exporta nada porque nada se va a mutar: la
+ * invariante "no mutar sin export previo" la garantiza restoreFromBackup, que no
+ * se alcanza si esto lanza.
+ */
+export async function importBackup(file: File): Promise<ImportOutcome> {
+  let backup: BackupFile;
+  try {
+    backup = parseBackup(JSON.parse(await file.text()));
+  } catch (err) {
+    return {
+      ok: false,
+      autoExportFilename: null,
+      error: err instanceof Error ? err.message : "El archivo no se pudo leer.",
+    };
+  }
+  return restoreFromBackup(backup);
+}
+
+/**
+ * Restauración desde el SERVIDOR. El payload ya es un objeto JSON; se valida su
+ * forma con el mismo parseBackup y se entra por el mismo restoreFromBackup.
+ */
+export async function restoreFromServerPayload(payload: unknown): Promise<ImportOutcome> {
+  let backup: BackupFile;
+  try {
+    backup = parseBackup(payload);
+  } catch (err) {
+    return {
+      ok: false,
+      autoExportFilename: null,
+      error: err instanceof Error ? err.message : "El snapshot del servidor no se pudo leer.",
+    };
+  }
+  return restoreFromBackup(backup);
 }

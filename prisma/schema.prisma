@@ -1,0 +1,34 @@
+// Respaldo automático a Postgres (DECISIONES.md §9). Primera vez que este
+// proyecto tiene backend. NO es sync: es un push de snapshots completos,
+// append-only. Dexie sigue siendo la única fuente de verdad; nada de la app lee
+// de aquí salvo el flujo explícito de restauración.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// Un volcado completo de las ocho tablas de Dexie, tal cual lo produce el
+/// export de /datos. Append-only: cada push es una fila nueva, nunca se
+/// sobrescribe ni se borra. Si un push manda una base vacía por accidente, los
+/// snapshots anteriores siguen aquí — que es justo el escenario que se cubre.
+model Snapshot {
+  id             String   @id @default(uuid()) @db.Uuid
+  creado_en      DateTime @default(now()) @db.Timestamptz(6)
+  /// schema_version del manifiesto. El servidor no lo valida contra un valor
+  /// propio: guarda lo que venga. El match de versión se exige en la RESTAURACIÓN
+  /// (lado cliente), no en el push.
+  schema_version Int
+  /// manifest.counts del export: filas por tabla. Se expone en los listados sin
+  /// tener que traer el payload entero.
+  counts         Json
+  /// El volcado completo { manifest, data }. Lo único que el flujo de restore
+  /// descarga y mete por el import existente.
+  payload        Json
+
+  @@index([creado_en])
+}

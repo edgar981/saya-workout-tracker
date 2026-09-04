@@ -87,8 +87,20 @@ Trabajado en el prompt de correcciones y backlog (2026-08-22):
   quererlo.
 
 - **Sync a Postgres.**
-  Disparador: un segundo dispositivo, o el fin de la validación de 4 semanas. Hoy
-  Dexie es la única fuente de verdad y el respaldo es el export/import manual.
+  Disparador: un segundo dispositivo, o el fin de la validación de 4 semanas. El
+  **respaldo** a Postgres ya existe (push de snapshots al cerrar sesión + restore
+  manual, DECISIONES.md §9): Dexie sigue siendo la única fuente de verdad, pero
+  perder el teléfono ya no cuesta datos. Lo que falta es SYNC de verdad —
+  seguimiento de cambios, merge, dos dispositivos leyendo del servidor — y eso
+  sigue esperando su disparador.
+
+- **Retención de snapshots en el servidor.**
+  Disparador: cuando el volumen de snapshots en Neon estorbe (hoy: irrelevante,
+  un snapshot son unos pocos miles de filas y el plan free aguanta miles). El
+  respaldo es append-only a propósito; podar ("últimos 50 + el más reciente de
+  cada día") se dejó fuera porque borrar la copia de seguridad es justo el riesgo
+  que el append-only evita. Si se implementa, que sea conservador y nunca borre
+  el más reciente de un día.
 
 - **Giant sets sin uso — revisar si la función sobra.**
   Disparador: al entrar a capa 2. El diagnóstico de segmentos encontró 2 filas con

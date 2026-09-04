@@ -9,6 +9,12 @@ import type {
   SessionTag,
   SetLog,
 } from "./types";
+import { TABLE_NAMES } from "./tables";
+
+// Reexportadas desde su módulo puro (sin Dexie) para no romper los imports
+// existentes de `@/lib/db/db`. La lista canónica vive en `./tables`.
+export { TABLE_NAMES } from "./tables";
+export type { TableName } from "./tables";
 
 /**
  * Versión de esquema de Dexie. DECISIONES.md §6:
@@ -23,19 +29,6 @@ import type {
  * de migrarse al vuelo.
  */
 export const SCHEMA_VERSION = 2;
-
-export const TABLE_NAMES = [
-  "exercises",
-  "routineDays",
-  "routineSlots",
-  "sessions",
-  "sessionExercises",
-  "setLogs",
-  "sessionTags",
-  "bodyweightLogs",
-] as const;
-
-export type TableName = (typeof TABLE_NAMES)[number];
 
 class WorkoutDB extends Dexie {
   exercises!: Table<Exercise, string>;

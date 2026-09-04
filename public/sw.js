@@ -19,7 +19,7 @@
  * entra a mitad de entrenamiento.
  */
 
-const CACHE = "saya-shell-v3";
+const CACHE = "saya-shell-v4";
 const APP_SHELL = [
   "/",
   "/sesion",
@@ -59,6 +59,12 @@ self.addEventListener("fetch", (event) => {
 
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
+
+  // Las rutas de respaldo (/api/*) nunca se cachean: son dinámicas y deben ir
+  // siempre a la red. Sin `respondWith`, el navegador hace su fetch normal. Sin
+  // señal fallan, y el cliente lo trata como "pendiente" — que es lo correcto.
+  // (Los POST ya salieron arriba por el filtro de método.)
+  if (url.pathname.startsWith("/api/")) return;
 
   if (request.mode === "navigate") {
     event.respondWith(

@@ -285,3 +285,19 @@ La app no propone "hoy toca Day 3". Es más simple y nunca se equivoca. Si tras 
 **Vuelves a Notes aunque sea una sesión → el problema es fricción, y se arregla eso antes de agregar cualquier feature.** La sesión en que vuelvas a Notes es el dato más valioso que va a producir este proyecto: dime por qué volviste.
 
 No hay tercer resultado. Si en 4 semanas la app no reemplazó al archivo de texto, agregarle features no lo va a arreglar.
+
+---
+
+## 9. Respaldo automático a Postgres
+
+Añade la pieza que §6 anticipaba: un push de snapshots a un backend. Se construyó porque el riesgo que **sí** se materializó no fue el que justificaba el local-first. La tesis de D2/§6 era la migración de esquema contra la única copia. Eso nunca rompió nada. Lo que rompió fue el desalojo: se desinstaló la PWA de la pantalla de inicio y iOS borró IndexedDB con ella — dos días de entrenamientos perdidos. La nota de §6 lo tenía como "riesgo de borde"; en la práctica fue el que costó datos.
+
+La conclusión no es abandonar el local-first. Dexie sigue siendo la fuente de verdad y la app sigue operando completa sin señal. Lo que faltaba era que perder el teléfono, desinstalar la app o borrar datos del sitio costara cero.
+
+**Es respaldo, no sync.** Sin seguimiento de cambios, sin merge, sin resolución de conflictos, sin segundo dispositivo. Un push de snapshot completo (las ocho tablas, el mismo objeto que exporta /datos) al cerrar una sesión. La restauración es manual y explícita: se descarga un snapshot y entra por el mismo import de /datos — reemplazo total, auto-export previo, rechazo por schema_version distinto. Ningún camino automático escribe en Dexie desde el servidor.
+
+**Append-only.** Cada push es una fila nueva; nunca se sobrescribe ni se borra un snapshot. Si un push manda una base vacía por accidente, los anteriores siguen ahí — que es justo el escenario que se cubre. Por eso la validación del servidor acepta un snapshot con `sessions: 0`: es un estado legítimo tras un reset, y la protección contra el caso indeseado es el append-only, no la validación. **Nota:** la retención ("conservar los últimos 50 y el más reciente de cada día") quedó SIN implementar en este alcance, porque borrar snapshots contradice el append-only y el "no borrar" explícito del prompt; se difiere hasta que el volumen lo pida, y borrar la copia de seguridad es justo el riesgo que este diseño evita.
+
+**Modelo de auth — proporcional, no fuerte.** Sin auth de usuario, el endpoint queda abierto a que cualquiera escriba. La barrera es un token en variable de entorno (`BACKUP_TOKEN`), comparado en cada ruta en tiempo constante. El cliente lo lleva embebido en el bundle (`NEXT_PUBLIC_BACKUP_TOKEN`), a la vista de quien inspeccione el JavaScript. Esto **no** protege de alguien que mire el bundle: protege de escrituras casuales de terceros. Es proporcional — son datos de gimnasio de una persona. Documentarlo como lo que es evita creer que es más. (Se exige el token también en las lecturas: la misma barrera débil, pero no se expone el histórico entero en abierto.)
+
+**Lo que no cambia.** Sin `version(3)` de Dexie. El export/import a archivo sigue existiendo tal cual — es la copia que no depende de que el backend esté vivo. La app prerenderiza estática; solo las rutas `/api/snapshot` son dinámicas (Node runtime, Prisma/Neon).

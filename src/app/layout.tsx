@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { DbBoot } from "@/components/db-boot";
 import { SwRegister } from "@/components/sw-register";
+import { BackupSync } from "@/components/backup-sync";
 
 export const metadata: Metadata = {
   title: "saya-tracker",
@@ -36,6 +37,7 @@ export default function RootLayout({
       <body className="antialiased">
         <DbBoot />
         <SwRegister />
+        <BackupSync />
         {children}
       </body>
     </html>

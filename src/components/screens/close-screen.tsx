@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { db } from "@/lib/db/db";
 import { closeSession, discardSession, getActiveSession } from "@/lib/db/queries";
+import { backupNow } from "@/lib/backup/client";
 import { cn } from "@/lib/utils";
 
 /** Ventana en la que el botón de descarte queda armado. */
@@ -70,6 +71,10 @@ export default function CloseScreen() {
       bodyweight: parsedWeight === null ? null : { valor: parsedWeight, unidad: weightUnit },
     });
     window.localStorage.removeItem(`saya:ejercicio:${session.id}`);
+    // Respaldo a Postgres: dispara y olvida, ya con `cerrada_en` escrito. NO se
+    // espera (no bloquea el cierre ni la navegación) y no lanza: si falla —sin
+    // señal, servidor caído— queda "pendiente" y se reintenta al abrir la app.
+    void backupNow();
     // Al cerrar, ir al detalle de ESTA sesión: es donde vive el veredicto y
     // evita dejar al usuario sin salida. El descarte sí va al home (no hay
     // sesión que mostrar).
