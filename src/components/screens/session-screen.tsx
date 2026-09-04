@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
-import { ChevronLeft, ChevronRight, Flag, Plus, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Flag, House, Plus, X } from "lucide-react";
 
 import { ExercisePicker } from "@/components/exercise-picker";
 import { ExerciseCard } from "@/components/session/exercise-card";
@@ -73,7 +73,15 @@ function ActiveSession({ view }: { view: SessionView }) {
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col p-4">
-      <header className="flex items-baseline gap-2 pt-2 pb-3">
+      <header className="flex items-center gap-2 pt-2 pb-3">
+        {/* Salir al home SIN cerrar: la sesión sigue activa (§1). No toca Dexie;
+            el home no rebota porque ya no autorredirecciona a /sesion. Volver a
+            entrar reanuda en el mismo ejercicio (saya:ejercicio:<id>). */}
+        <Button asChild variant="ghost" size="icon-sm" className="-ml-1 shrink-0">
+          <Link href="/" aria-label="Salir al home sin cerrar la sesión">
+            <House />
+          </Link>
+        </Button>
         <h1 className="text-sm font-semibold">{view.routineDay?.nombre ?? "Sesión libre"}</h1>
         <span className="text-muted-foreground text-xs">{view.session.fecha}</span>
         <span className="text-muted-foreground ml-auto text-xs tabular-nums">

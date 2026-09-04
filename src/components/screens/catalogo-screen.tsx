@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useLiveQuery } from "dexie-react-hooks";
-import { ChevronDown, ChevronLeft, Lock, Plus, Trash2, X } from "lucide-react";
+import { ChevronDown, ChevronLeft, Lock, Plus, Trash2 } from "lucide-react";
 
 import { unitTag } from "@/components/exercise-picker";
 import { Button } from "@/components/ui/button";
@@ -11,41 +11,19 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   countSetLogsForExercise,
-  createExercise,
   listActiveExercises,
   renameExercise,
   softDeleteExercise,
   updateExerciseUnits,
 } from "@/lib/db/queries";
-import type { AddedUnit, Exercise, Laterality, UnitType, WeightBasis } from "@/lib/db/types";
+import type { Exercise, UnitType } from "@/lib/db/types";
+import { UNIDADES, usaAddedUnit, usaBasis, usaStackLabel } from "@/lib/catalogo-units";
 import { useAutosave } from "@/lib/use-autosave";
 import { cn } from "@/lib/utils";
 
 const ARMED_MS = 5000;
 
-const UNIDADES: { valor: UnitType; etiqueta: string }[] = [
-  { valor: "LB", etiqueta: "Libras" },
-  { valor: "KG", etiqueta: "Kilos" },
-  { valor: "BODYWEIGHT", etiqueta: "Peso corporal" },
-  { valor: "BODYWEIGHT_PLUS", etiqueta: "Peso corporal + añadido" },
-  // Sin ejercicios en la semilla (§7.4) pero disponible para la máquina sin
-  // marcar que aparezca algún día.
-  { valor: "STACK_POSITION", etiqueta: "Posición de stack" },
-];
-
-/** Qué campos tienen sentido según la unidad. */
-function usaBasis(u: UnitType) {
-  return u === "KG" || u === "LB" || u === "BODYWEIGHT_PLUS";
-}
-function usaAddedUnit(u: UnitType) {
-  return u === "BODYWEIGHT_PLUS";
-}
-function usaStackLabel(u: UnitType) {
-  return u === "STACK_POSITION";
-}
-
 export default function CatalogoScreen() {
-  const [creando, setCreando] = useState(false);
   const exercises = useLiveQuery(() => listActiveExercises(), []);
 
   if (exercises === undefined) {
@@ -64,13 +42,14 @@ export default function CatalogoScreen() {
         <span className="text-muted-foreground ml-auto text-xs">{exercises.length} activos</span>
       </header>
 
-      {creando ? (
-        <FormularioNuevo onDone={() => setCreando(false)} />
-      ) : (
-        <Button variant="outline" onClick={() => setCreando(true)}>
+      {/* Crear ejercicio reemplaza la pantalla con un formulario completo, así que
+          es ruta propia (/catalogo/nuevo): el gesto atrás vuelve aquí en vez de
+          colapsar un panel. Expandir una fila, en cambio, se queda en estado. */}
+      <Button asChild variant="outline">
+        <Link href="/catalogo/nuevo">
           <Plus /> Crear ejercicio
-        </Button>
-      )}
+        </Link>
+      </Button>
 
       <div className="flex flex-col gap-2">
         {exercises.map((exercise) => (
@@ -78,148 +57,6 @@ export default function CatalogoScreen() {
         ))}
       </div>
     </main>
-  );
-}
-
-function FormularioNuevo({ onDone }: { onDone: () => void }) {
-  const [nombre, setNombre] = useState("");
-  const [unitType, setUnitType] = useState<UnitType>("LB");
-  const [basis, setBasis] = useState<WeightBasis>("TOTAL");
-  const [addedUnit, setAddedUnit] = useState<AddedUnit>("KG");
-  const [stackLabel, setStackLabel] = useState("disc");
-  const [lateralidad, setLateralidad] = useState<Laterality>("BILATERAL");
-
-  const crear = async () => {
-    if (nombre.trim() === "") return;
-    await createExercise({
-      nombre: nombre.trim(),
-      unit_type: unitType,
-      weight_basis: usaBasis(unitType) ? basis : null,
-      added_unit: usaAddedUnit(unitType) ? addedUnit : null,
-      stack_label: usaStackLabel(unitType) ? stackLabel.trim() || "disc" : null,
-      laterality_default: lateralidad,
-    });
-    onDone();
-  };
-
-  return (
-    <div className="flex flex-col gap-3 rounded-lg border p-3">
-      <div className="flex items-center gap-2">
-        <Label htmlFor="nuevo-nombre">Ejercicio nuevo</Label>
-        <Button variant="ghost" size="icon-sm" className="ml-auto" onClick={onDone} aria-label="Cerrar">
-          <X />
-        </Button>
-      </div>
-
-      <Input
-        id="nuevo-nombre"
-        value={nombre}
-        onChange={(e) => setNombre(e.target.value)}
-        placeholder="Nombre"
-      />
-
-      <div className="flex flex-col gap-1.5">
-        <Label>Unidad</Label>
-        <div className="flex flex-wrap gap-1.5">
-          {UNIDADES.map((u) => (
-            <Button
-              key={u.valor}
-              variant={unitType === u.valor ? "default" : "outline"}
-              size="sm"
-              onClick={() => setUnitType(u.valor)}
-            >
-              {u.etiqueta}
-            </Button>
-          ))}
-        </div>
-      </div>
-
-      {usaBasis(unitType) && (
-        <div className="flex flex-col gap-1.5">
-          <Label>Base del peso</Label>
-          <div className="flex gap-1.5">
-            <Button
-              variant={basis === "TOTAL" ? "default" : "outline"}
-              size="sm"
-              className="flex-1"
-              onClick={() => setBasis("TOTAL")}
-            >
-              Total
-            </Button>
-            <Button
-              variant={basis === "PER_IMPLEMENT" ? "default" : "outline"}
-              size="sm"
-              className="flex-1"
-              onClick={() => setBasis("PER_IMPLEMENT")}
-            >
-              Por mancuerna
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {usaAddedUnit(unitType) && (
-        <div className="flex flex-col gap-1.5">
-          <Label>Unidad del peso añadido</Label>
-          <div className="flex gap-1.5">
-            {(["KG", "LB"] as const).map((u) => (
-              <Button
-                key={u}
-                variant={addedUnit === u ? "default" : "outline"}
-                size="sm"
-                className="flex-1"
-                onClick={() => setAddedUnit(u)}
-              >
-                {u.toLowerCase()}
-              </Button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {usaStackLabel(unitType) && (
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="nuevo-stack">Etiqueta del stack</Label>
-          <Input
-            id="nuevo-stack"
-            value={stackLabel}
-            onChange={(e) => setStackLabel(e.target.value)}
-            placeholder="disc"
-          />
-        </div>
-      )}
-
-      <div className="flex flex-col gap-1.5">
-        <Label>Lateralidad</Label>
-        <div className="flex gap-1.5">
-          <Button
-            variant={lateralidad === "BILATERAL" ? "default" : "outline"}
-            size="sm"
-            className="flex-1"
-            onClick={() => setLateralidad("BILATERAL")}
-          >
-            Bilateral
-          </Button>
-          <Button
-            variant={lateralidad === "UNILATERAL" ? "default" : "outline"}
-            size="sm"
-            className="flex-1"
-            onClick={() => setLateralidad("UNILATERAL")}
-          >
-            Unilateral
-          </Button>
-        </div>
-      </div>
-
-      <p className="text-muted-foreground text-xs">
-        La unidad queda fija en cuanto registres la primera serie: se snapshotea en cada SetLog y
-        cambiarla después partiría el histórico.
-      </p>
-
-      <Button onClick={() => void crear()} disabled={nombre.trim() === ""}>
-        Crear
-      </Button>
-    </div>
   );
 }
 

@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useLiveQuery } from "dexie-react-hooks";
-import { BookOpen, ChevronRight, Database, History, ListChecks } from "lucide-react";
+import { BookOpen, ChevronRight, Database, Flag, History, ListChecks } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { db } from "@/lib/db/db";
@@ -13,9 +12,11 @@ import { countActiveSlots, getActiveSession, startSession } from "@/lib/db/queri
 export default function HomeScreen() {
   const router = useRouter();
 
-  // `?? null` para poder distinguir "cargando" (undefined) de "no hay sesión
-  // activa" (null). Sin eso, el arranque parpadea el selector de día encima de
-  // una sesión que sí existía.
+  // `?? null` para distinguir "cargando" (undefined) de "no hay sesión activa"
+  // (null). El home ya NO redirige a /sesion cuando hay sesión activa: en su
+  // lugar muestra la entrada "Sesión en curso · continuar" (abajo). Así salir de
+  // la sesión al home es un estado estable — sin esto, salir rebotaría de vuelta
+  // (FLUJOS.md §2.3).
   const active = useLiveQuery(async () => (await getActiveSession()) ?? null, []);
 
   const days = useLiveQuery(async () => {
@@ -30,18 +31,8 @@ export default function HomeScreen() {
     );
   }, []);
 
-  // Sesión activa: se entra directo, sin preguntar. El teléfono se bloqueó a
-  // mitad del entrenamiento y volver a elegir el día sería absurdo.
-  useEffect(() => {
-    if (active) router.replace("/sesion");
-  }, [active, router]);
-
   if (active === undefined || days === undefined) {
     return <p className="text-muted-foreground p-6 text-sm">Abriendo…</p>;
-  }
-
-  if (active) {
-    return <p className="text-muted-foreground p-6 text-sm">Reanudando la sesión…</p>;
   }
 
   const start = async (routineDayId: string) => {
@@ -57,6 +48,23 @@ export default function HomeScreen() {
           Elige el día. La app no propone ninguno.
         </p>
       </header>
+
+      {/* Sesión en curso: retomar cuesta un tap. Elegir un día empieza una
+          sesión NUEVA (y cierra esta, invariante de startSession), así que la
+          entrada de continuar va primero y visible para no perderla de vista. */}
+      {active && (
+        <Button asChild className="h-auto justify-between px-4 py-4">
+          <Link href="/sesion">
+            <span className="flex items-center gap-2 text-base font-medium">
+              <Flag className="size-4" /> Sesión en curso
+            </span>
+            <span className="flex items-center gap-2 text-sm">
+              continuar
+              <ChevronRight />
+            </span>
+          </Link>
+        </Button>
+      )}
 
       <div className="flex flex-col gap-2">
         {days.map(({ day, ejercicios }) => (

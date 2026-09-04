@@ -77,8 +77,10 @@ export default function CloseScreen() {
     void backupNow();
     // Al cerrar, ir al detalle de ESTA sesión: es donde vive el veredicto y
     // evita dejar al usuario sin salida. El descarte sí va al home (no hay
-    // sesión que mostrar).
-    router.replace(`/historial/${session.id}`);
+    // sesión que mostrar). `?desde=cierre` le dice al detalle que el "volver"
+    // debe ir al home (§3), no al historial: se llegó aquí por cerrar, no por
+    // navegar desde /historial.
+    router.replace(`/historial/${session.id}?desde=cierre`);
   };
 
   const discard = async () => {
