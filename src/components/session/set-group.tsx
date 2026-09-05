@@ -22,11 +22,14 @@ export function SetGroup({
   setIndex,
   sets,
   stackLabel,
+  refSets,
 }: {
   sessionExerciseId: string;
   setIndex: number;
   sets: SetLog[];
   stackLabel: string | null;
+  /** Series de la vez pasada (comparables), para el placeholder de reps (§2). */
+  refSets: SetLog[];
 }) {
   const segments = new Set(sets.map((s) => s.segment_index));
   const isGiant = segments.size > 1;
@@ -73,7 +76,7 @@ export function SetGroup({
               </span>
             )}
             <div className="min-w-0 flex-1">
-              <SetRow set={set} stackLabel={stackLabel} />
+              <SetRow set={set} stackLabel={stackLabel} refSets={refSets} />
             </div>
           </div>
         ))}

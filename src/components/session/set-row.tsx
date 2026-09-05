@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { deleteSet, updateSet } from "@/lib/db/queries";
 import type { SetLog } from "@/lib/db/types";
 import { hasWeightField, unitSuffix } from "@/lib/units";
+import { repsPlaceholder } from "@/lib/reps-hint";
 import { useAutosave } from "@/lib/use-autosave";
 
 function parseReps(value: string): number {
@@ -33,7 +34,16 @@ function parseWeight(value: string): number | null {
  * weight_basis, added_unit), nunca del Exercise actual. Si el ejercicio cambió
  * de unidad después, esta fila sigue diciendo lo que se hizo ese día.
  */
-export function SetRow({ set, stackLabel }: { set: SetLog; stackLabel: string | null }) {
+export function SetRow({
+  set,
+  stackLabel,
+  refSets,
+}: {
+  set: SetLog;
+  stackLabel: string | null;
+  /** Series comparables de la vez pasada, para el placeholder de reps (§2). */
+  refSets: SetLog[];
+}) {
   const [reps, setReps] = useState(() => (set.reps === 0 ? "" : String(set.reps)));
   const [weight, setWeight] = useState(() =>
     set.weight_value === null ? "" : String(set.weight_value),
@@ -68,6 +78,11 @@ export function SetRow({ set, stackLabel }: { set: SetLog; stackLabel: string | 
   // máquina. BODYWEIGHT nunca se marca: no tener peso es su estado correcto.
   const faltaPeso = showWeight && parseReps(reps) > 0 && parseWeight(weight) === null;
 
+  // Placeholder de reps: las de esta misma posición/lado la vez pasada (§2). Es
+  // placeholder, no valor: si no se teclea, la serie queda con reps vacías. null
+  // → sin dato comparable (sin registro previo o cambió la unidad); cae a "0".
+  const phReps = repsPlaceholder(refSets, set);
+
   return (
     <div className="flex items-center gap-2">
       {set.side && (
@@ -82,7 +97,7 @@ export function SetRow({ set, stackLabel }: { set: SetLog; stackLabel: string | 
           onChange={(e) => onReps(e.target.value)}
           onBlur={flush}
           inputMode="numeric"
-          placeholder="0"
+          placeholder={phReps !== null ? String(phReps) : "0"}
           aria-label="Repeticiones"
           className="w-full text-center"
         />

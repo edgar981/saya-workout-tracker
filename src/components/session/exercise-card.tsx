@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, MessageSquare, Plus, Repeat, Trash2 } from "lucide-react";
+import { useLiveQuery } from "dexie-react-hooks";
+import { ChevronDown, MessageSquare, Plus, Repeat, ScissorsLineDashed, Trash2 } from "lucide-react";
 
 import { LastPerformance } from "@/components/session/last-performance";
 import { SetGroup } from "@/components/session/set-group";
@@ -12,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   addSet,
   deleteSessionExercise,
+  getLastPerformance,
   updateSessionExerciseNote,
   type SessionExerciseView,
 } from "@/lib/db/queries";
@@ -50,6 +52,24 @@ export function ExerciseCard({
     const t = setTimeout(() => setArmed(false), ARMED_MS);
     return () => clearTimeout(t);
   }, [armed]);
+
+  // Última aparición del ejercicio: la MISMA fuente que ya alimenta la precarga
+  // de peso (getLastPerformance → getPerformanceHistory, la única travesía). Se
+  // carga una vez aquí y se reusa para la tarjeta "ÚLTIMA VEZ" y para los
+  // placeholders de reps (§2 / criterio 11).
+  const anterior = useLiveQuery(
+    () => getLastPerformance(item.exercise.id, sessionId),
+    [item.exercise.id, sessionId],
+  );
+  const prevSets = anterior?.sets ?? [];
+  // §3.5: la aparición anterior seed la captura solo si su snapshot de unidad
+  // coincide con el ejercicio de hoy. Si cambió, no hay placeholder y se avisa.
+  const comparable =
+    prevSets.length > 0 &&
+    prevSets[0].weight_unit === item.exercise.unit_type &&
+    prevSets[0].weight_basis === item.exercise.weight_basis;
+  const unidadCambio = anterior != null && !comparable;
+  const refSets = comparable ? prevSets : [];
 
   const groups = groupBySetIndex(item.sets);
   const { exercise, slot, sessionExercise } = item;
@@ -109,9 +129,18 @@ export function ExerciseCard({
 
       <LastPerformance
         exerciseId={exercise.id}
-        sessionId={sessionId}
         stackLabel={exercise.stack_label}
+        last={anterior}
       />
+
+      {/* §3: hay historial pero no comparable (cambió la unidad). Se avisa y no
+          se propone placeholder de reps de la aparición vieja (§3.5). */}
+      {unidadCambio && (
+        <p className="text-muted-foreground flex items-center gap-1.5 text-xs">
+          <ScissorsLineDashed className="size-3.5 shrink-0" />
+          La unidad cambió desde la última vez. No se compara ni se propone.
+        </p>
+      )}
 
       {groups.length === 0 ? (
         <p className="text-muted-foreground py-2 text-sm">Sin series todavía.</p>
@@ -124,6 +153,7 @@ export function ExerciseCard({
               setIndex={setIndex}
               sets={sets}
               stackLabel={exercise.stack_label}
+              refSets={refSets}
             />
           ))}
         </div>

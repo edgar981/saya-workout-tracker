@@ -9,6 +9,27 @@ import { Button } from "@/components/ui/button";
 import { db } from "@/lib/db/db";
 import { countActiveSlots, getActiveSession, startSession } from "@/lib/db/queries";
 
+/**
+ * Antigüedad relativa corta de la sesión abierta (§1). Es lo que decide si vas a
+ * retomarla ("hace 41 min") o si quedó abierta de un entrenamiento ya terminado
+ * ("hace 3 días"). Dentro del día, minutos/horas; luego, días de calendario para
+ * que "ayer" sea ayer y no depender de la hora exacta.
+ */
+function antiguedad(iso: string): string {
+  const inicio = new Date(iso);
+  const ahora = new Date();
+  const min = Math.floor((ahora.getTime() - inicio.getTime()) / 60000);
+  if (min < 1) return "recién";
+  if (min < 60) return `hace ${min} min`;
+
+  const diaInicio = new Date(inicio.getFullYear(), inicio.getMonth(), inicio.getDate());
+  const diaAhora = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
+  const dias = Math.round((diaAhora.getTime() - diaInicio.getTime()) / 86_400_000);
+  if (dias === 0) return `hace ${Math.floor(min / 60)} h`;
+  if (dias === 1) return "ayer";
+  return `hace ${dias} días`;
+}
+
 export default function HomeScreen() {
   const router = useRouter();
 
@@ -55,8 +76,13 @@ export default function HomeScreen() {
       {active && (
         <Button asChild className="h-auto justify-between px-4 py-4">
           <Link href="/sesion">
-            <span className="flex items-center gap-2 text-base font-medium">
-              <Flag className="size-4" /> Sesión en curso
+            <span className="flex flex-col gap-0.5 text-left">
+              <span className="flex items-center gap-2 text-base font-medium">
+                <Flag className="size-4" /> Sesión en curso
+              </span>
+              <span className="pl-6 text-xs font-normal opacity-80">
+                {antiguedad(active.iniciada_en)}
+              </span>
             </span>
             <span className="flex items-center gap-2 text-sm">
               continuar

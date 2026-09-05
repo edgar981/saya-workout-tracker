@@ -28,9 +28,11 @@ export async function loadSessionVerdicts(
 
   for (const inst of instances) {
     const sets = await db.setLogs.where("session_exercise_id").equals(inst.id).toArray();
-    // Instancia sin series: sin veredicto (conserva su estado "no realizado" /
-    // "se empezó, sin series" que el detalle ya renderiza).
-    if (sets.length === 0) continue;
+    // Solo series REALES: una serie sin teclear (reps 0) no cuenta. Una instancia
+    // sin series reales no recibe veredicto (conserva "se empezó, sin series" /
+    // "no realizado" que el detalle ya renderiza).
+    const reales = sets.filter((s) => s.reps > 0);
+    if (reales.length === 0) continue;
 
     // La aparición ANTERIOR de ESTE exercise_id (el que realmente se hizo, así que
     // una sustitución se compara contra sí misma, no contra el slot). Se excluye
@@ -43,7 +45,7 @@ export async function loadSessionVerdicts(
     const prev = history.find((h) => h.session.iniciada_en < session.iniciada_en) ?? null;
 
     result[inst.id] = {
-      verdict: compareAppearances(sets, prev?.sets ?? null),
+      verdict: compareAppearances(reales, prev?.sets ?? null),
       referenceFecha: prev?.session.fecha ?? null,
     };
   }

@@ -1,10 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useLiveQuery } from "dexie-react-hooks";
 import { ChevronRight } from "lucide-react";
 
-import { getLastPerformance } from "@/lib/db/queries";
+import type { LastPerformance as LastPerformanceData } from "@/lib/db/queries";
 import type { SetLog } from "@/lib/db/types";
 import { formatSetWeight } from "@/lib/units";
 
@@ -41,26 +40,22 @@ function summarize(sets: SetLog[], stackLabel: string | null): string[] {
 }
 
 /**
- * Los valores de la última vez que se hizo ESTE ejercicio, buscados por
- * exercise_id y no por slot (DECISIONES.md §5). Si la vez pasada sustituiste
- * Squats por Hack Squats, hoy al hacer Hack Squats ves Hack Squats.
- *
+ * Los valores de la última vez que se hizo ESTE ejercicio (DECISIONES.md §5).
  * No es un adorno: es la pantalla donde eliges el peso de la siguiente serie.
+ *
+ * Ya no consulta: recibe `last` de la tarjeta padre, que lo carga una sola vez
+ * con `getLastPerformance` y lo reusa para el placeholder de reps (§2 / criterio
+ * 11: una sola travesía). `undefined` = cargando; `null` = sin registro previo.
  */
 export function LastPerformance({
   exerciseId,
-  sessionId,
   stackLabel,
+  last,
 }: {
   exerciseId: string;
-  sessionId: string;
   stackLabel: string | null;
+  last: LastPerformanceData | null | undefined;
 }) {
-  const last = useLiveQuery(
-    () => getLastPerformance(exerciseId, sessionId),
-    [exerciseId, sessionId],
-  );
-
   if (last === undefined) return null;
 
   if (last === null) {

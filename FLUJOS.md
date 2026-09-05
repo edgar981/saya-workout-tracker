@@ -29,7 +29,7 @@ build de producción.
 
 | Ruta | Pantalla | Render | Parámetro | Qué es |
 |---|---|---|---|---|
-| `/` | `home-screen` | estática | — | Selector de día + entrada "Sesión en curso · continuar" cuando hay sesión activa. Hub de la app; ya **no** autorredirige a `/sesion`. |
+| `/` | `home-screen` | estática | — | Selector de día + entrada "Sesión en curso · continuar" (con su antigüedad: "hace 41 min", "ayer") cuando hay sesión activa. Hub de la app; ya **no** autorredirige a `/sesion`. |
 | `/sesion` | `session-screen` | estática | — | Registro de la sesión activa (el bucle central). Cabecera con "salir al home" sin cerrar. |
 | `/sesion/cerrar` | `close-screen` | estática | — | Cierre (nota / contexto / peso corporal opcionales) o descarte. |
 | `/historial` | `historial-screen` | estática | — | Lista de todas las sesiones, más reciente primero. |
@@ -108,6 +108,8 @@ porque varía con el valor.
 
 - Primera serie de un ejercicio, con peso: **3 taps** — "+ Serie" (crea la fila reps + peso), foco en reps, foco en peso — más el tecleo. Al crear la primera serie se asigna el badge "ejecutado Nº" y aparece "Agregar segmento".
 - Serie siguiente **al mismo peso**: **2 taps** — "+ Serie", foco en reps. El peso **se precarga** de la serie anterior (observado: la Serie 2 nació con "60" ya puesto en el campo de peso). Cambiar el peso suma 1 tap al campo.
+- **Reps como placeholder** (no como valor): el campo de reps muestra en gris —claramente distinto de un valor tecleado— las reps de esa misma posición y lado de la última vez comparable (Serie 1 → las de la serie 1, y así; si hoy hay más series, la extra usa la última disponible). Es placeholder: si no se teclea, la serie queda con reps vacías. Sin registro previo, o si cambió la unidad (§3.5), no hay placeholder y se avisa — el "sin registro previo" de la tarjeta ÚLTIMA VEZ, o un "la unidad cambió" bajo ella. El peso, en cambio, sigue naciendo como valor precargado. Todo esto se deriva en el render de la misma `getLastPerformance` que alimenta el peso; no hay una segunda travesía.
+  - Una serie que se queda en **reps 0** (creada y no tecleada) no cuenta como serie realizada: no entra al historial ni a "última vez", no suma al conteo de series, y no arrastra el veredicto. Se filtra `reps > 0` en toda la cadena de lectura (`getPerformanceHistory`, `compareAppearances`, el detalle de la sesión, el conteo del historial). En el detalle de una sesión cerrada, una instancia con solo ceros aparece como "se empezó, sin series", no como "realizado". La captura activa en `/sesion` sí conserva la fila para poder teclearla.
 
 **Registrar una serie (unilateral)**
 

@@ -85,35 +85,42 @@ function byTotalReps(current: SetLog[], previous: SetLog[]): Verdict {
  * cuando no hay aparición previa con series.
  */
 export function compareAppearances(current: SetLog[], previous: SetLog[] | null): Verdict {
-  if (current.length === 0) return sinComparacion("sin_historial"); // defensivo; el loader ya filtra
-  if (!previous || previous.length === 0) return sinComparacion("sin_historial");
+  // Una serie sin teclear (reps 0) no es una serie realizada: no cuenta para el
+  // veredicto. El cero se filtra en toda la cadena de lectura; aquí, además,
+  // como defensa del comparador puro. Sin esto, una serie creada y no tecleada
+  // arrastraba el total hacia abajo → "peor" sin que hubiera pasado nada.
+  const cur = current.filter((s) => s.reps > 0);
+  const prev = previous?.filter((s) => s.reps > 0) ?? null;
+
+  if (cur.length === 0) return sinComparacion("sin_historial");
+  if (!prev || prev.length === 0) return sinComparacion("sin_historial");
 
   // §3.5: solo se compara dentro de la misma tupla (weight_unit, weight_basis).
-  if (snapshotKey(current) !== snapshotKey(previous)) return sinComparacion("cambio_unidad");
+  if (snapshotKey(cur) !== snapshotKey(prev)) return sinComparacion("cambio_unidad");
 
-  const unit = current[0].weight_unit;
+  const unit = cur[0].weight_unit;
 
   // BODYWEIGHT: no hay peso, se compara por reps totales.
-  if (unit === "BODYWEIGHT") return byTotalReps(current, previous);
+  if (unit === "BODYWEIGHT") return byTotalReps(cur, prev);
 
   // Con peso (KG, LB, BODYWEIGHT_PLUS=añadido, STACK_POSITION).
-  const wCur = distinctWeights(current);
-  const wPrev = distinctWeights(previous);
+  const wCur = distinctWeights(cur);
+  const wPrev = distinctWeights(prev);
 
   // Si en alguna aparición no hay peso registrado (todos null), no se puede
   // peso/e1RM; se compara por reps, que es lo único disponible.
-  if (wCur.length === 0 || wPrev.length === 0) return byTotalReps(current, previous);
+  if (wCur.length === 0 || wPrev.length === 0) return byTotalReps(cur, prev);
 
   const mismoPeso = wCur.length === 1 && wPrev.length === 1 && wCur[0] === wPrev[0];
 
   // Mismo peso en ambas: reps totales. Exacto, sin fórmula, y el límite de 12
   // reps de e1RM NO bloquea (giant sets de 16 reps sí se comparan por reps).
-  if (mismoPeso) return byTotalReps(current, previous);
+  if (mismoPeso) return byTotalReps(cur, prev);
 
   // Peso distinto: e1RM de la mejor serie, con límite duro de 12 reps.
-  const bestCur = bestE1rm(current);
-  const bestPrev = bestE1rm(previous);
-  if (!bestCur || !bestPrev) return byTotalReps(current, previous);
+  const bestCur = bestE1rm(cur);
+  const bestPrev = bestE1rm(prev);
+  if (!bestCur || !bestPrev) return byTotalReps(cur, prev);
   if (bestCur.reps > MAX_REPS_E1RM || bestPrev.reps > MAX_REPS_E1RM) {
     return sinComparacion("fuera_rango_e1rm");
   }

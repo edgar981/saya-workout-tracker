@@ -283,8 +283,11 @@ export async function getPerformanceHistory(
   return filtered
     .map((inst) => {
       const session = byId.get(inst.session_id);
-      const sets = (setsByInstance.get(inst.id) ?? []).slice().sort(compareSets);
-      // Solo instancias con series: una instancia vacía no es "última vez".
+      // Solo series REALES: una serie sin teclear (reps 0) no cuenta. Filtrar en
+      // esta única travesía propaga la regla a "última vez", historial de
+      // ejercicio, placeholder de reps y veredicto. Tras filtrar, una instancia
+      // sin series reales deja de ser una aparición (no es "última vez").
+      const sets = (setsByInstance.get(inst.id) ?? []).filter((s) => s.reps > 0).sort(compareSets);
       return session && sets.length > 0 ? { session, sessionExercise: inst, sets } : null;
     })
     .filter((e): e is PerformanceEntry => e !== null)
@@ -304,7 +307,6 @@ export async function getLastPerformance(
 // ── Series ──────────────────────────────────────────────────────────────────
 
 interface Prefill {
-  reps: number;
   weight: number | null;
 }
 
@@ -353,12 +355,10 @@ async function seriesDeHoy(sessionId: string, exerciseId: string): Promise<SetLo
 }
 
 /**
- * Precarga POR POSICIÓN, con fuentes distintas para peso y reps.
- *
- * Reps: la serie en la misma posición (`set_index`) de la última sesión con
- * datos. Las reps son el resultado que decae serie a serie y la posición lo
- * predice: con `12, 10, 8` a peso fijo, precargar siempre la serie 1 propone
- * reps que ya se sabe que no se van a hacer.
+ * Precarga del PESO por posición. Solo el peso: las reps ya no se precargan como
+ * valor — se muestran como placeholder en la captura (§2 del prompt "El dato
+ * donde se necesita"), derivadas en el render de la misma `getLastPerformance`,
+ * sin persistirse. Aquí se resuelve el peso, que sí nace como valor.
  *
  * Peso: la referencia histórica de esa misma posición, salvo que hoy te hayas
  * apartado de ella — ahí gana el peso de hoy. El peso es una decisión que se
@@ -366,9 +366,9 @@ async function seriesDeHoy(sessionId: string, exerciseId: string): Promise<SetLo
  * proponerte volver a 100. Pero si hoy vas siguiendo la curva de la vez pasada
  * sin tocarla, se sigue la curva.
  *
- * En ambos casos, si el snapshot de unidad de la referencia no coincide con el
- * ejercicio actual, se heredan las reps y el peso queda en blanco: convertirlo
- * está prohibido (D5) y copiarlo tal cual sería peor.
+ * Si el snapshot de unidad de la referencia no coincide con el ejercicio actual,
+ * el peso queda en blanco: convertirlo está prohibido (D5) y copiarlo tal cual
+ * sería peor.
  */
 async function computePrefill(
   sessionExerciseId: string,
@@ -376,13 +376,11 @@ async function computePrefill(
   setIndex: number,
 ): Promise<Prefill> {
   const se = await db.sessionExercises.get(sessionExerciseId);
-  if (!se) return { reps: 0, weight: null };
+  if (!se) return { weight: null };
 
   const anterior = await getLastPerformance(exercise.id, se.session_id);
   const historicos = anterior?.sets ?? [];
   const referencia = enPosicion(historicos, setIndex);
-
-  const reps = referencia ? referencia.reps : 0;
 
   let weight: number | null =
     referencia && mismoSnapshot(referencia, exercise) ? referencia.weight_value : null;
@@ -400,7 +398,7 @@ async function computePrefill(
     }
   }
 
-  return { reps, weight };
+  return { weight };
 }
 
 /**
@@ -451,7 +449,10 @@ export async function addSet(
     session_exercise_id: sessionExerciseId,
     set_index: nextIndex,
     segment_index: 0,
-    reps: prefill.reps,
+    // Reps nacen vacías: la vez pasada se muestra como PLACEHOLDER en la fila,
+    // no como valor. Un placeholder no se persiste — si no tecleas, la serie
+    // queda con reps 0 (§2 del prompt "El dato donde se necesita").
+    reps: 0,
     weight_value: exercise.unit_type === "BODYWEIGHT" ? null : prefill.weight,
     // Snapshots (D4). Copiados aquí y nunca releídos por join.
     weight_unit: exercise.unit_type,
@@ -799,6 +800,9 @@ export async function listSessionSummaries(): Promise<SessionSummary[]> {
   }
   const setCountByInstance = new Map<string, number>();
   for (const set of allSets) {
+    // Solo series REALES: una serie sin teclear (reps 0) no suma al conteo del
+    // historial, igual que no cuenta en el detalle ni en el veredicto.
+    if (set.reps <= 0) continue;
     setCountByInstance.set(
       set.session_exercise_id,
       (setCountByInstance.get(set.session_exercise_id) ?? 0) + 1,
@@ -850,16 +854,22 @@ export async function loadSessionDetail(sessionId: string): Promise<SessionDetai
   const view = await loadSessionView(sessionId);
   if (!view) return null;
 
-  const items = view.items.slice().sort((a, b) => {
-    const ea = a.sessionExercise.orden_ejecucion;
-    const eb = b.sessionExercise.orden_ejecucion;
-    if (ea === null && eb === null) {
-      return a.sessionExercise.orden_visual - b.sessionExercise.orden_visual;
-    }
-    if (ea === null) return 1;
-    if (eb === null) return -1;
-    return ea - eb;
-  });
+  // Solo series REALES en el detalle: una serie sin teclear (reps 0) no se
+  // muestra ni hace que la instancia cuente como "realizado". La captura activa
+  // (/sesion, vía loadSessionView) SÍ conserva la fila para poder teclearla —
+  // esto solo afecta el registro de lo que pasó.
+  const items = view.items
+    .map((item) => ({ ...item, sets: item.sets.filter((s) => s.reps > 0) }))
+    .sort((a, b) => {
+      const ea = a.sessionExercise.orden_ejecucion;
+      const eb = b.sessionExercise.orden_ejecucion;
+      if (ea === null && eb === null) {
+        return a.sessionExercise.orden_visual - b.sessionExercise.orden_visual;
+      }
+      if (ea === null) return 1;
+      if (eb === null) return -1;
+      return ea - eb;
+    });
 
   const tags = await db.sessionTags.toArray();
   const tagById = new Map(tags.map((t) => [t.id, t]));
