@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useLiveQuery } from "dexie-react-hooks";
@@ -32,6 +33,13 @@ function antiguedad(iso: string): string {
 
 export default function HomeScreen() {
   const router = useRouter();
+  // Navegación en curso hacia /sesion: mientras está en vuelo se suprime el
+  // banner "Sesión en curso" (misma idea que el ref `navegando` de close-screen,
+  // FLUJOS.md §2.3). Aquí es ESTADO, no un ref: la bandera se lee en el render
+  // (la condición del banner), y React prohíbe leer refs en render. Como estado,
+  // además, reponerla re-renderiza sola — así el banner de una sesión legítima
+  // reaparece en el error sin depender de que algo más dispare un re-render.
+  const [navegando, setNavegando] = useState(false);
 
   // `?? null` para distinguir "cargando" (undefined) de "no hay sesión activa"
   // (null). El home ya NO redirige a /sesion cuando hay sesión activa: en su
@@ -57,8 +65,23 @@ export default function HomeScreen() {
   }
 
   const start = async (routineDayId: string) => {
-    await startSession(routineDayId);
-    router.replace("/sesion");
+    setNavegando(true);
+    try {
+      // startSession escribe en Dexie; el liveQuery re-renderiza con la sesión
+      // ya activa ANTES de que llegue el replace, lo que asomaba el banner un
+      // instante. La bandera lo suprime durante ese hueco.
+      await startSession(routineDayId);
+      router.replace("/sesion");
+    } catch (err) {
+      // Solo en el error: la navegación no ocurrió y el home sigue montado, así
+      // que hay que reponer la bandera — dejarla en true suprimiría el banner de
+      // una sesión legítima sin error visible. NO va en un `finally`: en el
+      // camino feliz debe seguir en true a través del replace (la navegación
+      // tarda más que el re-render del liveQuery), y resetearla ahí reintroduciría
+      // el parpadeo antes de que la navegación complete.
+      setNavegando(false);
+      console.error("[saya] no se pudo empezar la sesión:", err);
+    }
   };
 
   return (
@@ -73,7 +96,7 @@ export default function HomeScreen() {
       {/* Sesión en curso: retomar cuesta un tap. Elegir un día empieza una
           sesión NUEVA (y cierra esta, invariante de startSession), así que la
           entrada de continuar va primero y visible para no perderla de vista. */}
-      {active && (
+      {active && !navegando && (
         <Button asChild className="h-auto justify-between px-4 py-4">
           <Link href="/sesion">
             <span className="flex flex-col gap-0.5 text-left">
