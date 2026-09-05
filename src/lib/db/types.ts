@@ -135,6 +135,22 @@ export interface SetLog {
   added_unit: AddedUnit | null;
   side: Side | null;
   es_extra: boolean;
+  /**
+   * ISO. Cuándo se creó la fila — en la práctica, cuando terminaste la serie y la
+   * anotaste. NO es indexado: se agrega solo a esta interfaz, sin declararlo en
+   * `db.ts` / `stores()`, así que no hay bump a `version(3)` ni migración.
+   *
+   * Nullable a propósito: las filas anteriores a este cambio se quedan sin valor
+   * (ausente / null). No se rellena un valor de respaldo desde `Session.iniciada_en`
+   * — sería un dato falso presentado como observado (mismo criterio que
+   * `orden_ejecucion`).
+   *
+   * El hueco entre dos `creado_en` consecutivos NO es descanso puro: incluye el
+   * descanso MÁS la ejecución de la serie siguiente. Por eso no se rotula
+   * "descanso" en ninguna parte de la UI. Se escribe solo al crear la fila;
+   * editar reps o peso después no lo toca.
+   */
+  creado_en: string | null;
 }
 
 export interface SessionTag {

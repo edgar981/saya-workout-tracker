@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { ChevronLeft, Trash2 } from "lucide-react";
+import { ChevronLeft, Clock, Trash2 } from "lucide-react";
 
 import { SetLines } from "@/components/history/set-lines";
 import { VerdictBadge } from "@/components/history/verdict-badge";
@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { discardSession, loadSessionDetail, type SessionExerciseView } from "@/lib/db/queries";
 import { loadSessionVerdicts } from "@/lib/db/verdicts";
+import { formatGap, gapsBySetId, sessionDurationMs } from "@/lib/rest-gap";
 import type { VerdictCategory } from "@/lib/verdict";
 import { cn } from "@/lib/utils";
 
@@ -95,6 +96,13 @@ export default function SessionDetailScreen() {
 
   const { session, routineDay, tags, bodyweight, items } = detail;
 
+  // Tiempo entre registros (§4), derivado en lectura de creado_en. Los items ya
+  // vienen sin series en cero (loadSessionDetail filtra), así que los huecos y la
+  // duración son entre series reales. Nada de esto se almacena.
+  const allSets = items.flatMap((i) => i.sets);
+  const gapMs = gapsBySetId(allSets);
+  const duracionMs = sessionDurationMs(allSets);
+
   // Resumen del veredicto (§3): tally por categoría, solo en sesiones cerradas
   // con al menos un ejercicio comparado.
   const tally: Record<VerdictCategory, number> = { mejor: 0, igual: 0, peor: 0, sin_comparacion: 0 };
@@ -116,9 +124,18 @@ export default function SessionDetailScreen() {
         </Button>
         <div className="min-w-0">
           <h1 className="truncate text-lg font-semibold capitalize">{formatFecha(session.fecha)}</h1>
-          <p className="text-muted-foreground text-xs">
-            {routineDay?.nombre ?? "Sesión libre"}
-            {session.activa === 1 ? " · en curso" : ""}
+          <p className="text-muted-foreground flex items-center gap-1.5 text-xs">
+            <span className="truncate">
+              {routineDay?.nombre ?? "Sesión libre"}
+              {session.activa === 1 ? " · en curso" : ""}
+            </span>
+            {/* Duración: del primer al último creado_en (§4). Solo con ≥2 series. */}
+            {duracionMs !== null && (
+              <span className="flex shrink-0 items-center gap-1 tabular-nums">
+                <Clock className="size-3 shrink-0" />
+                {formatGap(duracionMs)}
+              </span>
+            )}
           </p>
         </div>
       </header>
@@ -232,7 +249,7 @@ export default function SessionDetailScreen() {
               {veredicto && <VerdictBadge item={veredicto} />}
 
               {estado === "realizado" && (
-                <SetLines sets={item.sets} stackLabel={item.exercise.stack_label} />
+                <SetLines sets={item.sets} stackLabel={item.exercise.stack_label} gaps={gapMs} />
               )}
               {estado === "iniciado_sin_registro" && (
                 <p className="text-muted-foreground text-xs italic">

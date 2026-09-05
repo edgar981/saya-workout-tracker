@@ -19,11 +19,21 @@ export interface SetLine {
   weightText: string;
   isBodyweight: boolean;
   esExtra: boolean;
+  /**
+   * Hueco (ms) contra la serie anterior de la sesión, para el detalle (§4). null
+   * si es la primera de la sesión o si la fila es anterior a `creado_en`. Solo se
+   * calcula cuando el llamador pasa `gapMs`; si no, siempre null.
+   */
+  gap: number | null;
 }
 
 const sideRank = (s: Side | null) => (s === null ? 0 : s === "L" ? 1 : 2);
 
-export function groupSetLines(sets: SetLog[], stackLabel: string | null): SetLine[] {
+export function groupSetLines(
+  sets: SetLog[],
+  stackLabel: string | null,
+  gapMs?: Map<string, number>,
+): SetLine[] {
   const groups = new Map<number, SetLog[]>();
   for (const set of sets) {
     const list = groups.get(set.set_index) ?? [];
@@ -58,6 +68,17 @@ export function groupSetLines(sets: SetLog[], stackLabel: string | null): SetLin
         repsText = rep.side ? `${rep.reps}${rep.side}` : String(rep.reps);
       }
 
+      // Hueco de la serie = el del primer SetLog creado del grupo (§2/§4). Las
+      // filas siguientes (lado opuesto, segmentos) no muestran hueco propio.
+      let gap: number | null = null;
+      if (gapMs) {
+        const conCreado = raw.filter((r) => r.creado_en);
+        const primero = conCreado.length
+          ? conCreado.reduce((a, b) => (a.creado_en! <= b.creado_en! ? a : b))
+          : null;
+        gap = primero ? (gapMs.get(primero.id) ?? null) : null;
+      }
+
       return {
         setIndex,
         repsText,
@@ -65,6 +86,7 @@ export function groupSetLines(sets: SetLog[], stackLabel: string | null): SetLin
         weightText: formatSetWeight(conPeso, stackLabel),
         isBodyweight: rep.weight_unit === "BODYWEIGHT",
         esExtra,
+        gap,
       };
     });
 }

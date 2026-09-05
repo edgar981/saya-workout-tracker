@@ -30,10 +30,10 @@ build de producción.
 | Ruta | Pantalla | Render | Parámetro | Qué es |
 |---|---|---|---|---|
 | `/` | `home-screen` | estática | — | Selector de día + entrada "Sesión en curso · continuar" (con su antigüedad: "hace 41 min", "ayer") cuando hay sesión activa. Hub de la app; ya **no** autorredirige a `/sesion`. |
-| `/sesion` | `session-screen` | estática | — | Registro de la sesión activa (el bucle central). Cabecera con "salir al home" sin cerrar. |
+| `/sesion` | `session-screen` | estática | — | Registro de la sesión activa (el bucle central). Cabecera con "salir al home" sin cerrar y contador neutro "desde la última serie". |
 | `/sesion/cerrar` | `close-screen` | estática | — | Cierre (nota / contexto / peso corporal opcionales) o descarte. |
 | `/historial` | `historial-screen` | estática | — | Lista de todas las sesiones, más reciente primero. |
-| `/historial/[sessionId]` | `session-detail-screen` | **dinámica (ƒ)** | `sessionId` | Detalle de una sesión: series, veredicto, tags, peso, nota. |
+| `/historial/[sessionId]` | `session-detail-screen` | **dinámica (ƒ)** | `sessionId` | Detalle de una sesión: series, veredicto, hueco por serie, duración, tags, peso, nota. |
 | `/ejercicio/[exerciseId]` | `ejercicio-screen` | **dinámica (ƒ)** | `exerciseId` | Historial de un ejercicio (últimas 5 sesiones con series). |
 | `/plantillas` | `plantillas-screen` | estática | — | Lista de días de plantilla. |
 | `/plantillas/[dayId]` | `plantillas-dia-screen` | **dinámica (ƒ)** | `dayId` | Detalle de un día: slots, orden, objetivos, alternativas. |

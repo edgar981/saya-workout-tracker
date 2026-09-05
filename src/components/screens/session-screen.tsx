@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
@@ -8,6 +8,7 @@ import { ChevronLeft, ChevronRight, Flag, House, Plus, X } from "lucide-react";
 
 import { ExercisePicker } from "@/components/exercise-picker";
 import { ExerciseCard } from "@/components/session/exercise-card";
+import { RestCounter } from "@/components/session/rest-counter";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
@@ -61,6 +62,16 @@ function ActiveSession({ view }: { view: SessionView }) {
   }, [sessionId, index]);
 
   const { items } = view;
+  // El `creado_en` más reciente de TODA la sesión (cualquier ejercicio): el
+  // contador cuenta contra la última serie de la sesión, no del ejercicio, así
+  // que cambiar de ejercicio no lo reinicia (§3 / criterio 8).
+  const ultimoCreadoEn = useMemo(() => {
+    const times = items
+      .flatMap((i) => i.sets)
+      .map((s) => s.creado_en)
+      .filter((t): t is string => !!t);
+    return times.length ? times.reduce((a, b) => (a > b ? a : b)) : null;
+  }, [items]);
   const safeIndex = items.length === 0 ? 0 : Math.min(index, items.length - 1);
   const item = items[safeIndex];
 
@@ -88,6 +99,9 @@ function ActiveSession({ view }: { view: SessionView }) {
           {items.length === 0 ? "0 / 0" : `${safeIndex + 1} / ${items.length}`}
         </span>
       </header>
+
+      {/* Tiempo desde la última serie (§3). Información neutra, no una meta. */}
+      <RestCounter lastCreadoEn={ultimoCreadoEn} />
 
       {/* Salto directo, en orden_visual. Este orden NO cambia según lo que vayas
           ejecutando: una lista que se reacomoda sola entre series desorienta. */}

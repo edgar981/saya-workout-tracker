@@ -122,6 +122,7 @@ Las alternativas son filas `Exercise` completas, no un campo variante, porque **
 | `weight_basis` | enum | **snapshot** de `Exercise.weight_basis` |
 | `side` | enum? | `null` \| `L` \| `R` |
 | `es_extra` | bool | serie fuera de la plantilla |
+| `creado_en` | timestamp? | **no indexado**. Cuándo se creó la fila. Nullable; ver abajo |
 
 Tres casos que este modelo resuelve y el ingenuo no:
 
@@ -130,6 +131,10 @@ Tres casos que este modelo resuelve y el ingenuo no:
 3. **Serie extra unilateral** `4L` = `es_extra=true`, `side=L`. Requiere que la UI permita agregar series con lado, no solo repetir la plantilla.
 
 **Efecto secundario gratuito:** el volumen acumulado por lado queda registrado sin trabajo adicional. La vista que lo muestre es capa 2.
+
+**`creado_en` (Tiempo entre registros).** Marca cuándo se creó la fila, que en la práctica es cuándo terminaste la serie y la anotaste. El hueco entre dos `creado_en` consecutivos **no es descanso puro**: incluye el descanso más la ejecución de la serie siguiente — por eso no se rotula "descanso" en ninguna parte de la UI. Se escribe solo al crear la fila; editar reps o peso después no lo toca.
+
+Es un campo **no indexado**: se agrega solo a la interfaz de TypeScript, sin declararlo en `stores()`, así que **no** sube a `version(3)` ni corre migración. Bumpear no tendría beneficio y sí un costo real: el import rechaza respaldos con `schema_version` distinta, así que invalidaría todos los snapshots existentes por un campo que no lo necesita. Nullable a propósito: las filas anteriores al campo se quedan sin valor y **no** se rellenan desde `iniciada_en` — sería un dato falso presentado como observado (mismo criterio que `orden_ejecucion`). Todo lo derivado —hueco por serie, duración de la sesión, contador en vivo— se calcula en lectura; nada se almacena. Sin umbrales, sin alertas, sin color por tiempo: es información, no una meta.
 
 ### 3.3 Contexto
 

@@ -444,6 +444,7 @@ export async function addSet(
         : [null]
       : [opts.side];
 
+  const now = new Date().toISOString();
   const rows: SetLog[] = sides.map((side) => ({
     id: newId(),
     session_exercise_id: sessionExerciseId,
@@ -460,6 +461,8 @@ export async function addSet(
     added_unit: exercise.added_unit,
     side,
     es_extra: opts.esExtra,
+    // Momento de creación de la fila (§1 "Tiempo entre registros"). No indexado.
+    creado_en: now,
   }));
 
   await db.transaction("rw", [db.setLogs, db.sessionExercises], async () => {
@@ -485,6 +488,8 @@ export async function addSegment(sessionExerciseId: string, setIndex: number): P
     ...source,
     id: newId(),
     segment_index: nextSegment,
+    // Fila nueva creada ahora: su propio creado_en, no el copiado del source.
+    creado_en: new Date().toISOString(),
   });
 }
 
@@ -521,6 +526,8 @@ export async function addOppositeSide(
     reps: 0,
     weight_value: src.weight_value,
     segment_index: 0,
+    // Fila nueva creada ahora: su propio creado_en, no el copiado del src.
+    creado_en: new Date().toISOString(),
   });
 }
 
