@@ -2,11 +2,13 @@
 
 import dynamic from "next/dynamic";
 
+import { SessionDetailSkeleton } from "@/components/skeletons";
+
 const SessionDetailScreen = dynamic(
   () => import("@/components/screens/session-detail-screen"),
   {
     ssr: false,
-    loading: () => <p className="text-muted-foreground p-6 text-sm">Cargando…</p>,
+    loading: () => <SessionDetailSkeleton />,
   },
 );
 

@@ -2,9 +2,11 @@
 
 import dynamic from "next/dynamic";
 
+import { CatalogoSkeleton } from "@/components/skeletons";
+
 const CatalogoScreen = dynamic(() => import("@/components/screens/catalogo-screen"), {
   ssr: false,
-  loading: () => <p className="text-muted-foreground p-6 text-sm">Cargando…</p>,
+  loading: () => <CatalogoSkeleton />,
 });
 
 export default function Page() {

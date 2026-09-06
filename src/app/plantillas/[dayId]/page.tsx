@@ -2,11 +2,13 @@
 
 import dynamic from "next/dynamic";
 
+import { PlantillaDiaSkeleton } from "@/components/skeletons";
+
 const PlantillaDiaScreen = dynamic(
   () => import("@/components/screens/plantillas-dia-screen"),
   {
     ssr: false,
-    loading: () => <p className="text-muted-foreground p-6 text-sm">Cargando…</p>,
+    loading: () => <PlantillaDiaSkeleton />,
   },
 );
 

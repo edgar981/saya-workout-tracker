@@ -2,9 +2,11 @@
 
 import dynamic from "next/dynamic";
 
+import { DataSkeleton } from "@/components/skeletons";
+
 const DataScreen = dynamic(() => import("@/components/screens/data-screen"), {
   ssr: false,
-  loading: () => <p className="text-muted-foreground p-6 text-sm">Cargando…</p>,
+  loading: () => <DataSkeleton />,
 });
 
 export default function Page() {

@@ -20,6 +20,7 @@ import type { Exercise, UnitType } from "@/lib/db/types";
 import { UNIDADES, usaAddedUnit, usaBasis, usaStackLabel } from "@/lib/catalogo-units";
 import { useAutosave } from "@/lib/use-autosave";
 import { cn } from "@/lib/utils";
+import { CatalogoSkeleton } from "@/components/skeletons";
 
 const ARMED_MS = 5000;
 
@@ -27,7 +28,7 @@ export default function CatalogoScreen() {
   const exercises = useLiveQuery(() => listActiveExercises(), []);
 
   if (exercises === undefined) {
-    return <p className="text-muted-foreground p-6 text-sm">Cargando…</p>;
+    return <CatalogoSkeleton />;
   }
 
   return (

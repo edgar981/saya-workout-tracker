@@ -2,9 +2,11 @@
 
 import dynamic from "next/dynamic";
 
+import { EjercicioSkeleton } from "@/components/skeletons";
+
 const EjercicioScreen = dynamic(() => import("@/components/screens/ejercicio-screen"), {
   ssr: false,
-  loading: () => <p className="text-muted-foreground p-6 text-sm">Cargando…</p>,
+  loading: () => <EjercicioSkeleton />,
 });
 
 export default function Page() {

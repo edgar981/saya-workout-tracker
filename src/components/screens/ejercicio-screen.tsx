@@ -11,6 +11,7 @@ import { SetLines } from "@/components/history/set-lines";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { loadExerciseHistory } from "@/lib/db/queries";
+import { EjercicioSkeleton } from "@/components/skeletons";
 
 function formatFecha(iso: string): string {
   const [y, m, d] = iso.split("-").map(Number);
@@ -39,7 +40,7 @@ export default function EjercicioScreen() {
   const history = useLiveQuery(() => loadExerciseHistory(exerciseId), [exerciseId]);
 
   if (history === undefined) {
-    return <p className="text-muted-foreground p-6 text-sm">Cargando…</p>;
+    return <EjercicioSkeleton />;
   }
 
   const { exercise, entries } = history;

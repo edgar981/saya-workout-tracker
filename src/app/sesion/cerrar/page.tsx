@@ -2,9 +2,11 @@
 
 import dynamic from "next/dynamic";
 
+import { CloseSkeleton } from "@/components/skeletons";
+
 const CloseScreen = dynamic(() => import("@/components/screens/close-screen"), {
   ssr: false,
-  loading: () => <p className="text-muted-foreground p-6 text-sm">Cargando…</p>,
+  loading: () => <CloseSkeleton />,
 });
 
 export default function Page() {

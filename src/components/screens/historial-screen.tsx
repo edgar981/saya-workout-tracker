@@ -7,6 +7,7 @@ import { ChevronLeft, ChevronRight, MessageSquare } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { listSessionSummaries } from "@/lib/db/queries";
+import { HistorialSkeleton } from "@/components/skeletons";
 
 function formatFecha(iso: string): string {
   // Partido a mano: new Date('2026-08-14') se parsea como UTC y muestra el día
@@ -23,7 +24,7 @@ export default function HistorialScreen() {
   const summaries = useLiveQuery(() => listSessionSummaries(), []);
 
   if (summaries === undefined) {
-    return <p className="text-muted-foreground p-6 text-sm">Cargando…</p>;
+    return <HistorialSkeleton />;
   }
 
   return (

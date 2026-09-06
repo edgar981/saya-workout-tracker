@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { listRoutineDays, loadDaySlots } from "@/lib/db/queries";
+import { PlantillasSkeleton } from "@/components/skeletons";
 
 export default function PlantillasScreen() {
   const days = useLiveQuery(async () => {
@@ -19,7 +20,7 @@ export default function PlantillasScreen() {
   }, []);
 
   if (days === undefined) {
-    return <p className="text-muted-foreground p-6 text-sm">Cargando…</p>;
+    return <PlantillasSkeleton />;
   }
 
   return (

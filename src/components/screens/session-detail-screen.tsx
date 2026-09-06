@@ -16,6 +16,7 @@ import { loadSessionVerdicts } from "@/lib/db/verdicts";
 import { formatGap, gapsBySetId, sessionDurationMs } from "@/lib/rest-gap";
 import type { VerdictCategory } from "@/lib/verdict";
 import { cn } from "@/lib/utils";
+import { SessionDetailSkeleton } from "@/components/skeletons";
 
 function formatFecha(iso: string): string {
   const [y, m, d] = iso.split("-").map(Number);
@@ -81,7 +82,7 @@ export default function SessionDetailScreen() {
   };
 
   if (detail === undefined) {
-    return <p className="text-muted-foreground p-6 text-sm">Cargando…</p>;
+    return <SessionDetailSkeleton />;
   }
   if (detail === null) {
     return (

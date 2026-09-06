@@ -19,6 +19,7 @@ import {
   type SessionView,
 } from "@/lib/db/queries";
 import { cn } from "@/lib/utils";
+import { SessionSkeleton } from "@/components/skeletons";
 
 const INDEX_KEY = (sessionId: string) => `saya:ejercicio:${sessionId}`;
 
@@ -43,7 +44,7 @@ export default function SessionScreen() {
   }, [view, router]);
 
   if (view === undefined) {
-    return <p className="text-muted-foreground p-6 text-sm">Abriendo la sesión…</p>;
+    return <SessionSkeleton />;
   }
   if (view === null) {
     return <p className="text-muted-foreground p-6 text-sm">Sin sesión activa.</p>;

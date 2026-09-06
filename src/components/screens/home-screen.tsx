@@ -23,6 +23,7 @@ import {
   startSession,
 } from "@/lib/db/queries";
 import { cn } from "@/lib/utils";
+import { HomeSkeleton } from "@/components/skeletons";
 
 /** Semana ISO — la que decide "SEMANA 36" en la orientación de la cabecera. */
 function isoWeek(d: Date): number {
@@ -119,7 +120,7 @@ export default function HomeScreen() {
   const summaries = useLiveQuery(async () => listSessionSummaries(), []);
 
   if (active === undefined || days === undefined || summaries === undefined) {
-    return <p className="text-muted-foreground p-6 text-sm">Abriendo…</p>;
+    return <HomeSkeleton />;
   }
 
   // Una sola lectura del reloj para toda la pantalla (cabecera, antigüedad y

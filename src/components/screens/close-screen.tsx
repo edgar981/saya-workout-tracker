@@ -13,6 +13,7 @@ import { db } from "@/lib/db/db";
 import { closeSession, discardSession, getActiveSession } from "@/lib/db/queries";
 import { backupNow } from "@/lib/backup/client";
 import { cn } from "@/lib/utils";
+import { CloseSkeleton } from "@/components/skeletons";
 
 /** Ventana en la que el botón de descarte queda armado. */
 const ARMED_MS = 5000;
@@ -47,7 +48,7 @@ export default function CloseScreen() {
   }, [session, router]);
 
   if (session === undefined) {
-    return <p className="text-muted-foreground p-6 text-sm">Cargando…</p>;
+    return <CloseSkeleton />;
   }
   if (session === null) {
     return <p className="text-muted-foreground p-6 text-sm">Sin sesión activa.</p>;

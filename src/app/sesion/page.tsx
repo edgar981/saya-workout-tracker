@@ -2,9 +2,11 @@
 
 import dynamic from "next/dynamic";
 
+import { SessionSkeleton } from "@/components/skeletons";
+
 const SessionScreen = dynamic(() => import("@/components/screens/session-screen"), {
   ssr: false,
-  loading: () => <p className="text-muted-foreground p-6 text-sm">Abriendo la sesión…</p>,
+  loading: () => <SessionSkeleton />,
 });
 
 export default function Page() {

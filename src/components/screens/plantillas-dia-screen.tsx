@@ -24,6 +24,7 @@ import {
 } from "@/lib/db/queries";
 import { useAutosave } from "@/lib/use-autosave";
 import { cn } from "@/lib/utils";
+import { PlantillaDiaSkeleton } from "@/components/skeletons";
 
 const ARMED_MS = 5000;
 
@@ -41,7 +42,7 @@ export default function PlantillaDiaScreen() {
   const slots = useLiveQuery(() => loadDaySlots(dayId), [dayId]);
 
   if (slots === undefined) {
-    return <p className="text-muted-foreground p-6 text-sm">Cargando…</p>;
+    return <PlantillaDiaSkeleton />;
   }
 
   return (

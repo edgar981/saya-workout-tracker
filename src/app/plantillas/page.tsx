@@ -2,9 +2,11 @@
 
 import dynamic from "next/dynamic";
 
+import { PlantillasSkeleton } from "@/components/skeletons";
+
 const PlantillasScreen = dynamic(() => import("@/components/screens/plantillas-screen"), {
   ssr: false,
-  loading: () => <p className="text-muted-foreground p-6 text-sm">Cargando…</p>,
+  loading: () => <PlantillasSkeleton />,
 });
 
 export default function Page() {

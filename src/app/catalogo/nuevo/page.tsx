@@ -2,11 +2,13 @@
 
 import dynamic from "next/dynamic";
 
+import { CatalogoNuevoSkeleton } from "@/components/skeletons";
+
 const CatalogoNuevoScreen = dynamic(
   () => import("@/components/screens/catalogo-nuevo-screen"),
   {
     ssr: false,
-    loading: () => <p className="text-muted-foreground p-6 text-sm">Cargando…</p>,
+    loading: () => <CatalogoNuevoSkeleton />,
   },
 );
 
