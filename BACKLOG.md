@@ -53,6 +53,17 @@ Trabajado en el prompt de correcciones y backlog (2026-08-22):
 
 ## Disparador escrito, no cumplido
 
+- **Delta por serie en `/sesion`.**
+  Disparador: decidir contra qué compara. La propuesta v2 pinta un `Δ` por serie
+  (p. ej. "+2 rep" en verde, "−1 rep" en rojo) en la franja de cada serie. Se dejó
+  fuera de la piel (tanda 2) porque NO es presentación: es un dato derivado nuevo y
+  hay que definirlo antes de pintarlo — ¿delta de qué (reps, peso, o e1RM), contra
+  qué serie de la pasada (misma posición, mejor serie), y qué hace en unilaterales
+  con dos lados? El color tampoco es libre: rojo es solo destructivo y "peor" en el
+  veredicto ya evita el rojo (DECISIONES.md §10), así que un delta rojo por bajar
+  una rep contradiría esa regla. Se decide como dato, no como skin, cuando el
+  disparador se cumpla.
+
 - **Propagación de peso vs creación secuencial en unilaterales.**
   Disparador: si el flujo de dos taps ("Serie" crea el lado L, "Agregar lado
   opuesto" crea el R) molesta tras una sesión real de Day 5. Alternativa: volver

@@ -42,9 +42,13 @@ export function SetGroup({
   const missingSide = !isGiant && sidesPresent.size === 1 ? (sidesPresent.has("L") ? "R" : "L") : null;
 
   return (
-    <div className="rounded-lg border p-2.5">
-      <div className="mb-2 flex items-center gap-2">
-        <span className="text-sm font-semibold">Serie {setIndex}</span>
+    <div className="bg-surface overflow-hidden rounded-xl border">
+      {/* Franja de encabezado (v2): rótulo de la serie, badges de estado y el
+          borrado sin guarda (D8) de la serie completa. */}
+      <div className="bg-surface-2 flex items-center gap-2 px-3 py-2">
+        <span className="text-muted-foreground font-mono text-[11px] font-semibold tracking-wide">
+          SERIE {setIndex}
+        </span>
         {esExtra && (
           <Badge variant="secondary" className="text-[10px]">
             extra
@@ -52,7 +56,7 @@ export function SetGroup({
         )}
         {isGiant && (
           <Badge variant="outline" className="text-[10px]">
-            giant set · {segments.size} segmentos
+            giant · {segments.size}
           </Badge>
         )}
         <div className="flex-1" />
@@ -61,17 +65,17 @@ export function SetGroup({
           size="icon-sm"
           onClick={() => void deleteSetGroup(sessionExerciseId, setIndex)}
           aria-label={`Borrar serie ${setIndex} completa`}
-          className="text-muted-foreground hover:text-destructive"
+          className="text-muted-foreground hover:text-destructive -mr-1"
         >
           <X />
         </Button>
       </div>
 
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2 p-3">
         {sets.map((set) => (
           <div key={set.id} className="flex items-center gap-2">
             {isGiant && (
-              <span className="text-muted-foreground w-5 shrink-0 text-center text-xs tabular-nums">
+              <span className="text-muted-foreground w-5 shrink-0 text-center font-mono text-xs tabular-nums">
                 {set.segment_index + 1}
               </span>
             )}
@@ -82,25 +86,26 @@ export function SetGroup({
         ))}
       </div>
 
+      {/* Serie unilateral con un solo lado: la fila para agregar el opuesto va en
+          acento (es un prompt de completar, hereda el peso). Reemplaza al botón
+          genérico anterior (§2). */}
       {missingSide && (
-        <Button
-          variant="secondary"
-          size="sm"
+        <button
+          type="button"
           onClick={() => void addOppositeSide(sessionExerciseId, setIndex)}
-          className="mt-2 h-8 w-full"
+          className="text-primary flex w-full items-center justify-center gap-1.5 border-t border-dashed py-2.5 text-xs font-semibold"
         >
-          <Plus /> Agregar lado {missingSide === "L" ? "izquierdo" : "derecho"}
-        </Button>
+          <Plus className="size-3.5" /> Falta el lado {missingSide === "L" ? "izquierdo" : "derecho"}
+        </button>
       )}
 
-      <Button
-        variant="ghost"
-        size="sm"
+      <button
+        type="button"
         onClick={() => void addSegment(sessionExerciseId, setIndex)}
-        className="text-muted-foreground mt-2 h-8 w-full"
+        className="text-muted-foreground flex w-full items-center justify-center gap-1.5 border-t py-2 text-xs font-medium"
       >
-        <Plus /> Agregar segmento
-      </Button>
+        <Plus className="size-3.5" /> Agregar segmento
+      </button>
     </div>
   );
 }

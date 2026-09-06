@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
-import { ChevronLeft, ChevronRight, Flag, House, Plus, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Flag, Plus, X } from "lucide-react";
 
 import { ExercisePicker } from "@/components/exercise-picker";
 import { ExerciseCard } from "@/components/session/exercise-card";
@@ -84,27 +84,34 @@ function ActiveSession({ view }: { view: SessionView }) {
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col p-4">
-      <header className="flex items-center gap-2 pt-2 pb-3">
+      {/* Cabecera compacta (v2): la barra que convive con el scroll. Salida que
+          deja la sesión abierta, nombre del día, y el contador desde la última
+          serie con su punto de acento. */}
+      <header className="flex items-center gap-2.5 pt-2 pb-3">
         {/* Salir al home SIN cerrar: la sesión sigue activa (§1). No toca Dexie;
             el home no rebota porque ya no autorredirecciona a /sesion. Volver a
             entrar reanuda en el mismo ejercicio (saya:ejercicio:<id>). */}
-        <Button asChild variant="ghost" size="icon-sm" className="-ml-1 shrink-0">
+        <Button
+          asChild
+          variant="outline"
+          size="sm"
+          className="-ml-1 shrink-0 gap-1.5 rounded-full px-3"
+        >
           <Link href="/" aria-label="Salir al home sin cerrar la sesión">
-            <House />
+            <ChevronLeft /> Salir
           </Link>
         </Button>
-        <h1 className="text-sm font-semibold">{view.routineDay?.nombre ?? "Sesión libre"}</h1>
-        <span className="text-muted-foreground text-xs">{view.session.fecha}</span>
-        <span className="text-muted-foreground ml-auto text-xs tabular-nums">
-          {items.length === 0 ? "0 / 0" : `${safeIndex + 1} / ${items.length}`}
+        <div className="flex-1" />
+        <span className="text-muted-foreground font-mono text-xs">
+          {view.routineDay?.nombre ?? "Sesión libre"}
         </span>
+        {ultimoCreadoEn && <span className="bg-border-strong h-3.5 w-px shrink-0" />}
+        <RestCounter lastCreadoEn={ultimoCreadoEn} />
       </header>
 
-      {/* Tiempo desde la última serie (§3). Información neutra, no una meta. */}
-      <RestCounter lastCreadoEn={ultimoCreadoEn} />
-
-      {/* Salto directo, en orden_visual. Este orden NO cambia según lo que vayas
-          ejecutando: una lista que se reacomoda sola entre series desorienta. */}
+      {/* Salto directo, en orden_visual. Número + nombre corto (v2). Este orden NO
+          cambia según lo que vayas ejecutando: una lista que se reacomoda sola
+          entre series desorienta. */}
       <nav className="-mx-4 mb-3 flex gap-1.5 overflow-x-auto px-4 pb-1">
         {items.map((other, i) => (
           <button
@@ -114,7 +121,7 @@ function ActiveSession({ view }: { view: SessionView }) {
             aria-label={other.exercise.nombre}
             aria-current={i === safeIndex}
             className={cn(
-              "size-8 shrink-0 rounded-md border text-xs font-medium tabular-nums",
+              "flex shrink-0 flex-col gap-0.5 rounded-md border px-2.5 py-1.5 text-left",
               i === safeIndex
                 ? "bg-primary text-primary-foreground border-transparent"
                 : other.sets.length > 0
@@ -123,14 +130,19 @@ function ActiveSession({ view }: { view: SessionView }) {
               other.isAdHoc && i !== safeIndex && "border-dashed",
             )}
           >
-            {i + 1}
+            <span className="font-mono text-[10px] font-semibold tabular-nums opacity-70">
+              {String(i + 1).padStart(2, "0")}
+            </span>
+            <span className="max-w-[7rem] truncate text-xs font-medium">
+              {other.exercise.nombre}
+            </span>
           </button>
         ))}
         <button
           type="button"
           onClick={() => setShowPicker((v) => !v)}
           aria-label="Agregar ejercicio a la sesión"
-          className="text-muted-foreground size-8 shrink-0 rounded-md border border-dashed"
+          className="text-muted-foreground flex shrink-0 items-center justify-center rounded-md border border-dashed px-3 text-lg"
         >
           +
         </button>

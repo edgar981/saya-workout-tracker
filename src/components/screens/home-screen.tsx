@@ -4,7 +4,16 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useLiveQuery } from "dexie-react-hooks";
-import { BookOpen, ChevronRight, Database, Flag, History, ListChecks } from "lucide-react";
+import {
+  BookOpen,
+  ChevronDown,
+  ChevronRight,
+  Database,
+  Flag,
+  History,
+  ListChecks,
+  Settings,
+} from "lucide-react";
 
 import { db } from "@/lib/db/db";
 import {
@@ -81,6 +90,10 @@ export default function HomeScreen() {
   // legítima reaparece en el error sin depender de que algo más dispare un
   // re-render.
   const [navegando, setNavegando] = useState(false);
+  // Ajustes colapsado: Plantillas · Catálogo · Respaldo son configuración de cada
+  // varias semanas. Fuera de la zona del pulgar en la pantalla diaria; se revelan
+  // en sitio como lista simple al tocar "Ajustes" (sin hoja, sin ruta nueva).
+  const [ajustes, setAjustes] = useState(false);
 
   // `?? null` para distinguir "cargando" (undefined) de "no hay sesión activa"
   // (null). El home NO redirige a /sesion cuando hay sesión activa: en su lugar
@@ -200,13 +213,12 @@ export default function HomeScreen() {
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-5 p-4">
-      {/* Cabecera (ambos estados): la orientación encabeza; el wordmark, chico y
-          discreto, deja de ser el elemento dominante (§2). */}
-      <header className="flex items-baseline justify-between pt-5">
+      {/* Cabecera (ambos estados): solo la línea de orientación. Sin wordmark —
+          el nombre de la app no informa nada a quien acaba de tocar su ícono. */}
+      <header className="pt-5">
         <p className="text-muted-foreground font-mono text-[11px] font-medium tracking-[0.14em]">
           {cabecera(ahora)}
         </p>
-        <span className="text-foreground/60 text-sm font-semibold tracking-tight">saya</span>
       </header>
 
       {mostrarSesion ? (
@@ -257,21 +269,17 @@ export default function HomeScreen() {
           </div>
         </>
       ) : (
-        <>
-          {/* Sin sesión: la lista de días ES la pantalla. La app no propone. */}
-          <p className="text-muted-foreground -mt-2 text-sm">
-            Elige el día. La app no propone ninguno.
-          </p>
-          <div className="flex flex-col">
-            {days.map(({ day, ejercicios }, i) => dayRow(day, ejercicios, i))}
-          </div>
-        </>
+        /* Sin sesión: la lista de días ES la pantalla y se explica sola. */
+        <div className="flex flex-col">
+          {days.map(({ day, ejercicios }, i) => dayRow(day, ejercicios, i))}
+        </div>
       )}
 
-      {/* Pie (ambos estados). Historial se separa: entrada con peso de contenido,
-          es visita frecuente (el veredicto vive ahí). Plantillas · Catálogo ·
-          Respaldo se agrupan atenuados: son configuración de cada varias semanas.
-          Sin rutas nuevas, sin tab bar — reagrupación de los enlaces existentes. */}
+      {/* Pie (ambos estados): dos entradas. Historial con peso de contenido (es
+          visita frecuente, el veredicto vive ahí) y Ajustes, que agrupa la
+          configuración de cada varias semanas fuera de la zona del pulgar. Sin
+          tab bar, sin rutas nuevas: los tres destinos existentes se revelan como
+          lista simple bajo "Ajustes". */}
       <div className="mt-auto flex flex-col gap-2 pt-4">
         <Link
           href="/historial"
@@ -281,29 +289,51 @@ export default function HomeScreen() {
           <span className="text-foreground flex-1 text-sm font-medium">Historial</span>
           <ChevronRight className="text-muted-foreground size-4 shrink-0" />
         </Link>
-        <div className="grid grid-cols-3 gap-2">
-          <Link
-            href="/plantillas"
-            className="border-border bg-surface text-muted-foreground flex flex-col items-center gap-1.5 rounded-xl border px-2 py-3 text-xs font-medium"
-          >
-            <ListChecks className="size-4" />
-            Plantillas
-          </Link>
-          <Link
-            href="/catalogo"
-            className="border-border bg-surface text-muted-foreground flex flex-col items-center gap-1.5 rounded-xl border px-2 py-3 text-xs font-medium"
-          >
-            <BookOpen className="size-4" />
-            Catálogo
-          </Link>
-          <Link
-            href="/datos"
-            className="border-border bg-surface text-muted-foreground flex flex-col items-center gap-1.5 rounded-xl border px-2 py-3 text-xs font-medium"
-          >
-            <Database className="size-4" />
-            Respaldo
-          </Link>
-        </div>
+
+        <button
+          type="button"
+          onClick={() => setAjustes((v) => !v)}
+          aria-expanded={ajustes}
+          className="border-border bg-surface flex items-center gap-3 rounded-xl border px-4 py-3.5 text-left"
+        >
+          <Settings className="text-muted-foreground size-4 shrink-0" />
+          <span className="text-foreground flex-1 text-sm font-medium">Ajustes</span>
+          <ChevronDown
+            className={cn(
+              "text-muted-foreground size-4 shrink-0 transition-transform",
+              ajustes && "rotate-180",
+            )}
+          />
+        </button>
+
+        {ajustes && (
+          <div className="flex flex-col gap-2 pl-3">
+            <Link
+              href="/plantillas"
+              className="border-border bg-surface text-muted-foreground flex items-center gap-3 rounded-xl border px-4 py-3 text-sm font-medium"
+            >
+              <ListChecks className="size-4 shrink-0" />
+              <span className="flex-1">Plantillas</span>
+              <ChevronRight className="size-4 shrink-0" />
+            </Link>
+            <Link
+              href="/catalogo"
+              className="border-border bg-surface text-muted-foreground flex items-center gap-3 rounded-xl border px-4 py-3 text-sm font-medium"
+            >
+              <BookOpen className="size-4 shrink-0" />
+              <span className="flex-1">Catálogo</span>
+              <ChevronRight className="size-4 shrink-0" />
+            </Link>
+            <Link
+              href="/datos"
+              className="border-border bg-surface text-muted-foreground flex items-center gap-3 rounded-xl border px-4 py-3 text-sm font-medium"
+            >
+              <Database className="size-4 shrink-0" />
+              <span className="flex-1">Respaldo</span>
+              <ChevronRight className="size-4 shrink-0" />
+            </Link>
+          </div>
+        )}
       </div>
     </main>
   );

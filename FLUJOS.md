@@ -29,7 +29,7 @@ build de producción.
 
 | Ruta | Pantalla | Render | Parámetro | Qué es |
 |---|---|---|---|---|
-| `/` | `home-screen` | estática | — | Dos estados. Sin sesión: la lista de días manda y `hace X d` por día (última sesión **cerrada** con series de ese `routine_day_id`; "nunca" si jamás se entrenó) es el dato prominente. Con sesión activa: una **tarjeta protagonista** ("Sesión abierta", antigüedad, progreso `X / N hechos · S series`, "Continuar donde ibas →"), con la lista secundaria bajo "Empezar otro día". Pie: Historial aparte; Plantillas · Catálogo · Respaldo agrupados. Hub de la app; ya **no** autorredirige a `/sesion`. |
+| `/` | `home-screen` | estática | — | Dos estados. Sin sesión: la lista de días manda y `hace X d` por día (última sesión **cerrada** con series de ese `routine_day_id`; "nunca" si jamás se entrenó) es el dato prominente. Con sesión activa: una **tarjeta protagonista** ("Sesión abierta", antigüedad, progreso `X / N hechos · S series`, "Continuar donde ibas →"), con la lista secundaria bajo "Empezar otro día". Pie: dos entradas — Historial aparte, y "Ajustes", que revela en sitio (lista simple, sin ruta nueva ni tab bar) Plantillas · Catálogo · Respaldo. Hub de la app; ya **no** autorredirige a `/sesion`. |
 | `/sesion` | `session-screen` | estática | — | Registro de la sesión activa (el bucle central). Cabecera con "salir al home" sin cerrar y contador neutro "desde la última serie". |
 | `/sesion/cerrar` | `close-screen` | estática | — | Cierre (nota / contexto / peso corporal opcionales) o descarte. |
 | `/historial` | `historial-screen` | estática | — | Lista de todas las sesiones, más reciente primero. |
@@ -53,8 +53,8 @@ prerenderiza estático.
 
 ### 2.1 Aristas por enlace (`<Link>`, un tap)
 
-- `/` → `/historial`, `/plantillas`, `/catalogo`, `/datos` (los cuatro enlaces del pie — Historial como entrada propia, los otros tres agrupados en una fila compacta); y la tarjeta de sesión abierta ("Continuar donde ibas →") → `/sesion` cuando hay sesión activa.
-- `/sesion` → `/` (icono "casa" de la cabecera: salir al home SIN cerrar); → `/sesion/cerrar` (botón "Cerrar sesión"); y la tarjeta "Última vez" → `/ejercicio/[id]`.
+- `/` → `/historial` (entrada propia del pie); → `/plantillas`, `/catalogo`, `/datos` (revelados al abrir "Ajustes" en el pie, +1 tap); y la tarjeta de sesión abierta ("Continuar donde ibas →") → `/sesion` cuando hay sesión activa.
+- `/sesion` → `/` (botón "Salir" de la cabecera: salir al home SIN cerrar); → `/sesion/cerrar` (botón "Cerrar sesión"); y la tarjeta "La pasada" → `/ejercicio/[id]`.
 - `/sesion/cerrar` → `/sesion` (chevron "Volver a la sesión").
 - `/historial` → `/` (chevron); cada fila → `/historial/[id]`.
 - `/historial/[id]` → cada nombre de ejercicio → `/ejercicio/[id]`; "Sesión en curso · abrir para cerrarla o descartarla" → `/sesion` (solo si `session.activa === 1`); "Volver al historial" → `/historial` (solo cuando la sesión no existe). El chevron "volver" ya no es enlace fijo: ver §2.2.
@@ -85,7 +85,7 @@ de rebotar. Reabrir la app en frío con una sesión activa cae en el home, no en
 
 ### 2.4 Callejones sin salida y asimetrías
 
-- **No hay barra de navegación persistente** (decisión tomada, no se agrega). Cada pantalla secundaria vuelve con su propio chevron; el único concentrador es `/`. `/sesion` ahora sí tiene salida propia: el icono "casa" de la cabecera va al home sin cerrar la sesión (la sesión sigue `activa: 1`).
+- **No hay barra de navegación persistente** (decisión tomada, no se agrega). Cada pantalla secundaria vuelve con su propio chevron; el único concentrador es `/`. `/sesion` ahora sí tiene salida propia: el botón "Salir" de la cabecera va al home sin cerrar la sesión (la sesión sigue `activa: 1`).
 - **El "volver" de `/historial/[id]` respeta el origen.** Si se llegó por cerrar una sesión (`?desde=cierre`) va al home; si se llegó desde `/historial` o `/ejercicio/[id]`, `router.back()` devuelve ahí. No se usa `router.back()` a ciegas: tras cerrar, el detalle reemplazó a `/sesion/cerrar` en el historial, así que `back()` caería en `/sesion` (ya cerrada) — por eso ese caso va explícito al home.
 - **El drill-down de `/plantillas` y el crear-ejercicio de `/catalogo` viven en la URL** (`/plantillas/[dayId]`, `/catalogo/nuevo`): el gesto atrás sube un nivel (al listado), no sale de la sección. En cambio, **expandir una fila del catálogo es estado en sitio** (divulgación, no navegación): el gesto atrás sale de `/catalogo` en vez de colapsar la fila — comportamiento buscado, no regresión.
 - **La restauración desde el servidor en `/datos` es in-place**: no cambia de ruta; la lista de snapshots y el resultado se renderizan en la misma pantalla.
@@ -126,7 +126,7 @@ porque varía con el valor.
 - Cambiar de ejercicio: **1 tap.** El navegador de chips numerados salta directo a cualquier ejercicio del día; las flechas ‹ › van al adyacente (deshabilitadas en los extremos). El orden de los chips no se reordena según lo ejecutado.
 - Agregar un ejercicio ad-hoc: **2 taps** — chip "+" abre el buscador del catálogo, elegir uno lo agrega y salta a él. (Filtrar con "Buscar…" suma tecleo.) Desde aquí solo se elige del catálogo; no se crea ejercicio nuevo.
 - Sustituir el ejercicio: botón "Cambiar" abre un selector dentro de la misma tarjeta.
-- Salir al home sin cerrar: **1 tap** (icono "casa" de la cabecera). La sesión sigue `activa: 1`; volver es 1 tap ("continuar" en el home).
+- Salir al home sin cerrar: **1 tap** (botón "Salir" de la cabecera). La sesión sigue `activa: 1`; volver es 1 tap ("continuar" en el home).
 
 **Cerrar**
 

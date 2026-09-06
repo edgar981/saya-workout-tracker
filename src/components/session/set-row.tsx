@@ -83,15 +83,22 @@ export function SetRow({
   // → sin dato comparable (sin registro previo o cambió la unidad); cae a "0".
   const phReps = repsPlaceholder(refSets, set);
 
+  // Inputs sin borde y en DM Mono grande (v2): la tarjeta de la serie ya aporta
+  // el marco. `text-xl` (20px) queda por encima del piso de 16px que evita el
+  // zoom de iOS al enfocar. reps y peso NO se unifican: reps es placeholder,
+  // peso es valor precargado — cada campo conserva su mecanismo.
+  const inputClass =
+    "h-auto border-0 bg-transparent px-0 text-left font-mono text-xl shadow-none focus-visible:ring-0";
+
   return (
     <div className="flex items-center gap-2">
       {set.side && (
-        <span className="bg-secondary text-secondary-foreground w-7 shrink-0 rounded-md py-1 text-center text-xs font-semibold">
+        <span className="bg-surface-2 text-muted-foreground flex w-8 shrink-0 items-center justify-center rounded-md py-2 font-mono text-sm font-semibold">
           {set.side}
         </span>
       )}
 
-      <div className="flex min-w-0 flex-1 items-center gap-1.5">
+      <label className="flex min-w-0 flex-1 items-baseline gap-1.5">
         <Input
           value={reps}
           onChange={(e) => onReps(e.target.value)}
@@ -99,31 +106,34 @@ export function SetRow({
           inputMode="numeric"
           placeholder={phReps !== null ? String(phReps) : "0"}
           aria-label="Repeticiones"
-          className="w-full text-center"
+          className={inputClass}
         />
         <span className="text-muted-foreground shrink-0 text-xs">reps</span>
-      </div>
+      </label>
 
       {showWeight ? (
-        <div className="flex min-w-0 flex-1 items-center gap-1.5">
-          {isAdded && <span className="text-muted-foreground shrink-0 text-sm">+</span>}
-          <Input
-            value={weight}
-            onChange={(e) => onWeight(e.target.value)}
-            onBlur={flush}
-            inputMode="decimal"
-            placeholder="—"
-            aria-label={isAdded ? "Peso añadido" : "Peso"}
-            className="w-full text-center"
-          />
-          <span className="text-muted-foreground shrink-0 text-xs">{suffix}</span>
-          {faltaPeso && (
-            <TriangleAlert
-              className="text-amber size-4 shrink-0"
-              aria-label="Serie con reps y sin peso"
+        <>
+          <span className="bg-border h-6 w-px shrink-0" />
+          <label className="flex min-w-0 flex-1 items-baseline gap-1.5">
+            {isAdded && <span className="text-muted-foreground shrink-0 text-sm">+</span>}
+            <Input
+              value={weight}
+              onChange={(e) => onWeight(e.target.value)}
+              onBlur={flush}
+              inputMode="decimal"
+              placeholder="—"
+              aria-label={isAdded ? "Peso añadido" : "Peso"}
+              className={inputClass}
             />
-          )}
-        </div>
+            <span className="text-muted-foreground shrink-0 text-xs">{suffix}</span>
+            {faltaPeso && (
+              <TriangleAlert
+                className="text-amber size-4 shrink-0 self-center"
+                aria-label="Serie con reps y sin peso"
+              />
+            )}
+          </label>
+        </>
       ) : (
         <div className="text-muted-foreground flex-1 text-center text-xs">peso corporal</div>
       )}

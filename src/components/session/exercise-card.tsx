@@ -164,7 +164,7 @@ export function ExerciseCard({
           className="flex-1"
           onClick={() => void addSet(sessionExercise.id, { esExtra: false, side: "AUTO" })}
         >
-          <Plus /> Serie
+          <Plus /> Otra serie
         </Button>
         <Button
           variant="outline"
