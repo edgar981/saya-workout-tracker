@@ -150,7 +150,8 @@ export default function SessionDetailScreen() {
                 key={t.key}
                 className={cn(
                   "font-medium",
-                  t.key === "mejor" ? "text-emerald-700 dark:text-emerald-400" : "text-muted-foreground",
+                  // "mejor" en tinta plena (no el verde de acento); el resto atenuado.
+                  t.key === "mejor" ? "text-foreground" : "text-muted-foreground",
                 )}
               >
                 {tally[t.key]} {t.label}

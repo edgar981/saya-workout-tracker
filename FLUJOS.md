@@ -29,7 +29,7 @@ build de producción.
 
 | Ruta | Pantalla | Render | Parámetro | Qué es |
 |---|---|---|---|---|
-| `/` | `home-screen` | estática | — | Selector de día + entrada "Sesión en curso · continuar" (con su antigüedad: "hace 41 min", "ayer") cuando hay sesión activa. Hub de la app; ya **no** autorredirige a `/sesion`. |
+| `/` | `home-screen` | estática | — | Dos estados. Sin sesión: la lista de días manda y `hace X d` por día (última sesión **cerrada** con series de ese `routine_day_id`; "nunca" si jamás se entrenó) es el dato prominente. Con sesión activa: una **tarjeta protagonista** ("Sesión abierta", antigüedad, progreso `X / N hechos · S series`, "Continuar donde ibas →"), con la lista secundaria bajo "Empezar otro día". Pie: Historial aparte; Plantillas · Catálogo · Respaldo agrupados. Hub de la app; ya **no** autorredirige a `/sesion`. |
 | `/sesion` | `session-screen` | estática | — | Registro de la sesión activa (el bucle central). Cabecera con "salir al home" sin cerrar y contador neutro "desde la última serie". |
 | `/sesion/cerrar` | `close-screen` | estática | — | Cierre (nota / contexto / peso corporal opcionales) o descarte. |
 | `/historial` | `historial-screen` | estática | — | Lista de todas las sesiones, más reciente primero. |
@@ -53,7 +53,7 @@ prerenderiza estático.
 
 ### 2.1 Aristas por enlace (`<Link>`, un tap)
 
-- `/` → `/historial`, `/plantillas`, `/catalogo`, `/datos` (los cuatro enlaces del pie); y "Sesión en curso · continuar" → `/sesion` cuando hay sesión activa.
+- `/` → `/historial`, `/plantillas`, `/catalogo`, `/datos` (los cuatro enlaces del pie — Historial como entrada propia, los otros tres agrupados en una fila compacta); y la tarjeta de sesión abierta ("Continuar donde ibas →") → `/sesion` cuando hay sesión activa.
 - `/sesion` → `/` (icono "casa" de la cabecera: salir al home SIN cerrar); → `/sesion/cerrar` (botón "Cerrar sesión"); y la tarjeta "Última vez" → `/ejercicio/[id]`.
 - `/sesion/cerrar` → `/sesion` (chevron "Volver a la sesión").
 - `/historial` → `/` (chevron); cada fila → `/historial/[id]`.
@@ -101,7 +101,7 @@ porque varía con el valor.
 
 **Entrar al registro**
 
-- Con sesión activa: **1 tap** — "Sesión en curso · continuar" en el home (el home ya no autorredirige). Reanuda en el mismo ejercicio.
+- Con sesión activa: **1 tap** — la tarjeta de sesión abierta ("Continuar donde ibas →") en el home (el home ya no autorredirige). Reanuda en el mismo ejercicio.
 - Sin sesión: **1 tap** (el día) → caes en el ejercicio 1/N con el navegador de ejercicios ya visible.
 
 **Registrar una serie (bilateral)**
@@ -197,7 +197,7 @@ refleja solo en cada pantalla montada. Ninguna pantalla tiene botón "Guardar".
 
 - `saya:ejercicio:<sessionId>` — el índice del ejercicio visible en `/sesion`. Se
   escribe al montar la sesión y en cada cambio de ejercicio; hace que volver a entrar
-  a la sesión (por "Sesión en curso · continuar" en el home, o por salir y regresar)
+  a la sesión (por la tarjeta de sesión abierta en el home, o por salir y regresar)
   restaure el ejercicio exacto. Se borra al cerrar o descartar la sesión.
 - `saya:backup:state` — `{ pending, lastError, last }` del respaldo (última copia
   conocida, si se debe un push, y el motivo del último fallo). Lo mantiene el cliente

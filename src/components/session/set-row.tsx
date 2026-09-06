@@ -119,7 +119,7 @@ export function SetRow({
           <span className="text-muted-foreground shrink-0 text-xs">{suffix}</span>
           {faltaPeso && (
             <TriangleAlert
-              className="size-4 shrink-0 text-amber-500"
+              className="text-amber size-4 shrink-0"
               aria-label="Serie con reps y sin peso"
             />
           )}

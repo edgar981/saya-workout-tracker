@@ -1,77 +1,86 @@
 @import "tailwindcss";
 
+/*
+ * PIEL — sistema de tokens (§0).
+ *
+ * Fuente única de color: las variables semánticas de `:root` de abajo. Ningún
+ * componente vuelve a hardcodear un hex; consume estos tokens vía las utilidades
+ * de Tailwind registradas aquí.
+ *
+ * La app es OSCURA siempre. No sigue a `prefers-color-scheme`: la propuesta v2 es
+ * un tema oscuro fijo, pensado para leerse frente a la máquina. Por eso no hay
+ * bloque `@media (prefers-color-scheme)` — el tema no cambia con el sistema.
+ *
+ * Los nombres shadcn (`--background`, `--card`, `--muted-foreground`, `--primary`…)
+ * se conservan como CAPA DE COMPATIBILIDAD: todo el árbol de componentes ya los
+ * consume por sus clases (`bg-card`, `text-muted-foreground`, `bg-primary`…), así
+ * que remapear sus VALORES a la paleta v2 recolorea cada pantalla sin tocar su
+ * markup. Cada rol shadcn apunta a un token semántico.
+ */
+
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
-  --color-destructive-foreground: var(--destructive-foreground);
+  /* Tokens semánticos → utilidades propias (bg-surface, text-ink, text-amber…). */
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-faint: var(--faint);
+  --color-accent-ink: var(--accent-ink);
+  --color-danger: var(--danger);
+  --color-amber: var(--amber);
+  --color-border-strong: var(--border-strong);
+
+  /* Capa de compatibilidad shadcn → tokens semánticos. */
+  --color-background: var(--bg);
+  --color-foreground: var(--ink);
+  --color-card: var(--surface);
+  --color-card-foreground: var(--ink);
+  --color-popover: var(--surface);
+  --color-popover-foreground: var(--ink);
+  /* Acción primaria = el acento verde. Es el ÚNICO acento. */
+  --color-primary: var(--accent);
+  --color-primary-foreground: var(--accent-ink);
+  --color-secondary: var(--surface-2);
+  --color-secondary-foreground: var(--ink);
+  /* `muted` shadcn es una SUPERFICIE tenue; el texto atenuado es `muted-foreground`. */
+  --color-muted: var(--surface-2);
+  --color-muted-foreground: var(--muted);
+  /* `accent` shadcn = superficie de hover (outline/ghost). NO es el verde de marca. */
+  --color-accent: var(--surface-2);
+  --color-accent-foreground: var(--ink);
+  --color-destructive: var(--danger);
+  --color-destructive-foreground: var(--ink);
   --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
+  --color-input: var(--border);
+  --color-ring: var(--muted);
+
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+
+  /* Fuentes autoalojadas por next/font (ver layout.tsx). Archivo para UI, DM Mono
+     para numerales y datos. Sin `<link>` a ningún CDN en runtime. */
+  --font-sans: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-dm-mono), ui-monospace, "SF Mono", monospace;
 }
 
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-}
+  --radius: 0.75rem;
 
-/* Sin toggle de tema: la app sigue al sistema y ya. */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.205 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.205 0 0);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.922 0 0);
-    --primary-foreground: oklch(0.205 0 0);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
-    --destructive: oklch(0.704 0.191 22.216);
-    --destructive-foreground: oklch(0.985 0 0);
-    --border: oklch(1 0 0 / 12%);
-    --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.556 0 0);
-  }
+  /* Paleta v2 — fuente única de verdad. */
+  --bg: #08090a; /* fondo de la app */
+  --surface: #1a1c1f; /* tarjetas */
+  --surface-2: #1f2226; /* superficie anidada / hover / chips */
+  --border: #26292e; /* borde base */
+  --border-strong: #2e3238; /* divisores algo más claros */
+  --ink: #f2f4f3; /* tinta */
+  --muted: #8b9199; /* atenuado */
+  --faint: #5a6169; /* aún más tenue (numerales de índice) */
+  --accent: #c6f24e; /* acento: acción, sesión activa, completar */
+  --accent-ink: #0e0f11; /* tinta sobre el acento */
+  --danger: #ff5c5c; /* solo destructivo/armado/error */
+  --amber: #e6b450; /* SOLO "dato incompleto arreglable ahora" (serie sin peso) */
 }
 
 @layer base {
@@ -81,11 +90,14 @@
 
   html {
     -webkit-text-size-adjust: 100%;
+    /* Controles del navegador (scrollbars, autofill, form widgets) en oscuro. */
+    color-scheme: dark;
   }
 
   body {
-    background-color: var(--background);
-    color: var(--foreground);
+    background-color: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
     /* La app corre en standalone en el teléfono: respeta el notch. */
     padding-top: env(safe-area-inset-top);
     padding-bottom: env(safe-area-inset-bottom);

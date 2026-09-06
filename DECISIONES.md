@@ -306,3 +306,20 @@ La conclusión no es abandonar el local-first. Dexie sigue siendo la fuente de v
 **Modelo de auth — proporcional, no fuerte.** Sin auth de usuario, el endpoint queda abierto a que cualquiera escriba. La barrera es un token en variable de entorno (`BACKUP_TOKEN`), comparado en cada ruta en tiempo constante. El cliente lo lleva embebido en el bundle (`NEXT_PUBLIC_BACKUP_TOKEN`), a la vista de quien inspeccione el JavaScript. Esto **no** protege de alguien que mire el bundle: protege de escrituras casuales de terceros. Es proporcional — son datos de gimnasio de una persona. Documentarlo como lo que es evita creer que es más. (Se exige el token también en las lecturas: la misma barrera débil, pero no se expone el histórico entero en abierto.)
 
 **Lo que no cambia.** Sin `version(3)` de Dexie. El export/import a archivo sigue existiendo tal cual — es la copia que no depende de que el backend esté vivo. La app prerenderiza estática; solo las rutas `/api/snapshot` son dinámicas (Node runtime, Prisma/Neon).
+
+## 10. Piel — tokens, color y fuentes
+
+Presentación pura: nada de esta sección toca datos, schema, queries ni el veredicto. La base visual pasó a **oscuro fijo** (propuesta v2), pensado para leerse frente a la máquina.
+
+**Fuente única de color.** Las variables semánticas viven solo en `globals.css` (`:root`): `--bg #08090A`, `--surface #1A1C1F`, `--surface-2 #1F2226`, `--border #26292E`, `--border-strong #2E3238`, `--ink #F2F4F3`, `--muted #8B9199`, `--faint #5A6169`, `--accent #C6F24E`, `--accent-ink #0E0F11`, `--danger #FF5C5C`, `--amber #E6B450`. Ningún componente hardcodea un hex. Los nombres shadcn (`--background`, `--card`, `--primary`, `--muted-foreground`…) se conservan como capa de compatibilidad y apuntan a estos tokens, así que recolorear es cambiar valores en un solo lugar, sin tocar el markup. Excepciones justificadas —literales de metadatos de plataforma que no aceptan `var()`: `viewport.themeColor` (layout) y `background_color`/`theme_color` (manifest), fijados en `#08090a` = `--bg`.
+
+**Tema oscuro fijo.** La app no sigue a `prefers-color-scheme`: la paleta vive directa en `:root`, sin bloque `@media`. `color-scheme: dark` para los controles del navegador.
+
+**Reglas de color (fijadas).**
+
+* `--accent` (verde) es el ÚNICO acento: acción primaria, estado de sesión activa, y prompts de completar.
+* **Veredictos.** "mejor" NO usa el verde de acento —colisionaría con acción/marca y vestiría un dato de botón—: tratamiento propio, **tinta plena** con su flecha (↑). "igual" y "peor" en **atenuado**; "peor" lleva flecha (↓) pero **nunca es rojo**. La dirección la carga la flecha, no el color. Nada de ámbar en un veredicto.
+* `--danger` (rojo): solo destructivo (descartar, eliminar, el estado armado del doble toque) y errores.
+* **Ámbar** (`--amber`): reservado a "dato incompleto que puedes arreglar ahora" — hoy, único uso: el indicador de serie con reps y sin peso. Para nada más.
+
+**Fuentes autoalojadas — restricción dura.** `next/font/google` descarga Archivo y DM Mono **en build** y las sirve desde el propio origen (`/_next/static/media/*.woff2`, cacheadas por el service worker como cualquier asset). **Prohibido** el `<link>` a Google Fonts o cualquier CDN en runtime: la app debe abrir con sus fuentes sin señal (D2). Archivo (variable) para UI; DM Mono para numerales y datos (fechas, conteos, pesos, reps, contador).

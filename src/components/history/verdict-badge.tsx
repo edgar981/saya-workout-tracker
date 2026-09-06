@@ -1,5 +1,7 @@
 "use client";
 
+import { ArrowDown, ArrowUp, type LucideIcon } from "lucide-react";
+
 import { Badge } from "@/components/ui/badge";
 import type { InstanceVerdict } from "@/lib/db/verdicts";
 import type { SinComparacionReason, Verdict } from "@/lib/verdict";
@@ -23,18 +25,28 @@ const REASON_LABEL: Record<SinComparacionReason, string> = {
   fuera_rango_e1rm: "fuera de rango de e1RM",
 };
 
-/** Color como información: verde SOLO para mejor. "peor" neutro atenuado, nunca
- *  rojo. Nada de ámbar — un veredicto no exige atención. */
+/**
+ * Color como información, no como botón. "mejor" NO usa el verde de acento
+ * (colisiona con acción/marca y vestiría un dato de botón): tratamiento propio,
+ * tinta plena con su flecha. "igual" y "peor" quedan en atenuado; "peor" lleva
+ * su flecha hacia abajo pero NUNCA es rojo. Nada de ámbar — un veredicto no
+ * exige atención inmediata. La dirección la carga la flecha, no el color.
+ */
 function badgeClass(category: Verdict["category"]): string {
   switch (category) {
     case "mejor":
-      return "border-emerald-600/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400";
+      return "text-foreground";
     case "peor":
     case "igual":
     case "sin_comparacion":
       return "text-muted-foreground";
   }
 }
+
+const CATEGORY_ICON: Partial<Record<Verdict["category"], LucideIcon>> = {
+  mejor: ArrowUp,
+  peor: ArrowDown,
+};
 
 /** Método + valores comparados. Sin esto el número no es auditable (§2). */
 function methodDetail(v: Verdict): string | null {
@@ -50,10 +62,15 @@ function methodDetail(v: Verdict): string | null {
 export function VerdictBadge({ item }: { item: InstanceVerdict }) {
   const { verdict, referenceFecha } = item;
   const detalle = methodDetail(verdict);
+  const Icon = CATEGORY_ICON[verdict.category];
 
   return (
     <div className="flex flex-wrap items-center gap-1.5">
-      <Badge variant="outline" className={cn("text-[10px]", badgeClass(verdict.category))}>
+      <Badge
+        variant="outline"
+        className={cn("gap-1 text-[10px]", badgeClass(verdict.category))}
+      >
+        {Icon && <Icon className="size-3" />}
         {CATEGORY_LABEL[verdict.category]}
       </Badge>
       {verdict.reason && (
