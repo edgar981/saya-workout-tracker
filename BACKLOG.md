@@ -53,6 +53,22 @@ Trabajado en el prompt de correcciones y backlog (2026-08-22):
 
 ## Disparador escrito, no cumplido
 
+- **Vuelta de las rutas de configuración: historial real, no destino fijo.**
+  `/plantillas`, `/catalogo` y `/datos` cuelgan de `/ajustes`, pero se alcanzan
+  desde más de un origen (el listado de `/ajustes` **y** la vuelta de sus
+  subrutas: `/plantillas/[dayId]`, el chevron de `/catalogo/nuevo`, y el
+  `push('/catalogo')` al crear). Por eso su chevron usa `history.back()` con
+  respaldo `/ajustes` (hook `useVolver`), igual que `/ejercicio/[id]` y
+  `/historial/[id]` — así coincide con el gesto de deslizar desde el borde, que es
+  el que usa el usuario. Regla general: una ruta alcanzable desde más de un origen
+  no lleva "arriba" fijo, sino `back()` + respaldo. Disparador: si se enlaza a una
+  de esas rutas desde una sección nueva, no hay que tocar el chevron (ya sigue el
+  historial); solo confirmar que el respaldo sigue siendo el destino correcto en
+  frío. Aparte, pendiente si molesta en uso real: el `push('/catalogo')` al crear
+  y los chevrones-`<Link>` de las subrutas dejan la subruta en el historial, así
+  que volver desde la lista puede caer en la subruta; se arreglaría cambiándolos a
+  `router.replace`/`back()`.
+
 - **Delta por serie en `/sesion`.**
   Disparador: decidir contra qué compara. La propuesta v2 pinta un `Δ` por serie
   (p. ej. "+2 rep" en verde, "−1 rep" en rojo) en la franja de cada serie. Se dejó

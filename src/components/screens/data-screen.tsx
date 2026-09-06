@@ -1,7 +1,6 @@
 "use client";
 
 import { useRef, useState } from "react";
-import Link from "next/link";
 import { useLiveQuery } from "dexie-react-hooks";
 import { ChevronLeft, Download, Layers, Stethoscope, Upload } from "lucide-react";
 
@@ -13,6 +12,7 @@ import { exportNow, importBackup, type ImportOutcome } from "@/lib/db/backup";
 import { SCHEMA_VERSION, TABLE_NAMES, db } from "@/lib/db/db";
 import { checkIntegrity, type IntegrityReport } from "@/lib/db/integrity";
 import { diagnoseSegmentSides, type SegmentDiagnostic } from "@/lib/db/segment-diagnostic";
+import { useVolver } from "@/lib/use-volver";
 
 type Status =
   | { kind: "idle" }
@@ -22,6 +22,10 @@ type Status =
   | { kind: "failed"; outcome: Extract<ImportOutcome, { ok: false }> };
 
 export default function DataScreen() {
+  // Alcanzable desde /ajustes (hoy, único origen). El chevron sigue el historial
+  // real igual que /plantillas y /catalogo, por consistencia y por si mañana se
+  // enlaza desde otra sección; con un solo origen equivale a volver a /ajustes.
+  const volver = useVolver("/ajustes");
   const [status, setStatus] = useState<Status>({ kind: "idle" });
   const [integridad, setIntegridad] = useState<IntegrityReport | null>(null);
   const [segmentos, setSegmentos] = useState<SegmentDiagnostic | null>(null);
@@ -61,10 +65,8 @@ export default function DataScreen() {
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-4 p-4">
       <header className="flex items-center gap-2 pt-2">
-        <Button asChild variant="ghost" size="icon-sm">
-          <Link href="/" aria-label="Volver">
-            <ChevronLeft />
-          </Link>
+        <Button variant="ghost" size="icon-sm" onClick={volver} aria-label="Volver">
+          <ChevronLeft />
         </Button>
         <h1 className="text-lg font-semibold">Respaldo</h1>
         <span className="text-muted-foreground ml-auto text-xs">

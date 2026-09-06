@@ -32,10 +32,6 @@ export default function AjustesScreen() {
         <h1 className="text-lg font-semibold">Ajustes</h1>
       </header>
 
-      <p className="text-muted-foreground text-sm">
-        Configuración de cada varias semanas. No estorba en la pantalla diaria.
-      </p>
-
       <div className="flex flex-col gap-2">
         {DESTINOS.map(({ href, label, Icon }) => (
           <Link

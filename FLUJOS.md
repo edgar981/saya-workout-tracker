@@ -57,15 +57,15 @@ prerenderiza estático.
 
 - La **barra de navegación** (§2.5) da `→ /`, `→ /historial`, `→ /ajustes` desde cualquier ruta donde es visible; no se repite por pantalla abajo.
 - `/` → la tarjeta de sesión abierta ("Continuar donde ibas →") → `/sesion` cuando hay sesión activa; cada día de la lista → `/sesion` (vía `startSession`). El home ya no tiene pie propio (los destinos de configuración viven en `/ajustes`, alcanzable por la barra).
-- `/ajustes` → `/plantillas`, `/catalogo`, `/datos` (los tres destinos de configuración); → `/` (chevron).
+- `/ajustes` → `/plantillas`, `/catalogo`, `/datos` (los tres destinos de configuración); → `/` (chevron: `/ajustes` es de primer nivel de la barra, como `/historial`).
 - `/sesion` → `/` (botón "Volver" de la cabecera: salir al home SIN cerrar); → `/sesion/cerrar` (botón "Cerrar sesión"); y la tarjeta "La pasada" → `/ejercicio/[id]`.
 - `/sesion/cerrar` → `/sesion` (chevron "Volver a la sesión").
-- `/historial` → `/` (chevron); cada fila → `/historial/[id]`.
+- `/historial` → `/` (chevron); cada fila → `/historial/[id]`. `/historial` es un destino **de primer nivel** de la barra (no cuelga de `/ajustes`), así que su chevron va al home; no quedó desactualizado.
 - `/historial/[id]` → cada nombre de ejercicio → `/ejercicio/[id]`; "Sesión en curso · abrir para cerrarla o descartarla" → `/sesion` (solo si `session.activa === 1`); "Volver al historial" → `/historial` (solo cuando la sesión no existe). El chevron "volver" ya no es enlace fijo: ver §2.2.
 - `/ejercicio/[id]` → cada entrada de sesión → `/historial/[id]`.
 - `/plantillas` → cada día → `/plantillas/[dayId]`; `/plantillas/[dayId]` → `/plantillas` (chevron).
 - `/catalogo` → "Crear ejercicio" → `/catalogo/nuevo`; `/catalogo/nuevo` → `/catalogo` (chevron).
-- `/plantillas`, `/catalogo`, `/datos` → `/` (chevron de cada lista).
+- Los chevrones de `/plantillas`, `/catalogo` y `/datos` ya **no** son enlace fijo: esas rutas se alcanzan desde más de un origen, así que siguen el historial real. Ver §2.2. (`/plantillas/[dayId]` y `/catalogo/nuevo` sí suben un nivel fijo a su propia lista con `<Link>`, porque tienen un solo origen.)
 
 ### 2.2 Aristas programáticas (`router.*`)
 
@@ -75,6 +75,7 @@ prerenderiza estático.
 - `/historial/[id]` : "volver" (chevron) respeta el origen — si se llegó por cerrar (`?desde=cierre`) → `replace('/')`; si no → `router.back()` con respaldo `push('/historial')`. Eliminar sesión → `replace('/historial')`.
 - `/catalogo/nuevo` : al crear → `push('/catalogo')`.
 - `/ejercicio/[id]` : "volver" → `router.back()` si hay historial de navegación, si no `push('/historial')`.
+- `/plantillas`, `/catalogo`, `/datos` : "volver" (chevron) → `router.back()` si hay historial, si no `push('/ajustes')` (hook `useVolver`). Se alcanzan desde el listado de `/ajustes` **y** desde la vuelta de sus subrutas (`/plantillas/[dayId]`, el chevron de `/catalogo/nuevo`, y el `push('/catalogo')` al crear), así que un "arriba" fijo sería equivocado para algunos orígenes; el chevron coincide con el edge-swipe. `/datos` hoy tiene un solo origen (`/ajustes`) pero usa el mismo patrón por consistencia — con un origen, `back()` equivale a volver a `/ajustes`.
 
 ### 2.3 Redirecciones automáticas (cero taps)
 
@@ -91,7 +92,7 @@ de rebotar. Reabrir la app en frío con una sesión activa cae en el home, no en
 
 - **Hay barra de navegación persistente** (§2.5). Revierte la decisión anterior: se probó el pie con "Ajustes" colapsado y se prefirió la barra. Los chevrones de vuelta de cada pantalla se conservan — la barra no los sustituye. `/sesion` tiene salida propia: el botón "Volver" de la cabecera va al home sin cerrar la sesión (la sesión sigue `activa: 1`).
 - **El "volver" de `/historial/[id]` respeta el origen.** Si se llegó por cerrar una sesión (`?desde=cierre`) va al home; si se llegó desde `/historial` o `/ejercicio/[id]`, `router.back()` devuelve ahí. No se usa `router.back()` a ciegas: tras cerrar, el detalle reemplazó a `/sesion/cerrar` en el historial, así que `back()` caería en `/sesion` (ya cerrada) — por eso ese caso va explícito al home.
-- **El drill-down de `/plantillas` y el crear-ejercicio de `/catalogo` viven en la URL** (`/plantillas/[dayId]`, `/catalogo/nuevo`): el gesto atrás sube un nivel (al listado), no sale de la sección. En cambio, **expandir una fila del catálogo es estado en sitio** (divulgación, no navegación): el gesto atrás sale de `/catalogo` en vez de colapsar la fila — comportamiento buscado, no regresión.
+- **El drill-down de `/plantillas` y el crear-ejercicio de `/catalogo` viven en la URL** (`/plantillas/[dayId]`, `/catalogo/nuevo`): el gesto atrás sube un nivel (al listado), no sale de la sección. En cambio, **expandir una fila del catálogo es estado en sitio** (divulgación, no navegación): el gesto atrás sale de `/catalogo` (a `/ajustes`) en vez de colapsar la fila — comportamiento buscado, no regresión.
 - **La restauración desde el servidor en `/datos` es in-place**: no cambia de ruta; la lista de snapshots y el resultado se renderizan en la misma pantalla.
 - **`/ejercicio/[id]` no tiene destino fijo de vuelta**: usa `history.back()`. Abierto desde la sesión activa vuelve a `/sesion`; abierto desde `/historial/[id]` vuelve a esa sesión; abierto en frío (sin historial de navegación) cae en `/historial`.
 

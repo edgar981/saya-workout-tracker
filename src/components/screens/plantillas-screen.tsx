@@ -7,8 +7,14 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { listRoutineDays, loadDaySlots } from "@/lib/db/queries";
 import { PlantillasSkeleton } from "@/components/skeletons";
+import { useVolver } from "@/lib/use-volver";
 
 export default function PlantillasScreen() {
+  // /plantillas es alcanzable desde /ajustes y desde /plantillas/[dayId] (chevron
+  // de vuelta), así que el chevron sigue el historial real (= el edge-swipe), con
+  // respaldo a /ajustes en frío. Ver src/lib/use-volver.ts.
+  const volver = useVolver("/ajustes");
+
   const days = useLiveQuery(async () => {
     const list = await listRoutineDays();
     return Promise.all(
@@ -26,10 +32,8 @@ export default function PlantillasScreen() {
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-4 p-4">
       <header className="flex items-center gap-2 pt-2">
-        <Button asChild variant="ghost" size="icon-sm">
-          <Link href="/" aria-label="Volver">
-            <ChevronLeft />
-          </Link>
+        <Button variant="ghost" size="icon-sm" onClick={volver} aria-label="Volver">
+          <ChevronLeft />
         </Button>
         <h1 className="text-lg font-semibold">Plantillas</h1>
       </header>
