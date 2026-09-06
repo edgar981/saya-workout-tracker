@@ -156,6 +156,10 @@ Nada calculado se almacena. e1RM, volumen y tendencias se derivan en lectura. Re
 
 Esta regla es la que absorbe la inconsistencia de §7.1: `Incline DB Press` en `TOTAL` y `DB Skull Crushers` en `PER_IMPLEMENT` nunca se comparan entre sí, así que la mezcla no produce lecturas falsas. Solo hay que no romper la base *dentro* de un mismo ejercicio.
 
+**Veredicto compacto de sesión (fila del historial).** El neto `mejor − peor` de los ejercicios de esa sesión. "igual" y "sin comparación" NO entran al neto. Deriva del mismo `Record` de veredictos que ya calcula `loadSessionVerdicts` (`getPerformanceHistory` + `compareAppearances`): ni una segunda travesía ni una segunda regla. Como el neto oculta la cobertura, la fila expone aparte cuántos ejercicios quedaron **sin comparación** (unidad cambiada o sin historial previo) con un punto discreto, para que un `+2` sobre 4 ejercicios comparados no se lea igual que sobre 4 comparados y 2 sin base. Color como en §10: tinta plena si es positivo, atenuado en cero y negativo; nunca acento ni rojo.
+
+**Mejor serie registrada (historial de ejercicio).** La serie de **mayor peso**; los empates se rompen por **más reps**. Sin e1RM ni ninguna fórmula: el rango de reps del usuario llega a 16 y ahí Epley deja de ser confiable, así que una fórmula mentiría en parte del historial. Se calcula **solo dentro del snapshot de unidad más reciente** (`weight_unit` + `weight_basis` + `added_unit`) — un "mejor de siempre" que mezcle kg y lb no significa nada (misma regla de §3.5, no se convierte). Cada fila (lado, segmento) es candidata, así que en unilateral la mejor sale con su lado. En `BODYWEIGHT`, donde no hay peso, la mejor es la de **más reps**. Se muestra con su fecha y, en unilateral, el lado. Derivada en lectura de la misma travesía (`getPerformanceHistory`) que alimenta la lista de sesiones; no es un veredicto y no reusa `compareAppearances` (no compara dos apariciones, resume una columna).
+
 ---
 
 ## 4. Catálogo semilla

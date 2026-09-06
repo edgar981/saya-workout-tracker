@@ -131,14 +131,32 @@ export function SessionSkeleton() {
 // ── /historial ──────────────────────────────────────────────────────────────
 export function HistorialSkeleton() {
   return (
-    <Screen className="gap-3">
-      <Head title="Historial" trailing={<Sk className="ml-auto h-4 w-16" />} />
+    <Screen className="gap-4">
+      <header className="flex items-center gap-2 pt-2">
+        <div className="size-9 shrink-0" />
+        <div className="min-w-0">
+          <h1 className="text-lg font-semibold">Historial</h1>
+          <Sk className="mt-1.5 h-3 w-44" />
+        </div>
+      </header>
+      {/* Gráfica de constancia (misma altura que la real: h-12). */}
+      <div className="flex flex-col gap-1.5">
+        <Sk className="h-3 w-40" />
+        <Sk className="h-12 w-full rounded-sm" />
+      </div>
       <div className="flex flex-col gap-2">
         {Array.from({ length: 4 }).map((_, i) => (
-          <Card key={i} className="flex flex-col gap-1.5">
-            <Sk className="h-4 w-40" />
-            <Sk className="h-3 w-32" />
-          </Card>
+          <div key={i} className="flex items-center gap-3 rounded-lg border p-3">
+            <div className="flex w-9 shrink-0 flex-col items-center gap-1">
+              <Sk className="h-5 w-6" />
+              <Sk className="h-2.5 w-6" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <Sk className="h-4 w-32" />
+              <Sk className="mt-1.5 h-3 w-40" />
+            </div>
+            <Sk className="h-4 w-6" />
+          </div>
         ))}
       </div>
     </Screen>
@@ -169,6 +187,12 @@ export function EjercicioSkeleton() {
   return (
     <Screen className="gap-4">
       <HeadStacked />
+      {/* Tarjeta "Mejor serie registrada" (reserva su altura). */}
+      <Card className="flex flex-col gap-1.5">
+        <Sk className="h-3 w-32" />
+        <Sk className="h-6 w-28" />
+        <Sk className="h-3 w-24" />
+      </Card>
       <Sk className="h-3 w-40" />
       <div className="flex flex-col gap-3">
         {Array.from({ length: 4 }).map((_, i) => (

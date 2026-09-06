@@ -52,3 +52,54 @@ export async function loadSessionVerdicts(
 
   return result;
 }
+
+/**
+ * Veredicto compacto de una sesión para la fila del historial (§1): el neto
+ * `mejor − peor`. "igual" y "sin comparación" no entran al neto — pero
+ * `sinComparacion` se expone aparte para que la fila pueda avisar que la
+ * cobertura no fue completa (un punto discreto), sin que el número lo esconda.
+ *
+ * Deriva del MISMO `Record` de veredictos que ya calcula `loadSessionVerdicts`:
+ * ni una segunda travesía ni una segunda regla de comparación (§13).
+ */
+export interface SessionVerdictNet {
+  /** mejor − peor. */
+  net: number;
+  /** Ejercicios comparados sin aparición previa (cobertura incompleta). */
+  sinComparacion: number;
+  /** Instancias con veredicto (mejor + igual + peor + sin comparación). */
+  comparados: number;
+}
+
+export function netFromVerdicts(verdicts: Record<string, InstanceVerdict>): SessionVerdictNet {
+  let mejor = 0;
+  let peor = 0;
+  let sinComparacion = 0;
+  let comparados = 0;
+  for (const id in verdicts) {
+    comparados++;
+    switch (verdicts[id].verdict.category) {
+      case "mejor":
+        mejor++;
+        break;
+      case "peor":
+        peor++;
+        break;
+      case "sin_comparacion":
+        sinComparacion++;
+        break;
+    }
+  }
+  return { net: mejor - peor, sinComparacion, comparados };
+}
+
+/** Neto por sesión para una lista de ids, reusando `loadSessionVerdicts`. */
+export async function loadSessionVerdictNets(
+  sessionIds: string[],
+): Promise<Record<string, SessionVerdictNet>> {
+  const out: Record<string, SessionVerdictNet> = {};
+  for (const id of sessionIds) {
+    out[id] = netFromVerdicts(await loadSessionVerdicts(id));
+  }
+  return out;
+}

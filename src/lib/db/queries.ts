@@ -902,21 +902,100 @@ export interface ExerciseHistoryEntry extends PerformanceEntry {
   unitKey: string;
 }
 
-export interface ExerciseHistory {
-  exercise: Exercise | null;
-  entries: ExerciseHistoryEntry[];
+/** Snapshot de unidad más reciente, para la línea de metadatos (§4). */
+export interface RecentSnapshot {
+  unit_type: UnitType;
+  weight_basis: WeightBasis | null;
+  added_unit: AddedUnit | null;
 }
 
 /**
- * Últimas 5 sesiones CON series de un ejercicio, vía getPerformanceHistory. La
- * unitKey sale del snapshot de la primera serie de cada entrada: si cambia
+ * Mejor serie registrada (§4): la de mayor peso dentro del snapshot de unidad
+ * más reciente, empates rotos por más reps; en BODYWEIGHT, la de más reps. Sin
+ * e1RM ni fórmulas — el rango de reps llega a 16 y ahí e1RM mentiría. Cada fila
+ * (lado/segmento) es candidata, así que en unilateral sale con su lado.
+ */
+export interface BestSet {
+  set: SetLog;
+  /** fecha (ISO) de la sesión donde ocurrió. */
+  fecha: string;
+  isBodyweight: boolean;
+}
+
+export interface ExerciseHistory {
+  exercise: Exercise | null;
+  entries: ExerciseHistoryEntry[];
+  /** Snapshot de la aparición más reciente; null si no hay series. */
+  recentSnapshot: RecentSnapshot | null;
+  /** Lateralidad observada en la aparición más reciente (o el default). */
+  esUnilateral: boolean;
+  /** Total de series REALES registradas (cada lado cuenta, como en el historial). */
+  totalSeries: number;
+  /** Mejor serie dentro del snapshot vigente; null si no hay series. */
+  bestSet: BestSet | null;
+}
+
+/**
+ * Historial de un ejercicio en UNA travesía (`getPerformanceHistory`): de ahí
+ * salen las últimas 5 apariciones para la lista, el total de series, el snapshot
+ * de unidad vigente, la lateralidad y la mejor serie registrada. Nada se
+ * recalcula con una segunda query.
+ *
+ * La unitKey de cada entrada sale del snapshot de su primera serie: si cambia
  * entre sesiones, la UI corta la serie en vez de fingir continuidad, porque
  * §3.5 solo compara dentro de la misma tupla (unit, basis, added).
  */
 export async function loadExerciseHistory(exerciseId: string): Promise<ExerciseHistory> {
   const exercise = (await db.exercises.get(exerciseId)) ?? null;
-  const raw = await getPerformanceHistory(exerciseId, { limit: 5 });
+  // Todo el historial con series (una sola travesía); las últimas 5 se cortan
+  // abajo para la lista.
+  const full = await getPerformanceHistory(exerciseId, { limit: Number.MAX_SAFE_INTEGER });
 
+  // Total de series registradas: filas reales (getPerformanceHistory ya filtró
+  // reps>0) sumadas sobre todas las apariciones. Cada lado cuenta por separado,
+  // igual que el conteo del historial.
+  const totalSeries = full.reduce((acc, e) => acc + e.sets.length, 0);
+
+  // Snapshot de unidad + lateralidad, de la aparición MÁS reciente.
+  const recent = full[0] ?? null;
+  const recentFirst = recent?.sets[0] ?? null;
+  const recentSnapshot: RecentSnapshot | null = recentFirst
+    ? {
+        unit_type: recentFirst.weight_unit,
+        weight_basis: recentFirst.weight_basis,
+        added_unit: recentFirst.added_unit,
+      }
+    : null;
+  const esUnilateral = recent
+    ? recent.sets.some((s) => s.side !== null)
+    : exercise?.laterality_default === "UNILATERAL";
+
+  // Mejor serie registrada: SOLO dentro del snapshot vigente (no mezcla kg/lb).
+  let bestSet: BestSet | null = null;
+  if (recentSnapshot) {
+    const mismoSnap = (s: SetLog) =>
+      s.weight_unit === recentSnapshot.unit_type &&
+      s.weight_basis === recentSnapshot.weight_basis &&
+      s.added_unit === recentSnapshot.added_unit;
+    const esBodyweight = recentSnapshot.unit_type === "BODYWEIGHT";
+    for (const entry of full) {
+      for (const s of entry.sets) {
+        if (!mismoSnap(s)) continue;
+        if (!bestSet) {
+          bestSet = { set: s, fecha: entry.session.fecha, isBodyweight: esBodyweight };
+          continue;
+        }
+        const mejor = esBodyweight
+          ? s.reps > bestSet.set.reps
+          : (s.weight_value ?? -Infinity) > (bestSet.set.weight_value ?? -Infinity) ||
+            ((s.weight_value ?? -Infinity) === (bestSet.set.weight_value ?? -Infinity) &&
+              s.reps > bestSet.set.reps);
+        if (mejor) bestSet = { set: s, fecha: entry.session.fecha, isBodyweight: esBodyweight };
+      }
+    }
+  }
+
+  const raw = full.slice(0, 5);
   const entries: ExerciseHistoryEntry[] = [];
   for (const entry of raw) {
     let isSubstitution = false;
@@ -936,5 +1015,5 @@ export async function loadExerciseHistory(exerciseId: string): Promise<ExerciseH
     entries.push({ ...entry, isSubstitution, slotExerciseNombre, unitKey });
   }
 
-  return { exercise, entries };
+  return { exercise, entries, recentSnapshot, esUnilateral, totalSeries, bestSet };
 }

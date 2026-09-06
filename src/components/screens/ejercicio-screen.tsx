@@ -10,7 +10,8 @@ import { unitTag } from "@/components/exercise-picker";
 import { SetLines } from "@/components/history/set-lines";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { loadExerciseHistory } from "@/lib/db/queries";
+import { loadExerciseHistory, type ExerciseHistory } from "@/lib/db/queries";
+import { formatSetWeight, unitSuffix } from "@/lib/units";
 import { EjercicioSkeleton } from "@/components/skeletons";
 
 function formatFecha(iso: string): string {
@@ -20,6 +21,15 @@ function formatFecha(iso: string): string {
     day: "numeric",
     month: "short",
   });
+}
+
+/** Etiqueta de unidad del snapshot vigente (no del catálogo): la línea de
+ *  metadatos describe lo que se registró, no lo que dice el catálogo hoy. */
+function unidadSnapshot(snap: NonNullable<ExerciseHistory["recentSnapshot"]>, stackLabel: string | null): string {
+  if (snap.unit_type === "BODYWEIGHT") return "peso corporal";
+  if (snap.unit_type === "BODYWEIGHT_PLUS")
+    return `+${unitSuffix(snap.unit_type, snap.weight_basis, snap.added_unit)}`;
+  return unitSuffix(snap.unit_type, snap.weight_basis, snap.added_unit, stackLabel);
 }
 
 export default function EjercicioScreen() {
@@ -43,7 +53,19 @@ export default function EjercicioScreen() {
     return <EjercicioSkeleton />;
   }
 
-  const { exercise, entries } = history;
+  const { exercise, entries, recentSnapshot, esUnilateral, totalSeries, bestSet } = history;
+
+  // Línea de metadatos (§4): unidad del snapshot vigente · lateralidad · total de
+  // series. Sin apariciones, cae a la unidad del catálogo.
+  const metaLine = recentSnapshot
+    ? [
+        unidadSnapshot(recentSnapshot, exercise?.stack_label ?? null),
+        esUnilateral ? "unilateral" : "bilateral",
+        `${totalSeries} ${totalSeries === 1 ? "serie" : "series"}`,
+      ].join(" · ")
+    : exercise
+      ? unitTag(exercise)
+      : "";
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-4 p-4">
@@ -55,9 +77,26 @@ export default function EjercicioScreen() {
           <h1 className="truncate text-lg font-semibold">
             {exercise?.nombre ?? "Ejercicio"}
           </h1>
-          {exercise && <p className="text-muted-foreground text-xs">{unitTag(exercise)}</p>}
+          {metaLine && <p className="text-muted-foreground text-xs">{metaLine}</p>}
         </div>
       </header>
+
+      {/* Mejor serie registrada: mayor peso dentro del snapshot vigente (§4). En
+          unilateral, con su lado. Sin e1RM. */}
+      {bestSet && (
+        <div className="bg-surface rounded-xl border p-3.5">
+          <span className="text-muted-foreground text-xs">Mejor serie registrada</span>
+          <p className="mt-1 font-mono text-xl tabular-nums">
+            {bestSet.isBodyweight
+              ? `${bestSet.set.reps} reps`
+              : `${bestSet.set.reps} × ${formatSetWeight(bestSet.set, exercise?.stack_label ?? null)}`}
+          </p>
+          <p className="text-muted-foreground mt-1 text-xs">
+            {formatFecha(bestSet.fecha)}
+            {bestSet.set.side && ` · lado ${bestSet.set.side}`}
+          </p>
+        </div>
+      )}
 
       <p className="text-muted-foreground text-xs">Últimas 5 sesiones con series.</p>
 
