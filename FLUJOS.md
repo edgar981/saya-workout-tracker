@@ -23,15 +23,16 @@ app consulta el servidor salvo la restauración manual. Detalle en `DECISIONES.m
 
 ## 1. Inventario de rutas
 
-Todas las páginas son componentes de cliente cargados con `dynamic(..., { ssr:
-false })`; el árbol de UI vive entero en el navegador. La columna "render" es del
+Casi todas las páginas son componentes de cliente cargados con `dynamic(..., {
+ssr: false })`; el árbol de UI vive entero en el navegador. La excepción es
+`/ajustes`, que no consulta Dexie y se prerenderiza. La columna "render" es del
 build de producción.
 
 | Ruta | Pantalla | Render | Parámetro | Qué es |
 |---|---|---|---|---|
-| `/` | `home-screen` | estática | — | Dos estados. Sin sesión: la lista de días manda y `hace X d` por día (última sesión **cerrada** con series de ese `routine_day_id`; "nunca" si jamás se entrenó) es el dato prominente. Con sesión activa: una **tarjeta protagonista** ("Sesión abierta", antigüedad, progreso `X / N hechos · S series`, "Continuar donde ibas →"), con la lista secundaria bajo "Empezar otro día". Pie: dos entradas — Historial aparte, y "Ajustes", que revela en sitio (lista simple, sin ruta nueva ni tab bar) Plantillas · Catálogo · Respaldo. Hub de la app; ya **no** autorredirige a `/sesion`. |
-| `/sesion` | `session-screen` | estática | — | Registro de la sesión activa (el bucle central). Cabecera con "salir al home" sin cerrar y contador neutro "desde la última serie". |
-| `/sesion/cerrar` | `close-screen` | estática | — | Cierre (nota / contexto / peso corporal opcionales) o descarte. |
+| `/` | `home-screen` | estática | — | Dos estados. Sin sesión: la lista de días manda y `hace X d` por día (última sesión **cerrada** con series de ese `routine_day_id`; "nunca" si jamás se entrenó) es el dato prominente. Con sesión activa: una **tarjeta protagonista** ("Sesión abierta", antigüedad, progreso `X / N hechos · S series`, "Continuar donde ibas →"), con la lista secundaria bajo "Empezar otro día". El home ya **no** lleva pie propio: la navegación vive en la barra persistente (§2.5). Hub de la app; ya **no** autorredirige a `/sesion`. |
+| `/sesion` | `session-screen` | estática | — | Registro de la sesión activa (el bucle central). Cabecera con "Volver" (al home sin cerrar) y contador neutro "desde la última serie". **Sin barra de navegación** (§2.5). |
+| `/sesion/cerrar` | `close-screen` | estática | — | Cierre (nota / contexto / peso corporal opcionales) o descarte. **Sin barra de navegación** (§2.5). |
 | `/historial` | `historial-screen` | estática | — | Lista de todas las sesiones, más reciente primero. |
 | `/historial/[sessionId]` | `session-detail-screen` | **dinámica (ƒ)** | `sessionId` | Detalle de una sesión: series, veredicto, hueco por serie, duración, tags, peso, nota. |
 | `/ejercicio/[exerciseId]` | `ejercicio-screen` | **dinámica (ƒ)** | `exerciseId` | Historial de un ejercicio (últimas 5 sesiones con series). |
@@ -40,6 +41,7 @@ build de producción.
 | `/catalogo` | `catalogo-screen` | estática | — | Lista del catálogo: renombrar, cambiar unidad, dar de baja (fila que se expande en sitio). |
 | `/catalogo/nuevo` | `catalogo-nuevo-screen` | estática | — | Formulario de crear ejercicio. |
 | `/datos` | `data-screen` | estática | — | Respaldo/restauración: servidor, archivo, integridad, diagnóstico. |
+| `/ajustes` | `ajustes-screen` | estática | — | Lista simple con los tres destinos de configuración (Plantillas · Catálogo · Respaldo). Sin Dexie, así que **no** usa `dynamic(ssr:false)`: se prerenderiza y abre al instante. Alcanzable desde la barra (§2.5); reemplazó al disclosure del pie del home. |
 | `/api/snapshot` · `/api/snapshot/latest` · `/api/snapshot/[id]` | rutas de API | **dinámicas (ƒ)** | — | No navegables por el usuario. Las consume el cliente de respaldo. |
 
 Las rutas de página dinámicas lo son por llevar segmento `[param]` sin
@@ -53,8 +55,10 @@ prerenderiza estático.
 
 ### 2.1 Aristas por enlace (`<Link>`, un tap)
 
-- `/` → `/historial` (entrada propia del pie); → `/plantillas`, `/catalogo`, `/datos` (revelados al abrir "Ajustes" en el pie, +1 tap); y la tarjeta de sesión abierta ("Continuar donde ibas →") → `/sesion` cuando hay sesión activa.
-- `/sesion` → `/` (botón "Salir" de la cabecera: salir al home SIN cerrar); → `/sesion/cerrar` (botón "Cerrar sesión"); y la tarjeta "La pasada" → `/ejercicio/[id]`.
+- La **barra de navegación** (§2.5) da `→ /`, `→ /historial`, `→ /ajustes` desde cualquier ruta donde es visible; no se repite por pantalla abajo.
+- `/` → la tarjeta de sesión abierta ("Continuar donde ibas →") → `/sesion` cuando hay sesión activa; cada día de la lista → `/sesion` (vía `startSession`). El home ya no tiene pie propio (los destinos de configuración viven en `/ajustes`, alcanzable por la barra).
+- `/ajustes` → `/plantillas`, `/catalogo`, `/datos` (los tres destinos de configuración); → `/` (chevron).
+- `/sesion` → `/` (botón "Volver" de la cabecera: salir al home SIN cerrar); → `/sesion/cerrar` (botón "Cerrar sesión"); y la tarjeta "La pasada" → `/ejercicio/[id]`.
 - `/sesion/cerrar` → `/sesion` (chevron "Volver a la sesión").
 - `/historial` → `/` (chevron); cada fila → `/historial/[id]`.
 - `/historial/[id]` → cada nombre de ejercicio → `/ejercicio/[id]`; "Sesión en curso · abrir para cerrarla o descartarla" → `/sesion` (solo si `session.activa === 1`); "Volver al historial" → `/historial` (solo cuando la sesión no existe). El chevron "volver" ya no es enlace fijo: ver §2.2.
@@ -85,11 +89,20 @@ de rebotar. Reabrir la app en frío con una sesión activa cae en el home, no en
 
 ### 2.4 Callejones sin salida y asimetrías
 
-- **No hay barra de navegación persistente** (decisión tomada, no se agrega). Cada pantalla secundaria vuelve con su propio chevron; el único concentrador es `/`. `/sesion` ahora sí tiene salida propia: el botón "Salir" de la cabecera va al home sin cerrar la sesión (la sesión sigue `activa: 1`).
+- **Hay barra de navegación persistente** (§2.5). Revierte la decisión anterior: se probó el pie con "Ajustes" colapsado y se prefirió la barra. Los chevrones de vuelta de cada pantalla se conservan — la barra no los sustituye. `/sesion` tiene salida propia: el botón "Volver" de la cabecera va al home sin cerrar la sesión (la sesión sigue `activa: 1`).
 - **El "volver" de `/historial/[id]` respeta el origen.** Si se llegó por cerrar una sesión (`?desde=cierre`) va al home; si se llegó desde `/historial` o `/ejercicio/[id]`, `router.back()` devuelve ahí. No se usa `router.back()` a ciegas: tras cerrar, el detalle reemplazó a `/sesion/cerrar` en el historial, así que `back()` caería en `/sesion` (ya cerrada) — por eso ese caso va explícito al home.
 - **El drill-down de `/plantillas` y el crear-ejercicio de `/catalogo` viven en la URL** (`/plantillas/[dayId]`, `/catalogo/nuevo`): el gesto atrás sube un nivel (al listado), no sale de la sección. En cambio, **expandir una fila del catálogo es estado en sitio** (divulgación, no navegación): el gesto atrás sale de `/catalogo` en vez de colapsar la fila — comportamiento buscado, no regresión.
 - **La restauración desde el servidor en `/datos` es in-place**: no cambia de ruta; la lista de snapshots y el resultado se renderizan en la misma pantalla.
 - **`/ejercicio/[id]` no tiene destino fijo de vuelta**: usa `history.back()`. Abierto desde la sesión activa vuelve a `/sesion`; abierto desde `/historial/[id]` vuelve a esa sesión; abierto en frío (sin historial de navegación) cae en `/historial`.
+
+### 2.5 Barra de navegación persistente
+
+- **Tres destinos fijos:** `Inicio` (`/`) · `Historial` (`/historial`) · `Ajustes` (`/ajustes`). Vive en el layout (`AppShell` + `NavBar`), así que es la misma barra en todas las rutas — no se re-monta ni parpadea al navegar.
+- **Visible en:** `/`, `/historial`, `/historial/[id]`, `/ejercicio/[id]`, `/plantillas`, `/plantillas/[dayId]`, `/catalogo`, `/catalogo/nuevo`, `/datos`, `/ajustes`.
+- **Ausente en `/sesion` y `/sesion/cerrar`** (exclusión no negociable): ahí el alto vale más y no hay a dónde navegar durante el registro. La decide `AppShell` por `usePathname`.
+- **Sección activa** marcada con tinta plena (el resto atenuado); NO usa el acento, reservado a acción/sesión activa/completar (`DECISIONES.md` §10). El mapa: `/` → Inicio; `/historial*` y `/ejercicio/*` → Historial; `/ajustes`, `/plantillas*`, `/catalogo*`, `/datos` → Ajustes.
+- **No sustituye los chevrones** de vuelta de cada pantalla; conviven. El drill-down (`/plantillas/[dayId]`, `/catalogo/nuevo`) sigue subiendo un nivel con el gesto atrás.
+- **Reserva de espacio:** el CSS (`[data-nav] main`, que pone `AppShell`) añade al `<main>` un padding-bottom del alto de la barra + un respiro + el área segura, para que el último contenido no quede tapado al final del scroll.
 
 ---
 

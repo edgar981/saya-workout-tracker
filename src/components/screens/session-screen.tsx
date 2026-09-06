@@ -89,7 +89,8 @@ function ActiveSession({ view }: { view: SessionView }) {
           deja la sesión abierta, nombre del día, y el contador desde la última
           serie con su punto de acento. */}
       <header className="flex items-center gap-2.5 pt-2 pb-3">
-        {/* Salir al home SIN cerrar: la sesión sigue activa (§1). No toca Dexie;
+        {/* Volver al home SIN cerrar: la sesión sigue activa (§1). Solo cambió el
+            rótulo (antes "Salir"); el comportamiento es el mismo. No toca Dexie;
             el home no rebota porque ya no autorredirecciona a /sesion. Volver a
             entrar reanuda en el mismo ejercicio (saya:ejercicio:<id>). */}
         <Button
@@ -98,8 +99,8 @@ function ActiveSession({ view }: { view: SessionView }) {
           size="sm"
           className="-ml-1 shrink-0 gap-1.5 rounded-full px-3"
         >
-          <Link href="/" aria-label="Salir al home sin cerrar la sesión">
-            <ChevronLeft /> Salir
+          <Link href="/" aria-label="Volver al home sin cerrar la sesión">
+            <ChevronLeft /> Volver
           </Link>
         </Button>
         <div className="flex-1" />

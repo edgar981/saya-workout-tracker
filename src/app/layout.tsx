@@ -4,6 +4,7 @@ import "./globals.css";
 import { DbBoot } from "@/components/db-boot";
 import { SwRegister } from "@/components/sw-register";
 import { BackupSync } from "@/components/backup-sync";
+import { AppShell } from "@/components/app-shell";
 
 // Autoalojadas: next/font descarga los archivos EN BUILD y los sirve desde el
 // propio origen (/_next/static/media/*.woff2). No hay <link> a ningún CDN de
@@ -56,7 +57,7 @@ export default function RootLayout({
         <DbBoot />
         <SwRegister />
         <BackupSync />
-        {children}
+        <AppShell>{children}</AppShell>
       </body>
     </html>
   );

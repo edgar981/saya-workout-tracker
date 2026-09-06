@@ -4,16 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useLiveQuery } from "dexie-react-hooks";
-import {
-  BookOpen,
-  ChevronDown,
-  ChevronRight,
-  Database,
-  Flag,
-  History,
-  ListChecks,
-  Settings,
-} from "lucide-react";
+import { Flag } from "lucide-react";
 
 import { db } from "@/lib/db/db";
 import {
@@ -91,10 +82,6 @@ export default function HomeScreen() {
   // legítima reaparece en el error sin depender de que algo más dispare un
   // re-render.
   const [navegando, setNavegando] = useState(false);
-  // Ajustes colapsado: Plantillas · Catálogo · Respaldo son configuración de cada
-  // varias semanas. Fuera de la zona del pulgar en la pantalla diaria; se revelan
-  // en sitio como lista simple al tocar "Ajustes" (sin hoja, sin ruta nueva).
-  const [ajustes, setAjustes] = useState(false);
 
   // `?? null` para distinguir "cargando" (undefined) de "no hay sesión activa"
   // (null). El home NO redirige a /sesion cuando hay sesión activa: en su lugar
@@ -275,67 +262,6 @@ export default function HomeScreen() {
           {days.map(({ day, ejercicios }, i) => dayRow(day, ejercicios, i))}
         </div>
       )}
-
-      {/* Pie (ambos estados): dos entradas. Historial con peso de contenido (es
-          visita frecuente, el veredicto vive ahí) y Ajustes, que agrupa la
-          configuración de cada varias semanas fuera de la zona del pulgar. Sin
-          tab bar, sin rutas nuevas: los tres destinos existentes se revelan como
-          lista simple bajo "Ajustes". */}
-      <div className="mt-auto flex flex-col gap-2 pt-4">
-        <Link
-          href="/historial"
-          className="border-border bg-surface flex items-center gap-3 rounded-xl border px-4 py-3.5"
-        >
-          <History className="text-muted-foreground size-4 shrink-0" />
-          <span className="text-foreground flex-1 text-sm font-medium">Historial</span>
-          <ChevronRight className="text-muted-foreground size-4 shrink-0" />
-        </Link>
-
-        <button
-          type="button"
-          onClick={() => setAjustes((v) => !v)}
-          aria-expanded={ajustes}
-          className="border-border bg-surface flex items-center gap-3 rounded-xl border px-4 py-3.5 text-left"
-        >
-          <Settings className="text-muted-foreground size-4 shrink-0" />
-          <span className="text-foreground flex-1 text-sm font-medium">Ajustes</span>
-          <ChevronDown
-            className={cn(
-              "text-muted-foreground size-4 shrink-0 transition-transform",
-              ajustes && "rotate-180",
-            )}
-          />
-        </button>
-
-        {ajustes && (
-          <div className="flex flex-col gap-2 pl-3">
-            <Link
-              href="/plantillas"
-              className="border-border bg-surface text-muted-foreground flex items-center gap-3 rounded-xl border px-4 py-3 text-sm font-medium"
-            >
-              <ListChecks className="size-4 shrink-0" />
-              <span className="flex-1">Plantillas</span>
-              <ChevronRight className="size-4 shrink-0" />
-            </Link>
-            <Link
-              href="/catalogo"
-              className="border-border bg-surface text-muted-foreground flex items-center gap-3 rounded-xl border px-4 py-3 text-sm font-medium"
-            >
-              <BookOpen className="size-4 shrink-0" />
-              <span className="flex-1">Catálogo</span>
-              <ChevronRight className="size-4 shrink-0" />
-            </Link>
-            <Link
-              href="/datos"
-              className="border-border bg-surface text-muted-foreground flex items-center gap-3 rounded-xl border px-4 py-3 text-sm font-medium"
-            >
-              <Database className="size-4 shrink-0" />
-              <span className="flex-1">Respaldo</span>
-              <ChevronRight className="size-4 shrink-0" />
-            </Link>
-          </div>
-        )}
-      </div>
     </main>
   );
 }

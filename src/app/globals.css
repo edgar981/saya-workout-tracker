@@ -104,3 +104,18 @@
     overscroll-behavior-y: contain;
   }
 }
+
+/*
+ * Reserva para la barra de navegación fija (§2). En las rutas con barra
+ * (`data-nav`, lo pone AppShell), el `<main>` de la pantalla reserva abajo el
+ * alto de la barra + el área segura, para que el último contenido no quede
+ * tapado al final del scroll (criterio 7). En `/sesion` y `/sesion/cerrar` no
+ * hay `data-nav`, así que no se reserva nada. Fuera de `@layer` para ganarle en
+ * la cascada al padding de la utilidad `p-4`.
+ */
+[data-nav] main {
+  /* Alto de la barra (h-14 = 3.5rem) + un respiro (1rem, el mismo que daba el
+     `p-4` original) + el área segura, para que el último contenido no toque la
+     barra al final del scroll. */
+  padding-bottom: calc(3.5rem + 1rem + env(safe-area-inset-bottom));
+}

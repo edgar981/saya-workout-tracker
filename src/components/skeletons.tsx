@@ -91,10 +91,6 @@ export function HomeSkeleton() {
           </div>
         ))}
       </div>
-      <div className="mt-auto flex flex-col gap-2 pt-4">
-        <Sk className="h-[52px] rounded-xl" />
-        <Sk className="h-[52px] rounded-xl" />
-      </div>
     </Screen>
   );
 }
