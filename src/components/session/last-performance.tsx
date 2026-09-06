@@ -56,7 +56,40 @@ export function LastPerformance({
   stackLabel: string | null;
   last: LastPerformanceData | null | undefined;
 }) {
-  if (last === undefined) return null;
+  // Cargando: esqueleto con la MISMA estructura y clases de texto que la tarjeta
+  // real, así que reserva su altura EXACTA (§3). Antes devolvía `null` (cero
+  // altura) y "Otra serie" —en acento— ocupaba este hueco hasta que llegaba el
+  // dato: eso era el destello verde. Con el hueco reservado no hay destello ni el
+  // desplazamiento de la nota "La unidad cambió…" que venía debajo. Las barras
+  // van dentro de spans con las clases de texto reales para que la altura de
+  // línea coincida al pixel.
+  if (last === undefined) {
+    return (
+      <div
+        className="bg-surface-2 flex flex-col gap-2.5 rounded-xl px-3.5 py-3"
+        aria-hidden="true"
+      >
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-[10px] font-medium tracking-wide uppercase">
+            <span className="bg-border inline-block h-2.5 w-24 rounded align-middle" />
+          </span>
+          <span className="bg-border ml-auto size-3.5 shrink-0 rounded" />
+        </div>
+        <div className="flex gap-5">
+          {[0, 1, 2].map((i) => (
+            <div key={i}>
+              <p className="font-mono text-[9px] tabular-nums">
+                <span className="bg-border inline-block h-2 w-4 rounded align-middle" />
+              </p>
+              <p className="mt-0.5 font-mono text-sm tabular-nums">
+                <span className="bg-border inline-block h-3.5 w-11 rounded align-middle" />
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   if (last === null) {
     return (

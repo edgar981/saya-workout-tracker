@@ -309,3 +309,22 @@ export function DataSkeleton() {
     </Screen>
   );
 }
+
+// ── /ajustes ────────────────────────────────────────────────────────────────
+export function AjustesSkeleton() {
+  return (
+    <Screen className="gap-3">
+      <Head title="Ajustes" />
+      <Sk className="h-4 w-64" />
+      <div className="flex flex-col gap-2">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="flex items-center gap-3 rounded-xl border px-4 py-3.5">
+            <Sk className="size-4 shrink-0" />
+            <Sk className="h-4 w-24 flex-1" />
+            <Sk className="size-4 shrink-0" />
+          </div>
+        ))}
+      </div>
+    </Screen>
+  );
+}
