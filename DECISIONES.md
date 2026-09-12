@@ -95,6 +95,8 @@ Las alternativas son filas `Exercise` completas, no un campo variante, porque **
 | `iniciada_en` / `cerrada_en` | timestamp | `cerrada_en` null = sesión activa, se reanuda al abrir la app |
 | `nota` | text? | libre, se llena al cerrar |
 
+**Una sesión sin contenido no se registra.** Al cerrar —tanto el cierre automático de `startSession` al empezar otro día como el explícito desde `/sesion/cerrar`— una sesión que no tiene NADA tecleado por el usuario (ni una serie ni una nota por ejercicio) se **descarta** en cascada (`discardSession`) en vez de cerrarse: abrir un día y no registrar nada no deja un registro fantasma de cero series en el historial. La excepción es el formulario de cierre: si el usuario escribió nota, tags o peso corporal, eso es dato suyo y la sesión se cierra normal aunque no tenga series.
+
 **`SessionExercise`** — instancia ejecutada de un ejercicio.
 
 | Campo | Tipo | Nota |

@@ -71,7 +71,7 @@ export default function CloseScreen() {
   const close = async () => {
     setSaving(true);
     marcar();
-    await closeSession(session.id, {
+    const { discarded } = await closeSession(session.id, {
       nota: note.trim() === "" ? null : note.trim(),
       tagIds: selected,
       // Sin esto, "+25kg" en dominadas no tiene denominador y la progresión en
@@ -79,15 +79,21 @@ export default function CloseScreen() {
       bodyweight: parsedWeight === null ? null : { valor: parsedWeight, unidad: weightUnit },
     });
     window.localStorage.removeItem(`saya:ejercicio:${session.id}`);
+    if (discarded) {
+      // No había nada que guardar (ni series ni nota/tags/peso): closeSession la
+      // descartó como "Descartar sesión". No hay detalle que mostrar ni registro
+      // nuevo que respaldar, así que al home directo, sin backupNow.
+      router.replace("/");
+      return;
+    }
     // Respaldo a Postgres: dispara y olvida, ya con `cerrada_en` escrito. NO se
     // espera (no bloquea el cierre ni la navegación) y no lanza: si falla —sin
     // señal, servidor caído— queda "pendiente" y se reintenta al abrir la app.
     void backupNow();
     // Al cerrar, ir al detalle de ESTA sesión: es donde vive el veredicto y
-    // evita dejar al usuario sin salida. El descarte sí va al home (no hay
-    // sesión que mostrar). `?desde=cierre` le dice al detalle que el "volver"
-    // debe ir al home (§3), no al historial: se llegó aquí por cerrar, no por
-    // navegar desde /historial.
+    // evita dejar al usuario sin salida. `?desde=cierre` le dice al detalle que el
+    // "volver" debe ir al home (§3), no al historial: se llegó aquí por cerrar, no
+    // por navegar desde /historial.
     router.replace(`/historial/${session.id}?desde=cierre`);
   };
 

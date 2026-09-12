@@ -69,9 +69,9 @@ prerenderiza estático.
 
 ### 2.2 Aristas programáticas (`router.*`)
 
-- `/` : elegir día → `startSession` → `replace('/sesion')`. (Ya **no** hay redirect por sesión activa.)
+- `/` : elegir día → `startSession` → `replace('/sesion')`. (Ya **no** hay redirect por sesión activa.) Al empezar un día, `startSession` cierra la sesión abierta anterior en la misma transacción; si esa sesión **no registró nada** (ni series ni notas por ejercicio) la **descarta** (cascada de `discardSession`) en vez de cerrarla, para que no quede en `/historial` como sesión de cero series.
 - `/sesion` : la vista resuelve a `null` (sin sesión activa) → `replace('/')`.
-- `/sesion/cerrar` : cerrar → `replace('/historial/[id]?desde=cierre')`; descartar → `replace('/')`; la sesión desaparece sin que navegues tú → `replace('/')`.
+- `/sesion/cerrar` : cerrar → `replace('/historial/[id]?desde=cierre')` **si se cerró**, o `replace('/')` **si `closeSession` la descartó** (sesión sin contenido y formulario de cierre vacío: no hay detalle que mostrar); descartar → `replace('/')`; la sesión desaparece sin que navegues tú → `replace('/')`. Nota, tags o peso corporal en el formulario cuentan como dato del usuario: con cualquiera de ellos la sesión se cierra normal aunque no tenga series.
 - `/historial/[id]` : "volver" (chevron) respeta el origen — si se llegó por cerrar (`?desde=cierre`) → `replace('/')`; si no → `router.back()` con respaldo `push('/historial')`. Eliminar sesión → `replace('/historial')`.
 - `/catalogo/nuevo` : al crear → `push('/catalogo')`.
 - `/ejercicio/[id]` : "volver" → `router.back()` si hay historial de navegación, si no `push('/historial')`.

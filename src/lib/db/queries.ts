@@ -53,6 +53,28 @@ export async function getActiveSession(): Promise<Session | undefined> {
   return db.sessions.where("activa").equals(1).first();
 }
 
+/**
+ * Una sesión "sin contenido" es la que no tiene NADA tecleado por el usuario: ni
+ * una sola serie (SetLog) ni una nota por ejercicio. Cerrar una así la dejaría en
+ * el historial como un registro de cero series — ruido, no dato. Los dos caminos
+ * de cierre (auto en startSession, explícito en closeSession) la descartan en vez
+ * de cerrarla, reusando la cascada de discardSession.
+ *
+ * Deliberadamente NO mira la nota, los tags ni el peso corporal de la SESIÓN:
+ * esos solo existen si el usuario los tecleó en el formulario de cierre, y ahí sí
+ * quiso guardar la sesión. Ese caso lo decide closeSession con lo que recibe del
+ * formulario, no esta función.
+ */
+async function sessionSinContenido(sessionId: string): Promise<boolean> {
+  const instancias = await db.sessionExercises.where("session_id").equals(sessionId).toArray();
+  for (const inst of instancias) {
+    if (inst.nota && inst.nota.trim() !== "") return false;
+    const setLogs = await db.setLogs.where("session_exercise_id").equals(inst.id).count();
+    if (setLogs > 0) return false;
+  }
+  return true;
+}
+
 export async function startSession(routineDayId: string | null): Promise<string> {
   const sessionId = newId();
   const now = new Date().toISOString();
@@ -63,7 +85,7 @@ export async function startSession(routineDayId: string | null): Promise<string>
       ).sort((a, b) => a.orden - b.orden)
     : [];
 
-  await db.transaction("rw", [db.sessions, db.sessionExercises], async () => {
+  await db.transaction("rw", [db.sessions, db.sessionExercises, db.setLogs], async () => {
     // §1.1 — Invariante de sesión única. getLastPerformance NO filtra por
     // `activa`: su corrección depende de que exista una sola sesión abierta, y
     // el llamador le pasa el id de esa. Aquí se hace cumplir cerrando cualquier
@@ -71,7 +93,17 @@ export async function startSession(routineDayId: string | null): Promise<string>
     // exista un instante con dos activas.
     const abiertas = await db.sessions.where("activa").equals(1).toArray();
     for (const abierta of abiertas) {
-      await db.sessions.update(abierta.id, { activa: 0, cerrada_en: now });
+      // Una sesión abierta que no registró nada no es un entrenamiento: al abrir
+      // otro día se DESCARTA (cascada de discardSession) en vez de cerrarse, para
+      // que no quede en /historial como sesión de cero series. Con series —o
+      // notas por ejercicio— se cierra normal. discardSession corre como
+      // sub-transacción: su alcance (sessions, sessionExercises, setLogs) ⊆ el de
+      // esta, por eso se incluyó setLogs arriba.
+      if (await sessionSinContenido(abierta.id)) {
+        await discardSession(abierta.id);
+      } else {
+        await db.sessions.update(abierta.id, { activa: 0, cerrada_en: now });
+      }
     }
 
     await db.sessions.add({
@@ -108,7 +140,30 @@ export interface CloseSessionInput {
   bodyweight: { valor: number; unidad: "KG" | "LB" } | null;
 }
 
-export async function closeSession(sessionId: string, input: CloseSessionInput): Promise<void> {
+/**
+ * Cierra la sesión. Devuelve `discarded` para que el llamador sepa a dónde ir: al
+ * detalle si se cerró (hay algo que mostrar) o al home si se descartó (no hay).
+ *
+ * Descarta en vez de cerrar cuando NO hay nada que guardar: ni series ni notas
+ * por ejercicio (sessionSinContenido) Y el formulario de cierre vino vacío. Si el
+ * usuario tecleó nota, tags o peso corporal, eso es dato suyo y la sesión se
+ * cierra normal aunque no tenga series. La rama de descarte va FUERA de la
+ * transacción de cierre a propósito: discardSession abre la suya, y su alcance
+ * (setLogs) no cabe en el de aquí (sessions, bodyweightLogs).
+ */
+export async function closeSession(
+  sessionId: string,
+  input: CloseSessionInput,
+): Promise<{ discarded: boolean }> {
+  const formularioVacio =
+    (input.nota === null || input.nota.trim() === "") &&
+    input.tagIds.length === 0 &&
+    input.bodyweight === null;
+  if (formularioVacio && (await sessionSinContenido(sessionId))) {
+    await discardSession(sessionId);
+    return { discarded: true };
+  }
+
   const now = new Date().toISOString();
   await db.transaction("rw", [db.sessions, db.bodyweightLogs], async () => {
     await db.sessions.update(sessionId, {
@@ -126,6 +181,7 @@ export async function closeSession(sessionId: string, input: CloseSessionInput):
       });
     }
   });
+  return { discarded: false };
 }
 
 /**
