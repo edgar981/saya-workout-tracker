@@ -16,6 +16,7 @@ import { loadSessionVerdicts } from "@/lib/db/verdicts";
 import { formatGap, gapsBySetId, sessionDurationMs } from "@/lib/rest-gap";
 import type { VerdictCategory } from "@/lib/verdict";
 import { cn } from "@/lib/utils";
+import { useNavegando } from "@/lib/use-navegando";
 import { SessionDetailSkeleton } from "@/components/skeletons";
 
 function formatFecha(iso: string): string {
@@ -55,6 +56,10 @@ export default function SessionDetailScreen() {
 
   const router = useRouter();
   const [armed, setArmed] = useState(false);
+  // Eliminar la sesión borra el detalle y navega: sin esto, loadSessionDetail
+  // devolvería null y pintaría "esta sesión no existe" antes de que aterrice el
+  // replace a /historial. Ver useNavegando.
+  const { navegando, marcar } = useNavegando();
 
   useEffect(() => {
     if (!armed) return;
@@ -85,6 +90,11 @@ export default function SessionDetailScreen() {
     return <SessionDetailSkeleton />;
   }
   if (detail === null) {
+    // Si el null es por NUESTRO propio eliminar, ya vamos en camino a /historial:
+    // el esqueleto cubre el hueco hasta el replace, en vez de parpadear "esta
+    // sesión no existe". Un null legítimo (URL de una sesión que no existe) sí
+    // muestra el mensaje.
+    if (navegando) return <SessionDetailSkeleton />;
     return (
       <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-4 p-4">
         <p className="text-muted-foreground text-sm">Esta sesión no existe.</p>
@@ -113,6 +123,7 @@ export default function SessionDetailScreen() {
   const tallyEntries = TALLY_ORDER.filter((t) => tally[t.key] > 0);
 
   const eliminar = async () => {
+    marcar();
     await discardSession(sessionId);
     router.replace("/historial");
   };

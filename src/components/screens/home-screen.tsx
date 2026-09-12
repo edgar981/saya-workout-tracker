@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useLiveQuery } from "dexie-react-hooks";
@@ -14,6 +13,7 @@ import {
   startSession,
 } from "@/lib/db/queries";
 import { cn } from "@/lib/utils";
+import { useNavegando } from "@/lib/use-navegando";
 import { HomeSkeleton } from "@/components/skeletons";
 
 /** Semana ISO — la que decide "SEMANA 36" en la orientación de la cabecera. */
@@ -75,13 +75,9 @@ function formatHace(dias: number): string {
 export default function HomeScreen() {
   const router = useRouter();
   // Navegación en curso hacia /sesion: mientras está en vuelo se suprime la
-  // TARJETA de sesión abierta (misma idea que el ref `navegando` de close-screen,
-  // FLUJOS.md §2.3). Aquí es ESTADO, no un ref: la bandera se lee en el render
-  // (la condición de la tarjeta), y React prohíbe leer refs en render. Como
-  // estado, además, reponerla re-renderiza sola — así la tarjeta de una sesión
-  // legítima reaparece en el error sin depender de que algo más dispare un
-  // re-render.
-  const [navegando, setNavegando] = useState(false);
+  // TARJETA de sesión abierta (la sesión nueva ya está activa antes del replace).
+  // El patrón —y por qué es estado y no ref— vive en useNavegando.
+  const { navegando, marcar, reponer } = useNavegando();
 
   // `?? null` para distinguir "cargando" (undefined) de "no hay sesión activa"
   // (null). El home NO redirige a /sesion cuando hay sesión activa: en su lugar
@@ -149,18 +145,15 @@ export default function HomeScreen() {
   const mostrarSesion = !!active && !navegando;
 
   const start = async (routineDayId: string) => {
-    setNavegando(true);
+    marcar();
     try {
       await startSession(routineDayId);
       router.replace("/sesion");
     } catch (err) {
-      // Solo en el error: la navegación no ocurrió y el home sigue montado, así
-      // que hay que reponer la bandera — dejarla en true suprimiría la tarjeta de
-      // una sesión legítima sin error visible. NO va en un `finally`: en el camino
-      // feliz debe seguir en true a través del replace (la navegación tarda más
-      // que el re-render del liveQuery), y resetearla ahí reintroduciría el
-      // parpadeo antes de que la navegación complete.
-      setNavegando(false);
+      // Solo en el error se repone (ver useNavegando): la navegación no ocurrió y
+      // el home sigue montado, así que dejar la bandera en alto escondería la
+      // tarjeta de una sesión legítima. En el camino feliz NO se repone.
+      reponer();
       console.error("[saya] no se pudo empezar la sesión:", err);
     }
   };

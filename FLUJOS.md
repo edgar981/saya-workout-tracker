@@ -80,7 +80,7 @@ prerenderiza estático.
 ### 2.3 Redirecciones automáticas (cero taps)
 
 - **`/sesion` → `/`** cuando no hay sesión activa (entrar a la URL de sesión sin sesión abierta rebota al home).
-- **`/sesion/cerrar` → `/`** cuando la sesión activa desaparece "por fuera" (p. ej. cerrada en otra pestaña) y no eres tú quien está navegando. Un `ref` (`navegando`) suprime esta redirección durante el propio cierre/descarte, para que el cierre no rebote al home antes de llegar al detalle.
+- **`/sesion/cerrar` → `/`** cuando la sesión activa desaparece "por fuera" (p. ej. cerrada en otra pestaña) y no eres tú quien está navegando. La bandera `useNavegando` suprime, durante el propio cierre/descarte, tanto esta redirección como el render de "sin sesión activa" (la escritura en Dexie vacía el `useLiveQuery` un tick antes de que aterrice el `replace`). El mismo hook cubre el gemelo en `/historial/[id]` (eliminar → "esta sesión no existe") y en el home (empezar sesión → la tarjeta que se esfuma).
 
 El `/` → `/sesion` que existía antes se **quitó**: el home ya no autorredirige a la
 sesión activa. En su lugar muestra "Sesión en curso · continuar" (1 tap para

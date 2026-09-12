@@ -53,6 +53,18 @@ Trabajado en el prompt de correcciones y backlog (2026-08-22):
 
 ## Disparador escrito, no cumplido
 
+- **`applyCatalogCorrections` es puntual, no un cajón de ediciones de catálogo.**
+  Es el mecanismo que arregla la definición de un ejercicio semilla YA sembrado
+  sobre bases donde `seedIfEmpty` ya no corre (hoy, único uso: `DB OH Triceps
+  Extension` → `UNILATERAL`). Cada corrección solo aplica mientras el registro
+  sigue en su valor semilla original, así que una edición deliberada del usuario
+  nunca se revierte. **No** es donde se acumulan cambios de catálogo. Disparador
+  para eliminarla: una vez confirmado **en el teléfono** que `DB OH Triceps
+  Extension` quedó en `UNILATERAL`, se borra el CUERPO de la función en el
+  siguiente deploy (el seed ya nace correcto, así que no hace falta). Si más
+  adelante hace falta otra corrección puntual, se agrega y se retira igual
+  —aplicar, confirmar, borrar—: nunca se deja acumulando parche sobre parche.
+
 - **Vuelta de las rutas de configuración: historial real, no destino fijo.**
   `/plantillas`, `/catalogo` y `/datos` cuelgan de `/ajustes`, pero se alcanzan
   desde más de un origen (el listado de `/ajustes` **y** la vuelta de sus

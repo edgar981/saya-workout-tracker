@@ -178,7 +178,7 @@ Extraído de tu mesociclo. `PI` = `PER_IMPLEMENT`, `T` = `TOTAL`.
 | Ejercicio | unit_type | basis | lat |
 |---|---|---|---|
 | DB Skull Crushers | `LB` | PI | BIL |
-| DB OH Triceps Extension | `LB` | PI | BIL |
+| DB OH Triceps Extension | `LB` | PI | **UNI** |
 | DB Lateral Raises | `LB` | PI | BIL |
 | Barbell Bicep Curls | `LB` | **T** ✅ §7.2 | BIL |
 | Barbell Standing Wrist Curl | `LB` | T | BIL |

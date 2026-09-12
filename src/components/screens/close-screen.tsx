@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
@@ -13,6 +13,7 @@ import { db } from "@/lib/db/db";
 import { closeSession, discardSession, getActiveSession } from "@/lib/db/queries";
 import { backupNow } from "@/lib/backup/client";
 import { cn } from "@/lib/utils";
+import { useNavegando } from "@/lib/use-navegando";
 import { CloseSkeleton } from "@/components/skeletons";
 
 /** Ventana en la que el botón de descarte queda armado. */
@@ -33,9 +34,10 @@ export default function CloseScreen() {
   const [weightUnit, setWeightUnit] = useState<"KG" | "LB">("KG");
   const [armed, setArmed] = useState(false);
   const [saving, setSaving] = useState(false);
-  // Al cerrar/descartar navegamos nosotros; el efecto de abajo no debe rebotar
-  // al home cuando la sesión activa desaparece por nuestra propia acción.
-  const navegando = useRef(false);
+  // Al cerrar/descartar navegamos nosotros; la bandera evita que la sesión activa
+  // desapareciendo por nuestra propia acción rebote al home (el efecto de abajo) o
+  // pinte "sin sesión activa" (el render de abajo). Ver useNavegando.
+  const { navegando, marcar } = useNavegando();
 
   useEffect(() => {
     if (!armed) return;
@@ -44,13 +46,18 @@ export default function CloseScreen() {
   }, [armed]);
 
   useEffect(() => {
-    if (session === null && !navegando.current) router.replace("/");
-  }, [session, router]);
+    if (session === null && !navegando) router.replace("/");
+  }, [session, navegando, router]);
 
   if (session === undefined) {
     return <CloseSkeleton />;
   }
   if (session === null) {
+    // Si desapareció por nuestro propio cierre/descarte, ya vamos en camino al
+    // detalle/home: el esqueleto cubre el hueco hasta que aterriza el replace, en
+    // vez de parpadear "sin sesión activa" (gemelo del destello del banner en el
+    // home).
+    if (navegando) return <CloseSkeleton />;
     return <p className="text-muted-foreground p-6 text-sm">Sin sesión activa.</p>;
   }
 
@@ -63,7 +70,7 @@ export default function CloseScreen() {
 
   const close = async () => {
     setSaving(true);
-    navegando.current = true;
+    marcar();
     await closeSession(session.id, {
       nota: note.trim() === "" ? null : note.trim(),
       tagIds: selected,
@@ -85,7 +92,7 @@ export default function CloseScreen() {
   };
 
   const discard = async () => {
-    navegando.current = true;
+    marcar();
     await discardSession(session.id);
     window.localStorage.removeItem(`saya:ejercicio:${session.id}`);
     router.replace("/");

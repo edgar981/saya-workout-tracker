@@ -164,7 +164,8 @@ export function ExerciseCard({
           className="flex-1"
           onClick={() => void addSet(sessionExercise.id, { esExtra: false, side: "AUTO" })}
         >
-          <Plus /> Otra serie
+          {/* "Nueva serie" cuando aún no hay ninguna; "Otra" a partir de la segunda. */}
+          <Plus /> {groups.length === 0 ? "Nueva serie" : "Otra serie"}
         </Button>
         <Button
           variant="outline"

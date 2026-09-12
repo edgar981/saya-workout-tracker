@@ -36,7 +36,7 @@ export const SEED_EXERCISES: Exercise[] = [
 
   // ── Day 2 ────────────────────────────────────────────────────────────────
   { id: "ex-db-skull-crushers", nombre: "DB Skull Crushers", ...LB_PER_IMPLEMENT, laterality_default: "BILATERAL", activo: true },
-  { id: "ex-db-oh-triceps-extension", nombre: "DB OH Triceps Extension", ...LB_PER_IMPLEMENT, laterality_default: "BILATERAL", activo: true },
+  { id: "ex-db-oh-triceps-extension", nombre: "DB OH Triceps Extension", ...LB_PER_IMPLEMENT, laterality_default: "UNILATERAL", activo: true },
   { id: "ex-db-lateral-raises", nombre: "DB Lateral Raises", ...LB_PER_IMPLEMENT, laterality_default: "BILATERAL", activo: true },
   { id: "ex-barbell-bicep-curls", nombre: "Barbell Bicep Curls", ...LB_TOTAL, laterality_default: "BILATERAL", activo: true },
   { id: "ex-barbell-standing-wrist-curl", nombre: "Barbell Standing Wrist Curl", ...LB_TOTAL, laterality_default: "BILATERAL", activo: true },
@@ -188,4 +188,38 @@ export async function seedIfEmpty(): Promise<boolean> {
   );
 
   return true;
+}
+
+/**
+ * Correcciones puntuales sobre un catálogo YA sembrado. A diferencia de
+ * `seedIfEmpty`, corre aunque haya datos: es para arreglar la definición de un
+ * ejercicio semilla que cambió después de que el usuario ya lo tenía.
+ *
+ * Solo toca `laterality_default`. La unidad NO se corrige por aquí nunca —se
+ * snapshotea en cada SetLog y cambiarla partiría el histórico (por eso el candado
+ * del catálogo es sobre la unidad, no sobre la lateralidad). La lateralidad, en
+ * cambio, no se snapshotea: cambiarla es retroactivo e inofensivo — las series
+ * viejas conservan su propio `side` (null o no).
+ *
+ * Cada corrección se aplica SOLO mientras el registro sigue en su valor SEMILLA
+ * original. En cuanto difiere —porque la corrección ya corrió, o porque el
+ * usuario lo editó a propósito— se deja intacto: una edición deliberada del
+ * usuario NUNCA se revierte. Por eso es idempotente y se apaga sola.
+ *
+ * Es un mecanismo de corrección PUNTUAL, no un cajón donde acumular ediciones de
+ * catálogo: se aplica, se confirma en el teléfono, y se borra el cuerpo en el
+ * siguiente deploy. Ver el disparador en BACKLOG.md.
+ */
+export async function applyCatalogCorrections(): Promise<void> {
+  // DB OH Triceps Extension pasa a UNILATERAL: se registra por lado. La unidad
+  // (LB / PER_IMPLEMENT) no cambia, así que no hay snapshot que romper.
+  // La guarda `=== "BILATERAL"` es la clave: BILATERAL es el valor semilla viejo,
+  // así que solo se toca un registro sin corregir. Si ya está en UNILATERAL —por
+  // la corrección o por el usuario— no se escribe.
+  const oh = await db.exercises.get("ex-db-oh-triceps-extension");
+  if (oh && oh.laterality_default === "BILATERAL") {
+    await db.exercises.update("ex-db-oh-triceps-extension", {
+      laterality_default: "UNILATERAL",
+    });
+  }
 }
