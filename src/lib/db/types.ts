@@ -42,10 +42,37 @@ export interface Exercise {
   activo: boolean;
 }
 
+/**
+ * Un bloque de entrenamiento. Los RoutineDay cuelgan de un mesociclo, así que
+ * cambiar de plan es crear/activar otro mesociclo en vez de editar los días en
+ * sitio — y la composición de un mesociclo viejo queda intacta para el histórico.
+ *
+ * Invariante: exactamente uno `activo`. Activar otro cierra el anterior en la
+ * misma transacción (como startSession con las sesiones). checkIntegrity lo
+ * verifica.
+ */
+export interface Mesociclo {
+  id: string;
+  nombre: string;
+  /**
+   * ISO date (YYYY-MM-DD). Null = sin fecha de inicio: el home no muestra número
+   * de semana (no se cae de vuelta a la semana ISO, que no informa nada).
+   */
+  iniciado_en: string | null;
+  terminado_en: string | null;
+  /**
+   * Indexado. IndexedDB no indexa booleanos de forma confiable, así que el
+   * mesociclo activo se encuentra por este número (0 | 1), igual que Session.activa.
+   */
+  activo: 0 | 1;
+}
+
 export interface RoutineDay {
   id: string;
   nombre: string;
   orden: number;
+  /** A qué mesociclo pertenece. Indexado (v3). */
+  mesociclo_id: string;
 }
 
 export interface RoutineSlot {

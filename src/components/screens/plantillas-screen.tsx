@@ -5,7 +5,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { listRoutineDays, loadDaySlots } from "@/lib/db/queries";
+import { getActiveMesociclo, listRoutineDays, loadDaySlots } from "@/lib/db/queries";
 import { PlantillasSkeleton } from "@/components/skeletons";
 import { useVolver } from "@/lib/use-volver";
 
@@ -15,19 +15,25 @@ export default function PlantillasScreen() {
   // respaldo a /ajustes en frío. Ver src/lib/use-volver.ts.
   const volver = useVolver("/ajustes");
 
-  const days = useLiveQuery(async () => {
+  // Muestra los días del mesociclo ACTIVO. El selector de mesociclo vive en
+  // /mesociclos, no aquí: esta pantalla edita el plan vigente.
+  const data = useLiveQuery(async () => {
+    const mesociclo = await getActiveMesociclo();
     const list = await listRoutineDays();
-    return Promise.all(
+    const days = await Promise.all(
       list.map(async (day) => ({
         day,
         activos: (await loadDaySlots(day.id)).length,
       })),
     );
+    return { mesociclo, days };
   }, []);
 
-  if (days === undefined) {
+  if (data === undefined) {
     return <PlantillasSkeleton />;
   }
+
+  const { mesociclo, days } = data;
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-4 p-4">
@@ -35,10 +41,18 @@ export default function PlantillasScreen() {
         <Button variant="ghost" size="icon-sm" onClick={volver} aria-label="Volver">
           <ChevronLeft />
         </Button>
-        <h1 className="text-lg font-semibold">Plantillas</h1>
+        <div className="min-w-0">
+          <h1 className="text-lg font-semibold">Plantillas</h1>
+          {mesociclo && (
+            <p className="text-muted-foreground truncate text-xs">
+              Editando <span className="text-foreground">{mesociclo.nombre}</span>
+            </p>
+          )}
+        </div>
       </header>
 
       <p className="text-muted-foreground text-sm">
+        Los días del mesociclo activo. Cambiar de mesociclo se hace en Ajustes → Mesociclos.
         Reordenar o dar de baja aquí no toca el histórico: las sesiones ya registradas guardan su
         propio orden y su propio slot.
       </p>

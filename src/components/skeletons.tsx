@@ -318,7 +318,7 @@ export function DataSkeleton() {
         <Sk className="h-3 w-3/4" />
       </div>
       <div className="rounded-lg border">
-        {Array.from({ length: 8 }).map((_, i) => (
+        {Array.from({ length: 9 }).map((_, i) => (
           <div
             key={i}
             className="flex items-center justify-between border-b px-3 py-2 last:border-b-0"
@@ -330,6 +330,31 @@ export function DataSkeleton() {
       </div>
       <Sk className="h-40 rounded-lg" />
       <Sk className="h-12" />
+    </Screen>
+  );
+}
+
+// ── /mesociclos ─────────────────────────────────────────────────────────────
+export function MesociclosSkeleton() {
+  return (
+    <Screen className="gap-3">
+      <Head title="Mesociclos" />
+      <div className="flex flex-col gap-1.5">
+        <Sk className="h-3 w-full" />
+        <Sk className="h-3 w-2/3" />
+      </div>
+      <div className="flex gap-2">
+        <Sk className="h-9 flex-1" />
+        <Sk className="h-9 flex-1" />
+      </div>
+      <div className="flex flex-col gap-2">
+        {Array.from({ length: 2 }).map((_, i) => (
+          <div key={i} className="rounded-lg border p-3">
+            <Sk className="h-4 w-32" />
+            <Sk className="mt-1.5 h-3 w-40" />
+          </div>
+        ))}
+      </div>
     </Screen>
   );
 }

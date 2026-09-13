@@ -3,7 +3,7 @@ import { SCHEMA_VERSION, TABLE_NAMES, allTables, db, type TableName } from "./db
 /**
  * Export / import de recuperación. Autoridad: DECISIONES.md §5 y §6.
  *
- * Esto NO es exportar-para-compartir. Es un volcado crudo de las ocho tablas,
+ * Esto NO es exportar-para-compartir. Es un volcado crudo de las nueve tablas,
  * feo, completo y solo legible por esta app. Existe porque cada migración de
  * esquema de Dexie corre contra la única copia de los datos (D2), y sin una
  * segunda copia un deploy con cambio de esquema es una apuesta.
@@ -90,6 +90,18 @@ function parseBackup(parsed: unknown): BackupFile {
     throw new Error("El archivo no tiene bloque `data`.");
   }
 
+  // La versión se valida ANTES que las tablas: un export de otra versión no tiene
+  // por qué traer el mismo juego de tablas (un backup pre-v3 no tiene `mesociclos`),
+  // así que quejarse de una tabla faltante desorientaría. El motivo real es la
+  // versión. No se muta nada: esto corre antes de restoreFromBackup.
+  if (candidate.manifest.schema_version !== SCHEMA_VERSION) {
+    throw new Error(
+      `El archivo fue exportado con schema_version ${candidate.manifest.schema_version} y esta app corre ${SCHEMA_VERSION}. ` +
+        "No se tocó Dexie: no se intenta migrar durante un restore. " +
+        "Revierte el deploy a la versión que generó el archivo, restaura ahí, arregla lo que haya que arreglar y vuelve a desplegar.",
+    );
+  }
+
   for (const name of TABLE_NAMES) {
     if (!Array.isArray(candidate.data[name])) {
       throw new Error(`El archivo no trae la tabla "${name}". Un backup incompleto no se restaura a medias.`);
@@ -110,7 +122,7 @@ function parseBackup(parsed: unknown): BackupFile {
  * Secuencia obligatoria:
  *   1. auto-export del estado actual, antes de tocar nada;
  *   2. validar schema_version — si difiere, abortar sin escribir;
- *   3. vaciar y reconstruir las ocho tablas en UNA sola transacción;
+ *   3. vaciar y reconstruir las nueve tablas en UNA sola transacción;
  *   4. verificar conteos contra el manifiesto; si no cuadran, throw → Dexie
  *      revierte la transacción entera.
  *

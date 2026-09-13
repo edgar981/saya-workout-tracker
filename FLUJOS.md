@@ -36,12 +36,13 @@ build de producción.
 | `/historial` | `historial-screen` | estática | — | Lista de todas las sesiones, más reciente primero. |
 | `/historial/[sessionId]` | `session-detail-screen` | **dinámica (ƒ)** | `sessionId` | Detalle de una sesión: series, veredicto, hueco por serie, duración, tags, peso, nota. |
 | `/ejercicio/[exerciseId]` | `ejercicio-screen` | **dinámica (ƒ)** | `exerciseId` | Historial de un ejercicio (últimas 5 sesiones con series). |
-| `/plantillas` | `plantillas-screen` | estática | — | Lista de días de plantilla. |
+| `/mesociclos` | `mesociclos-screen` | estática | — | Lista de mesociclos: nombre, rango de fechas, activo, nº de días. Activar otro, duplicar el actual, crear vacío, renombrar y editar `iniciado_en`. |
+| `/plantillas` | `plantillas-screen` | estática | — | Días del mesociclo **activo** (dice cuál edita). El selector de mesociclo vive en `/mesociclos`, no aquí. |
 | `/plantillas/[dayId]` | `plantillas-dia-screen` | **dinámica (ƒ)** | `dayId` | Detalle de un día: slots, orden, objetivos, alternativas. |
 | `/catalogo` | `catalogo-screen` | estática | — | Lista del catálogo: renombrar, cambiar unidad, dar de baja (fila que se expande en sitio). |
 | `/catalogo/nuevo` | `catalogo-nuevo-screen` | estática | — | Formulario de crear ejercicio. |
 | `/datos` | `data-screen` | estática | — | Respaldo/restauración: servidor, archivo, integridad, diagnóstico. |
-| `/ajustes` | `ajustes-screen` | estática | — | Lista simple con los tres destinos de configuración (Plantillas · Catálogo · Respaldo). Sin Dexie, así que **no** usa `dynamic(ssr:false)`: se prerenderiza y abre al instante. Alcanzable desde la barra (§2.5); reemplazó al disclosure del pie del home. |
+| `/ajustes` | `ajustes-screen` | estática | — | Lista simple con los destinos de configuración (Mesociclos · Plantillas · Catálogo · Respaldo). Sin Dexie, así que **no** usa `dynamic(ssr:false)`: se prerenderiza y abre al instante. Alcanzable desde la barra (§2.5); reemplazó al disclosure del pie del home. |
 | `/api/snapshot` · `/api/snapshot/latest` · `/api/snapshot/[id]` | rutas de API | **dinámicas (ƒ)** | — | No navegables por el usuario. Las consume el cliente de respaldo. |
 
 Las rutas de página dinámicas lo son por llevar segmento `[param]` sin
@@ -57,7 +58,7 @@ prerenderiza estático.
 
 - La **barra de navegación** (§2.5) da `→ /`, `→ /historial`, `→ /ajustes` desde cualquier ruta donde es visible; no se repite por pantalla abajo.
 - `/` → la tarjeta de sesión abierta ("Continuar donde ibas →") → `/sesion` cuando hay sesión activa; cada día de la lista → `/sesion` (vía `startSession`). El home ya no tiene pie propio (los destinos de configuración viven en `/ajustes`, alcanzable por la barra).
-- `/ajustes` → `/plantillas`, `/catalogo`, `/datos` (los tres destinos de configuración); → `/` (chevron: `/ajustes` es de primer nivel de la barra, como `/historial`).
+- `/ajustes` → `/mesociclos`, `/plantillas`, `/catalogo`, `/datos` (los destinos de configuración); → `/` (chevron: `/ajustes` es de primer nivel de la barra, como `/historial`).
 - `/sesion` → `/` (botón "Volver" de la cabecera: salir al home SIN cerrar); → `/sesion/cerrar` (botón "Cerrar sesión"); y la tarjeta "La pasada" → `/ejercicio/[id]`.
 - `/sesion/cerrar` → `/sesion` (chevron "Volver a la sesión").
 - `/historial` → `/` (chevron); cada fila → `/historial/[id]`. `/historial` es un destino **de primer nivel** de la barra (no cuelga de `/ajustes`), así que su chevron va al home; no quedó desactualizado.
@@ -65,7 +66,7 @@ prerenderiza estático.
 - `/ejercicio/[id]` → cada entrada de sesión → `/historial/[id]`.
 - `/plantillas` → cada día → `/plantillas/[dayId]`; `/plantillas/[dayId]` → `/plantillas` (chevron).
 - `/catalogo` → "Crear ejercicio" → `/catalogo/nuevo`; `/catalogo/nuevo` → `/catalogo` (chevron).
-- Los chevrones de `/plantillas`, `/catalogo` y `/datos` ya **no** son enlace fijo: esas rutas se alcanzan desde más de un origen, así que siguen el historial real. Ver §2.2. (`/plantillas/[dayId]` y `/catalogo/nuevo` sí suben un nivel fijo a su propia lista con `<Link>`, porque tienen un solo origen.)
+- Los chevrones de `/mesociclos`, `/plantillas`, `/catalogo` y `/datos` ya **no** son enlace fijo: esas rutas se alcanzan desde más de un origen, así que siguen el historial real. Ver §2.2. (`/plantillas/[dayId]` y `/catalogo/nuevo` sí suben un nivel fijo a su propia lista con `<Link>`, porque tienen un solo origen.)
 
 ### 2.2 Aristas programáticas (`router.*`)
 
@@ -75,7 +76,7 @@ prerenderiza estático.
 - `/historial/[id]` : "volver" (chevron) respeta el origen — si se llegó por cerrar (`?desde=cierre`) → `replace('/')`; si no → `router.back()` con respaldo `push('/historial')`. Eliminar sesión → `replace('/historial')`.
 - `/catalogo/nuevo` : al crear → `push('/catalogo')`.
 - `/ejercicio/[id]` : "volver" → `router.back()` si hay historial de navegación, si no `push('/historial')`.
-- `/plantillas`, `/catalogo`, `/datos` : "volver" (chevron) → `router.back()` si hay historial, si no `push('/ajustes')` (hook `useVolver`). Se alcanzan desde el listado de `/ajustes` **y** desde la vuelta de sus subrutas (`/plantillas/[dayId]`, el chevron de `/catalogo/nuevo`, y el `push('/catalogo')` al crear), así que un "arriba" fijo sería equivocado para algunos orígenes; el chevron coincide con el edge-swipe. `/datos` hoy tiene un solo origen (`/ajustes`) pero usa el mismo patrón por consistencia — con un origen, `back()` equivale a volver a `/ajustes`.
+- `/mesociclos`, `/plantillas`, `/catalogo`, `/datos` : "volver" (chevron) → `router.back()` si hay historial, si no `push('/ajustes')` (hook `useVolver`). Se alcanzan desde el listado de `/ajustes` **y** desde la vuelta de sus subrutas (`/plantillas/[dayId]`, el chevron de `/catalogo/nuevo`, y el `push('/catalogo')` al crear), así que un "arriba" fijo sería equivocado para algunos orígenes; el chevron coincide con el edge-swipe. `/datos` hoy tiene un solo origen (`/ajustes`) pero usa el mismo patrón por consistencia — con un origen, `back()` equivale a volver a `/ajustes`.
 
 ### 2.3 Redirecciones automáticas (cero taps)
 
@@ -99,9 +100,9 @@ de rebotar. Reabrir la app en frío con una sesión activa cae en el home, no en
 ### 2.5 Barra de navegación persistente
 
 - **Tres destinos fijos:** `Inicio` (`/`) · `Historial` (`/historial`) · `Ajustes` (`/ajustes`). Vive en el layout (`AppShell` + `NavBar`), así que es la misma barra en todas las rutas — no se re-monta ni parpadea al navegar.
-- **Visible en:** `/`, `/historial`, `/historial/[id]`, `/ejercicio/[id]`, `/plantillas`, `/plantillas/[dayId]`, `/catalogo`, `/catalogo/nuevo`, `/datos`, `/ajustes`.
+- **Visible en:** `/`, `/historial`, `/historial/[id]`, `/ejercicio/[id]`, `/mesociclos`, `/plantillas`, `/plantillas/[dayId]`, `/catalogo`, `/catalogo/nuevo`, `/datos`, `/ajustes`. La decide `AppShell` por exclusión (todo lo que no sea `/sesion*`), así que una ruta nueva la hereda sola.
 - **Ausente en `/sesion` y `/sesion/cerrar`** (exclusión no negociable): ahí el alto vale más y no hay a dónde navegar durante el registro. La decide `AppShell` por `usePathname`.
-- **Sección activa** marcada con tinta plena (el resto atenuado); NO usa el acento, reservado a acción/sesión activa/completar (`DECISIONES.md` §10). El mapa: `/` → Inicio; `/historial*` y `/ejercicio/*` → Historial; `/ajustes`, `/plantillas*`, `/catalogo*`, `/datos` → Ajustes.
+- **Sección activa** marcada con tinta plena (el resto atenuado); NO usa el acento, reservado a acción/sesión activa/completar (`DECISIONES.md` §10). El mapa: `/` → Inicio; `/historial*` y `/ejercicio/*` → Historial; `/ajustes`, `/mesociclos`, `/plantillas*`, `/catalogo*`, `/datos` → Ajustes.
 - **No sustituye los chevrones** de vuelta de cada pantalla; conviven. El drill-down (`/plantillas/[dayId]`, `/catalogo/nuevo`) sigue subiendo un nivel con el gesto atrás.
 - **Reserva de espacio:** el CSS (`[data-nav] main`, que pone `AppShell`) añade al `<main>` un padding-bottom del alto de la barra + un respiro + el área segura, para que el último contenido no quede tapado al final del scroll.
 

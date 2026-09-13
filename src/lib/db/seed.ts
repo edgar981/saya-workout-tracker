@@ -1,5 +1,5 @@
-import { db } from "./db";
-import type { Exercise, RoutineDay, RoutineSlot, SessionTag } from "./types";
+import { db, MESOCICLO_INICIAL_ID } from "./db";
+import type { Exercise, Mesociclo, RoutineDay, RoutineSlot, SessionTag } from "./types";
 
 /**
  * Catálogo semilla. Autoridad: DECISIONES.md §4. Nada de esto se inventa.
@@ -71,12 +71,22 @@ export const SEED_EXERCISES: Exercise[] = [
   { id: "ex-concentration-hammer-curls", nombre: "Concentration Hammer Curls", ...LB_PER_IMPLEMENT, laterality_default: "UNILATERAL", activo: true },
 ];
 
+/**
+ * Instalación fresca: nace con un mesociclo activo que envuelve los cinco días.
+ * `iniciado_en` null (aún no hay sesiones con series de dónde derivarlo), así que
+ * el home no muestra número de semana hasta que el usuario lo fije. En una base
+ * ya existente esto no corre: lo crea la migración v3 (ver db.ts).
+ */
+export const SEED_MESOCICLOS: Mesociclo[] = [
+  { id: MESOCICLO_INICIAL_ID, nombre: "Mesociclo 1", iniciado_en: null, terminado_en: null, activo: 1 },
+];
+
 export const SEED_ROUTINE_DAYS: RoutineDay[] = [
-  { id: "day-1", nombre: "Day 1", orden: 1 },
-  { id: "day-2", nombre: "Day 2", orden: 2 },
-  { id: "day-3", nombre: "Day 3", orden: 3 },
-  { id: "day-4", nombre: "Day 4", orden: 4 },
-  { id: "day-5", nombre: "Day 5", orden: 5 },
+  { id: "day-1", nombre: "Day 1", orden: 1, mesociclo_id: MESOCICLO_INICIAL_ID },
+  { id: "day-2", nombre: "Day 2", orden: 2, mesociclo_id: MESOCICLO_INICIAL_ID },
+  { id: "day-3", nombre: "Day 3", orden: 3, mesociclo_id: MESOCICLO_INICIAL_ID },
+  { id: "day-4", nombre: "Day 4", orden: 4, mesociclo_id: MESOCICLO_INICIAL_ID },
+  { id: "day-5", nombre: "Day 5", orden: 5, mesociclo_id: MESOCICLO_INICIAL_ID },
 ];
 
 /**
@@ -175,12 +185,13 @@ export async function seedIfEmpty(): Promise<boolean> {
 
   await db.transaction(
     "rw",
-    [db.exercises, db.routineDays, db.routineSlots, db.sessionTags],
+    [db.exercises, db.mesociclos, db.routineDays, db.routineSlots, db.sessionTags],
     async () => {
       // Re-chequeo dentro de la transacción: dos pestañas abriendo la app a la
       // vez llegarían aquí las dos.
       if ((await db.exercises.count()) > 0) return;
       await db.exercises.bulkAdd(SEED_EXERCISES);
+      await db.mesociclos.bulkAdd(SEED_MESOCICLOS);
       await db.routineDays.bulkAdd(SEED_ROUTINE_DAYS);
       await db.routineSlots.bulkAdd(SEED_ROUTINE_SLOTS);
       await db.sessionTags.bulkAdd(SEED_SESSION_TAGS);

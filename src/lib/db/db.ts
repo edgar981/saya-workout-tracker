@@ -2,6 +2,7 @@ import Dexie, { type Table } from "dexie";
 import type {
   BodyweightLog,
   Exercise,
+  Mesociclo,
   RoutineDay,
   RoutineSlot,
   Session,
@@ -28,10 +29,16 @@ export type { TableName } from "./tables";
  * el que valida el import — un archivo de otra versión se rechaza entero en vez
  * de migrarse al vuelo.
  */
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
+
+/** Id determinista del mesociclo que la migración v3 y el seed crean. Ninguno
+ *  de los dos corre en la misma base (upgrade solo sobre datos previos, seed
+ *  solo sobre base vacía), así que el id fijo nunca colisiona. */
+export const MESOCICLO_INICIAL_ID = "meso-1";
 
 class WorkoutDB extends Dexie {
   exercises!: Table<Exercise, string>;
+  mesociclos!: Table<Mesociclo, string>;
   routineDays!: Table<RoutineDay, string>;
   routineSlots!: Table<RoutineSlot, string>;
   sessions!: Table<Session, string>;
@@ -96,12 +103,61 @@ class WorkoutDB extends Dexie {
             delete se.orden;
           });
       });
+
+    // ── v3 ──────────────────────────────────────────────────────────────────
+    // Mesociclos. `routineDays` gana `mesociclo_id` (indexado, por eso el bump).
+    // La migración envuelve los cinco días existentes en "Mesociclo 1" activo,
+    // sin tocar una sola fila de sesiones: Session sigue apuntando a
+    // routine_day_id y el mesociclo es derivable por el día.
+    this.version(3)
+      .stores({
+        mesociclos: "id, activo",
+        routineDays: "id, orden, mesociclo_id",
+      })
+      .upgrade(async (tx) => {
+        // iniciado_en = fecha de la sesión más antigua CON series reales. OJO al
+        // leer esto en seis meses: es un valor DERIVADO, no observado — el
+        // mesociclo no existía cuando se registraron esas sesiones, igual que
+        // orden_ejecucion en v2. Sin ninguna sesión con series, queda null (no se
+        // inventa una fecha).
+        const setLogs = await tx.table<SetLog>("setLogs").toArray();
+        const instanciasConSeries = new Set(
+          setLogs.filter((s) => s.reps > 0).map((s) => s.session_exercise_id),
+        );
+        const sessionExercises = await tx.table<SessionExercise>("sessionExercises").toArray();
+        const sesionesConSeries = new Set(
+          sessionExercises
+            .filter((se) => instanciasConSeries.has(se.id))
+            .map((se) => se.session_id),
+        );
+        const sessions = await tx.table<Session>("sessions").toArray();
+        const fechas = sessions
+          .filter((s) => sesionesConSeries.has(s.id))
+          .map((s) => s.fecha)
+          .sort(); // YYYY-MM-DD: orden lexicográfico = cronológico
+        const iniciado_en = fechas.length > 0 ? fechas[0] : null;
+
+        await tx.table<Mesociclo>("mesociclos").add({
+          id: MESOCICLO_INICIAL_ID,
+          nombre: "Mesociclo 1",
+          iniciado_en,
+          terminado_en: null,
+          activo: 1,
+        });
+
+        await tx
+          .table<RoutineDay>("routineDays")
+          .toCollection()
+          .modify((d) => {
+            d.mesociclo_id = MESOCICLO_INICIAL_ID;
+          });
+      });
   }
 }
 
 export const db = new WorkoutDB();
 
-/** Las ocho tablas en el orden de TABLE_NAMES, para transacciones y volcados. */
+/** Las nueve tablas en el orden de TABLE_NAMES, para transacciones y volcados. */
 export function allTables(): Table<unknown, string>[] {
   return TABLE_NAMES.map((name) => db.table(name));
 }

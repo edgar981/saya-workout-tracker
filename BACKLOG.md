@@ -10,6 +10,24 @@ Autoridad sobre schema y alcance: `DECISIONES.md`.
 
 ## Disparador cumplido — en curso
 
+Trabajado en el prompt de mesociclos (2026-09-12) — primera migración real a `version(3)`:
+
+- **Mesociclos.** Entidad nueva (`Mesociclo`) + `RoutineDay.mesociclo_id` (indexado).
+  La migración envuelve los cinco días en "Mesociclo 1" activo, con `iniciado_en`
+  derivado de la sesión más antigua con series reales (null si no hay ninguna). El
+  histórico no se toca: `Session` no gana `mesociclo_id` y `getPerformanceHistory`
+  cruza mesociclos. Detalle e invariantes en `DECISIONES.md` §3.6. → **Cierra dos
+  pendientes que este trabajo resuelve por diseño:**
+  - **Mesociclos intercambiables.** Antes, cambiar de plan editaba las plantillas
+    en sitio y volvía irrecuperable cómo se veía un día en agosto. Ahora es
+    activar/duplicar un mesociclo: el viejo conserva su composición intacta
+    (duplicar **copia**, no mueve; nada se borra duro; `terminado_en` lo saca del
+    camino).
+  - **El disparador frágil de "avisar antes de tocar `/plantillas`".** El
+    recordatorio de chat —que editar un día pisaba su propio historial— ya no hace
+    falta: `/plantillas` edita el mesociclo **activo**, y el histórico resuelve
+    contra los días/slots de su mesociclo. Se cierra por diseño, no por disciplina.
+
 Trabajado en el prompt de captura de peso unilateral (2026-08-28):
 
 - **Hueco de captura: series unilaterales sin peso.** Disparador: el diagnóstico
@@ -99,11 +117,12 @@ Trabajado en el prompt de correcciones y backlog (2026-08-22):
   opuesto vacío. Es una decisión de UX que solo se puede juzgar usándolo frente a
   la máquina — esperar a esa sesión antes de cambiar nada.
 
-- **Snapshot de `stack_label` (`version(3)`).**
+- **Snapshot de `stack_label` (siguiente `version(n)`).**
   Disparador: cuando se registre el primer ejercicio `STACK_POSITION`. Hoy ninguno
   lo usa (los stacks del gym están marcados en libras, §7.4). Mientras tanto, el
   render toma `stack_label` de `Exercise`, no del snapshot — inofensivo porque no
-  es ni peso ni unidad y no hay filas que dependan de ello.
+  es ni peso ni unidad y no hay filas que dependan de ello. (Ya no sería
+  `version(3)`: esa la consumió mesociclos; el próximo bump es `version(4)`.)
 
 - **Precarga arrastrando *offset* en vez de valor absoluto.**
   Disparador: la primera vez que se rampee el peso dentro de una misma sesión y la

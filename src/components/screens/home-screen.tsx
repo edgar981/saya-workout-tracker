@@ -5,37 +5,55 @@ import Link from "next/link";
 import { useLiveQuery } from "dexie-react-hooks";
 import { Flag } from "lucide-react";
 
-import { db } from "@/lib/db/db";
 import {
   countActiveSlots,
+  getActiveMesociclo,
   getActiveSession,
+  listRoutineDays,
   listSessionSummaries,
   startSession,
 } from "@/lib/db/queries";
+import type { Mesociclo } from "@/lib/db/types";
 import { cn } from "@/lib/utils";
 import { useNavegando } from "@/lib/use-navegando";
 import { HomeSkeleton } from "@/components/skeletons";
 
-/** Semana ISO — la que decide "SEMANA 36" en la orientación de la cabecera. */
-function isoWeek(d: Date): number {
-  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-  const dow = (date.getUTCDay() + 6) % 7; // lunes = 0
-  date.setUTCDate(date.getUTCDate() - dow + 3); // jueves de esta semana
-  const firstThu = new Date(Date.UTC(date.getUTCFullYear(), 0, 4));
-  const firstDow = (firstThu.getUTCDay() + 6) % 7;
-  firstThu.setUTCDate(firstThu.getUTCDate() - firstDow + 3);
-  return 1 + Math.round((date.getTime() - firstThu.getTime()) / (7 * 86_400_000));
-}
-
-/** `JUE 5 SEP · SEMANA 36`: la línea de orientación, no el wordmark, encabeza. */
-function cabecera(ahora: Date): string {
+/** `SÁB 12 SEP`: la parte de fecha de la línea de orientación. */
+function fechaLinea(ahora: Date): string {
   const dia = ahora.toLocaleDateString("es", { weekday: "short" }).replace(".", "").toUpperCase();
   const mes = ahora
     .toLocaleDateString("es", { month: "short" })
     .replace(".", "")
     .slice(0, 3)
     .toUpperCase();
-  return `${dia} ${ahora.getDate()} ${mes} · SEMANA ${isoWeek(ahora)}`;
+  return `${dia} ${ahora.getDate()} ${mes}`;
+}
+
+/**
+ * Semana del mesociclo desde `iniciado_en`: semanas completas transcurridas + 1.
+ * Reemplaza a la semana ISO del año, que no informaba nada. Sustituye la fecha de
+ * inicio (YYYY-MM-DD) por local para no cruzar zonas. Se clampa a 1 por si la
+ * fecha de inicio quedó en el futuro (edición manual).
+ */
+function semanaMesociclo(iniciadoEn: string, ahora: Date): number {
+  const [y, m, d] = iniciadoEn.split("-").map(Number);
+  const inicio = new Date(y, m - 1, d).getTime();
+  const hoy = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate()).getTime();
+  return Math.max(1, Math.floor((hoy - inicio) / (7 * 86_400_000)) + 1);
+}
+
+/**
+ * `SÁB 12 SEP · MESOCICLO 1 · SEMANA 3`. El nombre del mesociclo va discreto en
+ * la línea; el número de semana solo si hay `iniciado_en` — sin fecha no se
+ * muestra, y NUNCA se cae de vuelta a la semana ISO (el dato que se eliminó).
+ */
+function cabecera(ahora: Date, mesociclo: Mesociclo | null): string {
+  const partes = [fechaLinea(ahora)];
+  if (mesociclo) {
+    partes.push(mesociclo.nombre.toUpperCase());
+    if (mesociclo.iniciado_en) partes.push(`SEMANA ${semanaMesociclo(mesociclo.iniciado_en, ahora)}`);
+  }
+  return partes.join(" · ");
 }
 
 /**
@@ -85,8 +103,12 @@ export default function HomeScreen() {
   // estado estable — sin esto, salir rebotaría de vuelta (FLUJOS.md §2.3).
   const active = useLiveQuery(async () => (await getActiveSession()) ?? null, []);
 
+  // Mesociclo activo: da el número de semana y el nombre de la orientación.
+  const mesociclo = useLiveQuery(async () => (await getActiveMesociclo()) ?? null, []);
+
   const days = useLiveQuery(async () => {
-    const list = await db.routineDays.orderBy("orden").toArray();
+    // Días del mesociclo activo (listRoutineDays ya filtra por él).
+    const list = await listRoutineDays();
     return Promise.all(
       list.map(async (day) => ({
         day,
@@ -102,7 +124,12 @@ export default function HomeScreen() {
   // en el render de lo que ya devuelve listSessionSummaries.
   const summaries = useLiveQuery(async () => listSessionSummaries(), []);
 
-  if (active === undefined || days === undefined || summaries === undefined) {
+  if (
+    active === undefined ||
+    mesociclo === undefined ||
+    days === undefined ||
+    summaries === undefined
+  ) {
     return <HomeSkeleton />;
   }
 
@@ -198,7 +225,7 @@ export default function HomeScreen() {
           el nombre de la app no informa nada a quien acaba de tocar su ícono. */}
       <header className="pt-5">
         <p className="text-muted-foreground font-mono text-[11px] font-medium tracking-[0.14em]">
-          {cabecera(ahora)}
+          {cabecera(ahora, mesociclo)}
         </p>
       </header>
 

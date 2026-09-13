@@ -22,25 +22,43 @@ export interface IntegrityReport {
    * filtra por `activa`. Cuenta las que sobran: 0 si hay una o ninguna.
    */
   sesionesActivasDeMas: number;
+  /** RoutineDay con `mesociclo_id` vacío o apuntando a un mesociclo inexistente. */
+  routineDaysSinMesociclo: string[];
+  /**
+   * Mesociclos con `activo === 1` de más. Misma invariante de "exactamente uno"
+   * que las sesiones: activar otro cierra el anterior en la misma transacción.
+   */
+  mesociclosActivosDeMas: number;
   total: number;
 }
 
 export async function checkIntegrity(): Promise<IntegrityReport> {
-  const [sessions, sessionExercises, setLogs, routineSlots, exercises] = await Promise.all([
-    db.sessions.toArray(),
-    db.sessionExercises.toArray(),
-    db.setLogs.toArray(),
-    db.routineSlots.toArray(),
-    db.exercises.toArray(),
-  ]);
+  const [sessions, sessionExercises, setLogs, routineSlots, exercises, mesociclos, routineDays] =
+    await Promise.all([
+      db.sessions.toArray(),
+      db.sessionExercises.toArray(),
+      db.setLogs.toArray(),
+      db.routineSlots.toArray(),
+      db.exercises.toArray(),
+      db.mesociclos.toArray(),
+      db.routineDays.toArray(),
+    ]);
 
   const activas = sessions.filter((s) => s.activa === 1);
   const sesionesActivasDeMas = Math.max(0, activas.length - 1);
+
+  const mesociclosActivos = mesociclos.filter((m) => m.activo === 1);
+  const mesociclosActivosDeMas = Math.max(0, mesociclosActivos.length - 1);
 
   const idsSesiones = new Set(sessions.map((s) => s.id));
   const idsInstancias = new Set(sessionExercises.map((s) => s.id));
   const idsSlots = new Set(routineSlots.map((s) => s.id));
   const idsEjercicios = new Set(exercises.map((e) => e.id));
+  const idsMesociclos = new Set(mesociclos.map((m) => m.id));
+
+  const routineDaysSinMesociclo = routineDays
+    .filter((d) => !d.mesociclo_id || !idsMesociclos.has(d.mesociclo_id))
+    .map((d) => d.id);
 
   const setLogsSinInstancia = setLogs
     .filter((s) => !idsInstancias.has(s.session_exercise_id))
@@ -65,11 +83,15 @@ export async function checkIntegrity(): Promise<IntegrityReport> {
     sessionExercisesSinSlot,
     sessionExercisesSinEjercicio,
     sesionesActivasDeMas,
+    routineDaysSinMesociclo,
+    mesociclosActivosDeMas,
     total:
       setLogsSinInstancia.length +
       sessionExercisesSinSesion.length +
       sessionExercisesSinSlot.length +
       sessionExercisesSinEjercicio.length +
-      sesionesActivasDeMas,
+      sesionesActivasDeMas +
+      routineDaysSinMesociclo.length +
+      mesociclosActivosDeMas,
   };
 }

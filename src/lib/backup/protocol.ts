@@ -38,7 +38,7 @@ function isRecord(v: unknown): v is Record<string, unknown> {
 }
 
 /**
- * Rechaza (sin guardar) si falta `manifest` o `data`, si no vienen las ocho
+ * Rechaza (sin guardar) si falta `manifest` o `data`, si no vienen las nueve
  * tablas, o si `counts` no coincide con la cantidad real de filas del `data`.
  *
  * Un snapshot con todas las tablas vacías (sessions: 0, setLogs: 0) es LEGÍTIMO

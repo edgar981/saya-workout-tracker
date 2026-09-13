@@ -4,6 +4,7 @@ import type {
   BodyweightLog,
   Exercise,
   Laterality,
+  Mesociclo,
   RoutineDay,
   RoutineSlot,
   Session,
@@ -703,14 +704,141 @@ export async function softDeleteExercise(exerciseId: string): Promise<void> {
 
 // ── Plantillas ──────────────────────────────────────────────────────────────
 
+// ── Mesociclos ───────────────────────────────────────────────────────────────
+
+export async function getActiveMesociclo(): Promise<Mesociclo | undefined> {
+  return db.mesociclos.where("activo").equals(1).first();
+}
+
+export interface MesocicloView {
+  mesociclo: Mesociclo;
+  dias: number;
+}
+
+/** Todos los mesociclos con su conteo de días. Activo primero, luego por inicio. */
+export async function listMesociclos(): Promise<MesocicloView[]> {
+  const [mesociclos, routineDays] = await Promise.all([
+    db.mesociclos.toArray(),
+    db.routineDays.toArray(),
+  ]);
+  const diasPorMeso = new Map<string, number>();
+  for (const d of routineDays) {
+    diasPorMeso.set(d.mesociclo_id, (diasPorMeso.get(d.mesociclo_id) ?? 0) + 1);
+  }
+  return mesociclos
+    .map((mesociclo) => ({ mesociclo, dias: diasPorMeso.get(mesociclo.id) ?? 0 }))
+    .sort((a, b) => {
+      if (a.mesociclo.activo !== b.mesociclo.activo) return b.mesociclo.activo - a.mesociclo.activo;
+      // Sin fecha al final; con fecha, la más reciente primero.
+      const fa = a.mesociclo.iniciado_en ?? "";
+      const fb = b.mesociclo.iniciado_en ?? "";
+      return fb.localeCompare(fa);
+    });
+}
+
+/**
+ * Activa un mesociclo y cierra el anterior en la MISMA transacción — misma
+ * invariante de "exactamente uno activo" que startSession con las sesiones, para
+ * que no exista un instante con dos activos. `terminado_en` se sella en el que
+ * se cierra; `iniciado_en` no se toca (es decisión manual del usuario).
+ */
+export async function activateMesociclo(mesocicloId: string): Promise<void> {
+  const now = new Date().toISOString();
+  await db.transaction("rw", [db.mesociclos], async () => {
+    const activos = await db.mesociclos.where("activo").equals(1).toArray();
+    for (const m of activos) {
+      if (m.id === mesocicloId) continue;
+      await db.mesociclos.update(m.id, { activo: 0, terminado_en: m.terminado_en ?? now });
+    }
+    await db.mesociclos.update(mesocicloId, { activo: 1, terminado_en: null });
+  });
+}
+
+/**
+ * Duplica un mesociclo a uno nuevo (inactivo): COPIA sus días, slots y
+ * alternativas con ids nuevos. Copia, no mueve — el original conserva sus slots
+ * intactos, que es todo el punto. Los `alternative_exercise_ids` apuntan a
+ * ejercicios (globales, compartidos entre mesociclos), así que se copian tal cual
+ * sin remapear. Devuelve el id del nuevo mesociclo.
+ */
+export async function duplicateMesociclo(sourceId: string, nombre: string): Promise<string> {
+  const nuevoMesoId = newId();
+  await db.transaction("rw", [db.mesociclos, db.routineDays, db.routineSlots], async () => {
+    await db.mesociclos.add({
+      id: nuevoMesoId,
+      nombre,
+      iniciado_en: null,
+      terminado_en: null,
+      activo: 0,
+    });
+
+    const dias = (await db.routineDays.where("mesociclo_id").equals(sourceId).toArray()).sort(
+      (a, b) => a.orden - b.orden,
+    );
+    for (const dia of dias) {
+      const nuevoDiaId = newId();
+      await db.routineDays.add({
+        id: nuevoDiaId,
+        nombre: dia.nombre,
+        orden: dia.orden,
+        mesociclo_id: nuevoMesoId,
+      });
+
+      const slots = await db.routineSlots.where("routine_day_id").equals(dia.id).toArray();
+      for (const slot of slots) {
+        await db.routineSlots.add({
+          id: newId(),
+          routine_day_id: nuevoDiaId,
+          exercise_id: slot.exercise_id,
+          orden: slot.orden,
+          target_sets: slot.target_sets,
+          target_reps: slot.target_reps,
+          // Ids de EJERCICIO (globales), no de slot: se copian tal cual.
+          alternative_exercise_ids: [...slot.alternative_exercise_ids],
+          activo: slot.activo,
+        });
+      }
+    }
+  });
+  return nuevoMesoId;
+}
+
+/** Mesociclo vacío, inactivo, sin días. Se activa/rellena aparte. */
+export async function createEmptyMesociclo(nombre: string): Promise<string> {
+  const id = newId();
+  await db.mesociclos.add({ id, nombre, iniciado_en: null, terminado_en: null, activo: 0 });
+  return id;
+}
+
+export async function renameMesociclo(mesocicloId: string, nombre: string): Promise<void> {
+  await db.mesociclos.update(mesocicloId, { nombre });
+}
+
+/** `iniciado_en` es YYYY-MM-DD o null. Null quita el número de semana del home. */
+export async function updateMesocicloIniciadoEn(
+  mesocicloId: string,
+  iniciadoEn: string | null,
+): Promise<void> {
+  await db.mesociclos.update(mesocicloId, { iniciado_en: iniciadoEn });
+}
+
 export interface SlotView {
   slot: RoutineSlot;
   exercise: Exercise | null;
   alternatives: Exercise[];
 }
 
+/**
+ * Los días del mesociclo ACTIVO, por orden. `/plantillas` y el home muestran el
+ * plan vigente, no todos los días de todos los mesociclos. Sin mesociclo activo
+ * (no debería pasar tras la migración) devuelve vacío.
+ */
 export async function listRoutineDays(): Promise<RoutineDay[]> {
-  return db.routineDays.orderBy("orden").toArray();
+  const meso = await getActiveMesociclo();
+  if (!meso) return [];
+  return (await db.routineDays.where("mesociclo_id").equals(meso.id).toArray()).sort(
+    (a, b) => a.orden - b.orden,
+  );
 }
 
 /**

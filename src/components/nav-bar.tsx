@@ -20,7 +20,8 @@ function section(pathname: string): "inicio" | "historial" | "ajustes" {
   if (pathname === "/") return "inicio";
   // El historial de un ejercicio (/ejercicio/[id]) es historial, no ajustes.
   if (pathname.startsWith("/historial") || pathname.startsWith("/ejercicio")) return "historial";
-  // /ajustes y los tres destinos de configuración que agrupa.
+  // /ajustes y los destinos de configuración que agrupa (mesociclos, plantillas,
+  // catálogo, datos y sus subrutas).
   return "ajustes";
 }
 

@@ -75,7 +75,7 @@ export default function DataScreen() {
       </header>
 
       <p className="text-muted-foreground text-sm">
-        Volcado crudo de las ocho tablas, solo legible por esta app. Existe porque cada migración
+        Volcado crudo de las nueve tablas, solo legible por esta app. Existe porque cada migración
         de esquema corre contra la única copia de los datos. No sirve para compartir.
       </p>
 
@@ -112,7 +112,7 @@ export default function DataScreen() {
 
       <div className="flex flex-col gap-2">
         <p className="text-muted-foreground text-xs">
-          Restaurar reemplaza todo: vacía las ocho tablas y reconstruye desde el archivo. Nunca
+          Restaurar reemplaza todo: vacía las nueve tablas y reconstruye desde el archivo. Nunca
           fusiona. Antes de tocar nada se descarga un respaldo del estado actual — esa es la
           guarda, no un cuadro de confirmación.
         </p>
@@ -170,6 +170,8 @@ export default function DataScreen() {
                   SessionExercise sin ejercicio: {integridad.sessionExercisesSinEjercicio.length}
                 </li>
                 <li>Sesiones activas duplicadas: {integridad.sesionesActivasDeMas}</li>
+                <li>RoutineDay sin mesociclo: {integridad.routineDaysSinMesociclo.length}</li>
+                <li>Mesociclos activos duplicados: {integridad.mesociclosActivosDeMas}</li>
               </ul>
             </>
           )}
