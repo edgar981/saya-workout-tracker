@@ -57,7 +57,7 @@ prerenderiza estático.
 ### 2.1 Aristas por enlace (`<Link>`, un tap)
 
 - La **barra de navegación** (§2.5) da `→ /`, `→ /historial`, `→ /ajustes` desde cualquier ruta donde es visible; no se repite por pantalla abajo.
-- `/` → la tarjeta de sesión abierta ("Continuar donde ibas →") → `/sesion` cuando hay sesión activa; cada día de la lista → `/sesion` (vía `startSession`). El home ya no tiene pie propio (los destinos de configuración viven en `/ajustes`, alcanzable por la barra).
+- `/` → la tarjeta de sesión abierta ("Continuar donde ibas →") → `/sesion` cuando hay sesión activa. Tocar un día de la lista **ya no** llama a `startSession`: abre la **hoja de vista previa** (§2.6), una capa sobre el home, no una ruta. La sesión se crea solo al tocar "Empezar" dentro de la hoja (ver §2.2). El home ya no tiene pie propio (los destinos de configuración viven en `/ajustes`, alcanzable por la barra).
 - `/ajustes` → `/mesociclos`, `/plantillas`, `/catalogo`, `/datos` (los destinos de configuración); → `/` (chevron: `/ajustes` es de primer nivel de la barra, como `/historial`).
 - `/sesion` → `/` (botón "Volver" de la cabecera: salir al home SIN cerrar); → `/sesion/cerrar` (botón "Cerrar sesión"); y la tarjeta "La pasada" → `/ejercicio/[id]`.
 - `/sesion/cerrar` → `/sesion` (chevron "Volver a la sesión").
@@ -70,7 +70,7 @@ prerenderiza estático.
 
 ### 2.2 Aristas programáticas (`router.*`)
 
-- `/` : elegir día → `startSession` → `replace('/sesion')`. (Ya **no** hay redirect por sesión activa.) Al empezar un día, `startSession` cierra la sesión abierta anterior en la misma transacción; si esa sesión **no registró nada** (ni series ni notas por ejercicio) la **descarta** (cascada de `discardSession`) en vez de cerrarla, para que no quede en `/historial` como sesión de cero series.
+- `/` : tocar un día abre la hoja de vista previa (§2.6) — solo estado de UI, sin escritura. **"Empezar" dentro de la hoja** → `startSession` → `replace('/sesion')`. (Ya **no** hay redirect por sesión activa.) Al empezar un día, `startSession` cierra la sesión abierta anterior en la misma transacción; si esa sesión **no registró nada** (ni series ni notas por ejercicio) la **descarta** (cascada de `discardSession`) en vez de cerrarla, para que no quede en `/historial` como sesión de cero series. Con una sesión abierta, la hoja lo advierte antes de "Empezar"; el comportamiento de `startSession` no cambia.
 - `/sesion` : la vista resuelve a `null` (sin sesión activa) → `replace('/')`.
 - `/sesion/cerrar` : cerrar → `replace('/historial/[id]?desde=cierre')` **si se cerró**, o `replace('/')` **si `closeSession` la descartó** (sesión sin contenido y formulario de cierre vacío: no hay detalle que mostrar); descartar → `replace('/')`; la sesión desaparece sin que navegues tú → `replace('/')`. Nota, tags o peso corporal en el formulario cuentan como dato del usuario: con cualquiera de ellos la sesión se cierra normal aunque no tenga series.
 - `/historial/[id]` : "volver" (chevron) respeta el origen — si se llegó por cerrar (`?desde=cierre`) → `replace('/')`; si no → `router.back()` con respaldo `push('/historial')`. Eliminar sesión → `replace('/historial')`.
@@ -105,6 +105,13 @@ de rebotar. Reabrir la app en frío con una sesión activa cae en el home, no en
 - **Sección activa** marcada con tinta plena (el resto atenuado); NO usa el acento, reservado a acción/sesión activa/completar (`DECISIONES.md` §10). El mapa: `/` → Inicio; `/historial*` y `/ejercicio/*` → Historial; `/ajustes`, `/mesociclos`, `/plantillas*`, `/catalogo*`, `/datos` → Ajustes.
 - **No sustituye los chevrones** de vuelta de cada pantalla; conviven. El drill-down (`/plantillas/[dayId]`, `/catalogo/nuevo`) sigue subiendo un nivel con el gesto atrás.
 - **Reserva de espacio:** el CSS (`[data-nav] main`, que pone `AppShell`) añade al `<main>` un padding-bottom del alto de la barra + un respiro + el área segura, para que el último contenido no quede tapado al final del scroll.
+
+### 2.6 Hoja de vista previa del día
+
+- **Capa sobre el home, no una ruta.** Tocar un día (en cualquiera de los dos estados del home) abre `DayPreviewSheet` desde abajo, con la vista previa del día: nombre, ejercicios en orden (solo slots activos, con objetivo cuando exista), la última vez que se hizo y su veredicto compacto (o "nunca"), y "Empezar Day N" en acento. La hoja **no escribe nada** en Dexie; solo "Empezar" crea la sesión (`startSession`, §2.2).
+- **Por qué no es ruta:** es estado de UI del home (`selectedDayId`). Ponerla en una ruta agregaría una entrada de historial y una transición de página para algo que es una capa efímera. La contra es el gesto de borde (abajo).
+- **Se descarta:** deslizando hacia abajo, tocando fuera (el velo) o con `Escape`. Bloquea el scroll del home detrás mientras está abierta.
+- **Gesto de deslizar desde el borde (§2 del prompt):** el edge-swipe-atrás **sí** funciona en la PWA instalada en standalone (verificado: en `/plantillas/[dayId]` vuelve a `/ajustes`). Como la hoja no es ruta, no tiene entrada de historial propia, así que **con la hoja abierta el gesto no la cierra**: ejecuta el `back` normal del home y sale a la entrada anterior. Se dejó **como está** en vez de inventar una solución frágil: forzar que la hoja se cierre primero exige o una ruta (rechazada arriba) o manipular `history.pushState`/`popstate` a mano peleándose con el App Router de Next. El caso es **inofensivo** (diagnosticado con `history.back()` estando la hoja abierta): al salir del home, la hoja se desmonta con él —`selectedDayId` se descarta, no queda un estado colgado— y el `useEffect` de la hoja restaura `body.overflow`, así que el scroll del fondo se **libera** y la página destino queda usable; al volver al home, la hoja aparece **cerrada**. Las tres formas de descartar (deslizar, tocar fuera, `Escape`) cubren el uso real.
 
 ---
 

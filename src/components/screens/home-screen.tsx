@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useLiveQuery } from "dexie-react-hooks";
@@ -16,6 +17,7 @@ import {
 import type { Mesociclo } from "@/lib/db/types";
 import { cn } from "@/lib/utils";
 import { useNavegando } from "@/lib/use-navegando";
+import { DayPreviewSheet } from "@/components/day-preview-sheet";
 import { HomeSkeleton } from "@/components/skeletons";
 
 /** `SÁB 12 SEP`: la parte de fecha de la línea de orientación. */
@@ -96,6 +98,10 @@ export default function HomeScreen() {
   // TARJETA de sesión abierta (la sesión nueva ya está activa antes del replace).
   // El patrón —y por qué es estado y no ref— vive en useNavegando.
   const { navegando, marcar, reponer } = useNavegando();
+
+  // Día elegido para la hoja de vista previa (§1). Tocar un día YA NO inicia la
+  // sesión: abre esta hoja. Es solo estado de UI; no escribe nada en Dexie.
+  const [selectedDayId, setSelectedDayId] = useState<string | null>(null);
 
   // `?? null` para distinguir "cargando" (undefined) de "no hay sesión activa"
   // (null). El home NO redirige a /sesion cuando hay sesión activa: en su lugar
@@ -192,7 +198,7 @@ export default function HomeScreen() {
       <button
         key={day.id}
         type="button"
-        onClick={() => void start(day.id)}
+        onClick={() => setSelectedDayId(day.id)}
         className={cn(
           "hover:bg-surface-2 flex items-center gap-3 px-2 py-4 text-left transition-colors",
           i > 0 && "border-border border-t",
@@ -220,6 +226,7 @@ export default function HomeScreen() {
   };
 
   return (
+    <>
     <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-5 p-4">
       {/* Cabecera (ambos estados): solo la línea de orientación. Sin wordmark —
           el nombre de la app no informa nada a quien acaba de tocar su ícono. */}
@@ -283,5 +290,18 @@ export default function HomeScreen() {
         </div>
       )}
     </main>
+
+      {/* Hoja de vista previa (§1): tocar un día la abre; "Empezar" es el único
+          punto que escribe (reusa start → startSession). Con sesión abierta,
+          advierte antes de que el usuario toque "Empezar". */}
+      {selectedDayId && (
+        <DayPreviewSheet
+          dayId={selectedDayId}
+          sesionAbiertaNombre={active ? nombreSesion : null}
+          onEmpezar={() => void start(selectedDayId)}
+          onClose={() => setSelectedDayId(null)}
+        />
+      )}
+    </>
   );
 }

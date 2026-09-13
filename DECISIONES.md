@@ -97,6 +97,8 @@ Las alternativas son filas `Exercise` completas, no un campo variante, porque **
 
 **Una sesión sin contenido no se registra.** Al cerrar —tanto el cierre automático de `startSession` al empezar otro día como el explícito desde `/sesion/cerrar`— una sesión que no tiene NADA tecleado por el usuario (ni una serie ni una nota por ejercicio) se **descarta** en cascada (`discardSession`) en vez de cerrarse: abrir un día y no registrar nada no deja un registro fantasma de cero series en el historial. La excepción es el formulario de cierre: si el usuario escribió nota, tags o peso corporal, eso es dato suyo y la sesión se cierra normal aunque no tenga series.
 
+**Empezar una sesión es un gesto deliberado: vista previa antes del arranque.** Tocar un día en el home elegía y comprometía en el mismo gesto — la sesión arrancaba al instante, y no se sentía estar empezando algo porque no se empezó, solo se tocó. Ahora tocar un día abre una **hoja de vista previa** (desde abajo, con "Empezar" en la zona del pulgar) y la sesión se crea solo al tocar "Empezar". Es **un tap extra, a propósito**: la restricción de dos taps es para *registrar una serie*, que ocurre decenas de veces por entrenamiento; *empezar* ocurre una vez, así que puede pagar el gesto deliberado. Efecto secundario que resuelve: un toque accidental ya no crea una sesión real — el descarte de `startSession` sobre una sesión sin contenido deja de ser la primera línea de defensa y pasa a ser la red de abajo. Abrir, mirar y cerrar la hoja no escribe nada en Dexie. Detalle de navegación en `FLUJOS.md` §2.6.
+
 **`SessionExercise`** — instancia ejecutada de un ejercicio.
 
 | Campo | Tipo | Nota |
