@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  type TouchEvent as ReactTouchEvent,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { AlertTriangle, Flag } from "lucide-react";
 
@@ -70,8 +64,8 @@ export function DayPreviewSheet({
   const [shown, setShown] = useState(false);
   const [dragY, setDragY] = useState(0);
   const [dragging, setDragging] = useState(false);
-  const startY = useRef(0);
   const panelRef = useRef<HTMLDivElement>(null);
+  const grabRef = useRef<HTMLDivElement>(null);
 
   // Entrada: desliza hacia arriba en el primer frame.
   useEffect(() => {
@@ -110,19 +104,49 @@ export function DayPreviewSheet({
     };
   }, []);
 
-  const onTouchStart = (e: ReactTouchEvent) => {
-    setDragging(true);
-    startY.current = e.touches[0].clientY;
-  };
-  const onTouchMove = (e: ReactTouchEvent) => {
-    if (!dragging) return;
-    setDragY(Math.max(0, e.touches[0].clientY - startY.current));
-  };
-  const onTouchEnd = () => {
-    setDragging(false);
-    if (dragY > DISMISS_PX) cerrar();
-    else setDragY(0);
-  };
+  // Arrastre para cerrar, en listeners NATIVOS sobre la zona de agarre. El
+  // `touchmove` debe ser NON-PASSIVE para poder `preventDefault()` y consumir el
+  // gesto — si no, iOS lo interpreta también como overscroll del viewport y el
+  // fondo rebota. React registra sus `onTouchMove` como passive, así que su
+  // `preventDefault` no serviría; de ahí el listener a mano. La otra mitad es
+  // `touch-action: none` (clase `touch-none`) en el elemento: le dice al
+  // navegador que no haga scroll/zoom por su cuenta al tocar aquí.
+  useEffect(() => {
+    const el = grabRef.current;
+    if (!el) return;
+    let startY = 0;
+    let activo = false;
+    let dy = 0;
+    const onStart = (e: TouchEvent) => {
+      activo = true;
+      startY = e.touches[0].clientY;
+      dy = 0;
+      setDragging(true);
+    };
+    const onMove = (e: TouchEvent) => {
+      if (!activo) return;
+      e.preventDefault(); // consume el gesto: nada de scroll/rebote del fondo
+      dy = Math.max(0, e.touches[0].clientY - startY);
+      setDragY(dy);
+    };
+    const onEnd = () => {
+      if (!activo) return;
+      activo = false;
+      setDragging(false);
+      if (dy > DISMISS_PX) cerrar();
+      else setDragY(0);
+    };
+    el.addEventListener("touchstart", onStart, { passive: true });
+    el.addEventListener("touchmove", onMove, { passive: false });
+    el.addEventListener("touchend", onEnd);
+    el.addEventListener("touchcancel", onEnd);
+    return () => {
+      el.removeEventListener("touchstart", onStart);
+      el.removeEventListener("touchmove", onMove);
+      el.removeEventListener("touchend", onEnd);
+      el.removeEventListener("touchcancel", onEnd);
+    };
+  }, [cerrar]);
 
   return (
     <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label="Vista previa del día">
@@ -143,14 +167,10 @@ export function DayPreviewSheet({
           transition: dragging ? "none" : `transform ${SLIDE_MS}ms cubic-bezier(0.32,0.72,0,1)`,
         }}
       >
-        {/* Zona de agarre: el asa y la cabecera arrastran; el contenido de abajo
-            hace scroll normal. */}
-        <div
-          onTouchStart={onTouchStart}
-          onTouchMove={onTouchMove}
-          onTouchEnd={onTouchEnd}
-          className="shrink-0 px-4 pt-2.5"
-        >
+        {/* Zona de agarre: el asa y la cabecera arrastran (listeners nativos, ver
+            arriba); el contenido de abajo hace scroll normal. `touch-none` para
+            que el arrastre no lo tome el navegador como scroll del fondo. */}
+        <div ref={grabRef} className="shrink-0 touch-none px-4 pt-2.5">
           <div className="bg-border mx-auto mb-3 h-1 w-9 rounded-full" />
           {preview === undefined || !preview.day ? (
             <div className="bg-surface-2 h-6 w-32 rounded-md" />
