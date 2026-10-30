@@ -8,9 +8,12 @@ import { ChevronLeft, ScissorsLineDashed } from "lucide-react";
 
 import { unitTag } from "@/components/exercise-picker";
 import { SetLines } from "@/components/history/set-lines";
+import { EstadoLinea } from "@/components/progress/estado";
+import { MarcaChart } from "@/components/progress/marca-chart";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { loadExerciseHistory, type ExerciseHistory } from "@/lib/db/queries";
+import { loadExerciseHistory, todayISO, type ExerciseHistory } from "@/lib/db/queries";
+import { aparicionesDe, evaluarProgreso } from "@/lib/progress";
 import { formatSetWeight, unitSuffix } from "@/lib/units";
 import { EjercicioSkeleton } from "@/components/skeletons";
 
@@ -47,13 +50,22 @@ export default function EjercicioScreen() {
     else router.push("/historial");
   };
 
-  const history = useLiveQuery(() => loadExerciseHistory(exerciseId), [exerciseId]);
+  // Capa 2 (§11) sale de la MISMA travesía: `todas` ya viene en el historial.
+  const history = useLiveQuery(async () => {
+    const h = await loadExerciseHistory(exerciseId);
+    return { ...h, progreso: evaluarProgreso(aparicionesDe(h.todas), todayISO()) };
+  }, [exerciseId]);
 
   if (history === undefined) {
     return <EjercicioSkeleton />;
   }
 
-  const { exercise, entries, recentSnapshot, esUnilateral, totalSeries, bestSet } = history;
+  const { exercise, entries, recentSnapshot, esUnilateral, totalSeries, bestSet, progreso } = history;
+  const fuera = [
+    progreso.otraCarga > 0 &&
+      `${progreso.otraCarga} ${progreso.otraCarga === 1 ? "sesión no comparable" : "sesiones no comparables"} (otra carga, unidad o lateralidad)`,
+    progreso.deload > 0 && `${progreso.deload} de descarga`,
+  ].filter(Boolean);
 
   // Línea de metadatos (§4): unidad del snapshot vigente · lateralidad · total de
   // series. Sin apariciones, cae a la unidad del catálogo.
@@ -96,6 +108,29 @@ export default function EjercicioScreen() {
             {bestSet.set.side && ` · lado ${bestSet.set.side}`}
           </p>
         </div>
+      )}
+
+      {/* Progreso (§11.7): estado y línea de marcas de las comparables. La marca
+          no se muestra como número; al tocar un punto se leen sus series. */}
+      {progreso.estado !== "sin_registros" && (
+        <section className="bg-surface flex flex-col gap-3 rounded-xl border p-3.5">
+          <div className="flex flex-col gap-1">
+            <span className="text-muted-foreground text-xs">Progreso</span>
+            <EstadoLinea progreso={progreso} />
+          </div>
+          {progreso.mejor && progreso.puntos.length >= 2 && (
+            <MarcaChart
+              puntos={progreso.puntos}
+              mejor={progreso.mejor}
+              stackLabel={exercise?.stack_label ?? null}
+            />
+          )}
+          <p className="text-muted-foreground text-xs">
+            Cada punto: el promedio de tus dos mejores series de esa sesión. El anillo marca tu
+            mejor sesión.
+            {fuera.length > 0 && ` Fuera de la línea: ${fuera.join(" y ")}.`}
+          </p>
+        </section>
       )}
 
       <p className="text-muted-foreground text-xs">Últimas 5 sesiones con series.</p>

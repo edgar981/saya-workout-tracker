@@ -341,3 +341,85 @@ Presentación pura: nada de esta sección toca datos, schema, queries ni el vere
 * **Ámbar** (`--amber`): reservado a "dato incompleto que puedes arreglar ahora" — hoy, único uso: el indicador de serie con reps y sin peso. Para nada más.
 
 **Fuentes autoalojadas — restricción dura.** `next/font/google` descarga Archivo y DM Mono **en build** y las sirve desde el propio origen (`/_next/static/media/*.woff2`, cacheadas por el service worker como cualquier asset). **Prohibido** el `<link>` a Google Fonts o cualquier CDN en runtime: la app debe abrir con sus fuentes sin señal (D2). Archivo (variable) para UI; DM Mono para numerales y datos (fechas, conteos, pesos, reps, contador).
+
+---
+
+## 11. Capa 2 — lectura de progresión
+
+**Disparador de §8: cumplido.** Mesociclo 1 se registró completo en la app (24 ago → 29 oct, 43 sesiones). Esta sección fija las definiciones **antes** de pintar nada: cada número de capa 2 sale de aquí, y una regla que no está escrita aquí no se implementa.
+
+La pregunta que responde es una: **¿estoy progresando, en qué, y desde cuándo no?** Hasta ahora contestarla exigía exportar la base y analizarla fuera de la app.
+
+**Lo que no cambia.** Nada se almacena (§3.5): todo se deriva en lectura desde `getPerformanceHistory`. Sin `version(4)`, sin migración. El veredicto por aparición (`compareAppearances`) y su neto por sesión siguen tal cual; capa 2 los reusa donde aplican y no los redefine.
+
+### 11.1 Marca de una aparición
+
+Un número por aparición de un ejercicio, para compararla contra **meses** de historial, no solo contra la anterior. Es una medida aparte del veredicto, y la razón es concreta: el veredicto compara reps totales a igual peso, lo cual sirve entre dos apariciones vecinas (mismo número de series), pero contra el historial completo el número de series varía. `Chest Supported Rows` el 1 oct hizo 170 × 7, 6, 5 (18 reps); el 29 oct, 170 × 8, 6 (14 reps), la mejor serie que ha hecho a ese peso. Por reps totales, el 29 oct quedaría −22% de su "mejor": falso.
+
+**Definición.** Por lado (en unilateral, L y R por separado y luego el promedio de los lados presentes): el **promedio de las dos mejores series**, cada una valorada así:
+
+- **Carga variable** (`KG`, `LB`, `STACK_POSITION`): e1RM de Epley, `peso × (1 + reps/30)`, con el mismo tope de 12 reps del veredicto (`MAX_REPS_E1RM`). Una serie de más de 12 reps no cuenta; una aparición sin ninguna serie ≤ 12 no tiene marca y no se grafica.
+- **Carga fija** (`BODYWEIGHT`, y `BODYWEIGHT_PLUS` dentro de su carga añadida, §11.2): el factor de Epley sin peso, `1 + reps/30`, **sin tope**. El tope protege estimaciones *entre cargas distintas*; aquí la carga es siempre la misma, así que solo comprime la escala. Se usa el factor y no reps crudas para que una rep pese lo mismo (~3%) en todos los ejercicios: así un solo umbral (§11.4) sirve para todos.
+
+**Por qué las dos mejores y no la mejor serie.** Probado contra los datos reales: con la mejor serie sola, una rep de diferencia ponía `Pull Up` y `Hack Squats` como "bajando", y escondía el progreso de `DB Skull Crushers` (35 lb × 6, 4 → 7, 7: el avance está en la segunda serie). Con todas las series promediadas, dejar de hacer una tercera serie (`Single Arm Cable Push Down`, 3 → 2 desde el 17 oct) subía la marca artificialmente. Dos mejores: robusta a 2 ↔ 3 series e incluye la serie de respaldo.
+
+**La marca nunca se muestra como peso.** Solo da forma a la línea y a los porcentajes. Un "233 lb e1RM" afirmaría que puedes levantar 233 lb una vez, y eso no lo sabemos: es el mismo criterio por el que la "mejor serie registrada" (§3.5) no usa fórmula. Esa tarjeta sigue igual; la marca es otro objeto.
+
+### 11.2 Comparables
+
+Una aparición es **comparable** con la más reciente del ejercicio si comparte:
+
+- La tupla de unidad `(weight_unit, weight_basis, added_unit)` — §3.5, sin conversión (D5).
+- La **lateralidad observada** (unilateral si alguna serie lleva lado). Pasar de bilateral a unilateral cambia lo que se mide: `DB OH Triceps Extension` desde el 22 sep.
+- En `BODYWEIGHT_PLUS`, además, la **misma carga añadida** (la mayor de la aparición). Sin peso corporal, +25 kg y +20 kg no tienen denominador común (§3.4): `Pull Up` a +20 kg el 19 oct no se compara con las de +25 kg. Hoy hay 0 `BodyweightLog`; ver BACKLOG.
+
+Se excluyen las sesiones con el tag `deload` —por id (`tag-deload`), no por nombre, que es editable— y la sesión activa. Solo series reales (reps > 0), como en toda la cadena de lectura.
+
+Las apariciones no comparables no se grafican pero se cuentan ("2 apariciones con otra carga"), para que el corte se vea en vez de esconderse — el mismo espíritu que la línea de "la unidad cambió aquí" del historial.
+
+### 11.3 Mejor marca
+
+La mayor marca entre las comparables. Su fecha es la de la **primera** aparición que la alcanzó: una marca nueva tiene que superar estrictamente a todas las anteriores; un empate no es mejor marca.
+
+En pantalla se llama **"tu mejor sesión"**, nunca "tu mejor" a secas: en `/ejercicio/[id]` convive con la "mejor serie registrada" (§3.5), que es otra cosa —la serie de mayor peso—. En `Close Grip Bench Press` la mejor serie es 200 × 5 (24 sep) y la mejor sesión es 184 × 11, 7 (4 sep); con el mismo nombre, la pantalla se contradiría.
+
+### 11.4 Estado por ejercicio
+
+Se evalúa en este orden; el primero que aplica gana:
+
+| Estado | Condición | Se muestra |
+|---|---|---|
+| **Sin registros** | Nunca se hizo | — |
+| **Sin registrar** | La aparición más reciente tiene más de **14 días** | "desde 9 oct" |
+| **Pocos datos** | Menos de **4** comparables | "3 comparables" |
+| **Subiendo** ↑ | Mejor marca en alguna de las **2** últimas comparables | "+22% desde 9 sep": promedio de las 2 últimas vs promedio de las 2 primeras |
+| **Por debajo** ↓ | Promedio de las 2 últimas **≤ 97%** de la mejor marca | "−8% vs tu mejor sesión (4 sep)" |
+| **Estancado** | Lo demás | "sin mejorar desde 1 sep (8 sem)" |
+
+**Por qué 14 días y 2 apariciones.** Con el split actual cada ejercicio va una vez por semana: dos semanas son dos oportunidades. "Sin registrar" va antes que todo porque un estado calculado sobre datos de hace un mes no describe el presente.
+
+**Por qué 3% y no el 2% del veredicto (`UMBRAL_IGUAL`).** El veredicto compara dos apariciones; aquí la actual se compara contra el **máximo** de muchas, y un máximo está sesgado hacia arriba por el ruido (es el mejor día de N). El margen tiene que ser más ancho. 3% ≈ una rep menos en cada una de las dos series. Con 2%, `DB Bicep Curl` (−2.1%), `Pull Up` (−2.8%) y `Weighted Dips` (−2.9%) serían "por debajo" por una rep.
+
+**Por qué "por debajo" y no "bajando".** El estado dice dónde estás respecto a tu mejor, no la pendiente. `Close Grip Bench Press` está en un nivel más bajo desde finales de septiembre sin seguir cayendo; "bajando" afirmaría una dirección que los datos no muestran.
+
+Los umbrales (14 días, 4 comparables, 2 últimas, 97%) viven como constantes con nombre en un solo lugar, igual que `UMBRAL_IGUAL`.
+
+### 11.5 Semana desde la última pausa
+
+**Pausa:** un hueco de **7 días o más** entre dos sesiones cerradas con series, o una sesión con tag `deload`. El bloque actual empieza en la primera sesión después de la pausa más reciente (o en la primera sesión de todas, si nunca hubo pausa). Se muestra "semana N" = semanas completas transcurridas + 1, la misma regla que la semana del mesociclo (§3.6). Al 29 oct: semana 6, desde el 21 sep.
+
+Es un **hecho, no un consejo.** La app no sugiere descargar, igual que no sugiere qué día toca (§7.5): muestra "semana 6 desde la última pausa · 6 ejercicios por debajo" y la decisión es tuya.
+
+### 11.6 Balance semanal
+
+Por semana de lunes a domingo, la suma de los netos de sesión (`mejor − peor`, §3.5, `netFromVerdicts`). Es la misma regla de los badges del historial sumada por semana: no hay segunda regla. Las semanas sin sesiones se ven como hueco, no como cero; las semanas con alguna sesión `deload` se marcan.
+
+### 11.7 Dónde vive
+
+- **`/progreso`**, una cuarta pestaña en la barra (Inicio · Historial · Progreso · Ajustes). La lectura es el valor de la app (§1), así que no va escondida dentro de otra sección. Arriba: mesociclo activo y semana desde la pausa. Luego, el balance de las últimas 8 semanas. Luego, los ejercicios del mesociclo activo (slots activos, el ejercicio del slot, no sus alternativas) agrupados por estado, cada fila enlazada a `/ejercicio/[id]`.
+- **`/ejercicio/[id]`**: la línea de marcas de las comparables, con la mejor marca señalada, y la línea de estado de §11.4.
+- **Visual.** SVG a mano, sin librería de gráficas. §10 manda: la línea en tinta, nada de acento ni rojo. "Subiendo" en tinta plena con ↑; "estancado" y "por debajo" atenuados, "por debajo" con ↓. La dirección la carga la flecha, no el color.
+
+### 11.8 Fuera de esta entrega
+
+Con su disparador en BACKLOG: volumen por grupo muscular (pide un campo nuevo en `Exercise` → `version(4)`), balance por lado (hoy L y R coinciden en 57 de 58 pares de series: no hay señal que mostrar), y comparar `BODYWEIGHT_PLUS` entre cargas usando el peso corporal.

@@ -1117,6 +1117,12 @@ export interface ExerciseHistory {
   totalSeries: number;
   /** Mejor serie dentro del snapshot vigente; null si no hay series. */
   bestSet: BestSet | null;
+  /**
+   * TODAS las apariciones con series, descendentes: la misma travesía, entregada
+   * entera para que la pantalla calcule capa 2 (`lib/progress`, §11) sin una
+   * segunda. El cálculo NO vive aquí: este módulo entra al bundle de /sesion.
+   */
+  todas: PerformanceEntry[];
 }
 
 /**
@@ -1199,5 +1205,5 @@ export async function loadExerciseHistory(exerciseId: string): Promise<ExerciseH
     entries.push({ ...entry, isSubstitution, slotExerciseNombre, unitKey });
   }
 
-  return { exercise, entries, recentSnapshot, esUnilateral, totalSeries, bestSet };
+  return { exercise, entries, recentSnapshot, esUnilateral, totalSeries, bestSet, todas: full };
 }

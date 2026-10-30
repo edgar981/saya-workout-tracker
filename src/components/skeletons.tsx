@@ -193,6 +193,12 @@ export function EjercicioSkeleton() {
         <Sk className="h-6 w-28" />
         <Sk className="h-3 w-24" />
       </Card>
+      {/* Tarjeta de progreso: estado + lectura + línea (104 + eje 18). */}
+      <Card className="flex flex-col gap-2">
+        <Sk className="h-3 w-48" />
+        <Sk className="h-4 w-40" />
+        <Sk className="h-[122px] w-full" />
+      </Card>
       <Sk className="h-3 w-40" />
       <div className="flex flex-col gap-3">
         {Array.from({ length: 4 }).map((_, i) => (
@@ -200,6 +206,39 @@ export function EjercicioSkeleton() {
             <Sk className="h-4 w-32" />
             <Sk className="h-3 w-full" />
           </Card>
+        ))}
+      </div>
+    </Screen>
+  );
+}
+
+// ── /progreso ───────────────────────────────────────────────────────────────
+export function ProgresoSkeleton() {
+  return (
+    <Screen className="gap-5">
+      <header className="flex items-center gap-2 pt-2">
+        <div className="size-9 shrink-0" />
+        <div className="min-w-0">
+          <h1 className="text-lg font-semibold">Progreso</h1>
+          <Sk className="mt-1.5 h-3 w-52" />
+        </div>
+      </header>
+      {/* Balance semanal (misma altura que el real: dos mitades de 32px + rótulos). */}
+      <Card className="flex flex-col gap-3">
+        <Sk className="h-4 w-32" />
+        <Sk className="h-16 w-full rounded-sm" />
+        <Sk className="h-3 w-full" />
+      </Card>
+      <div className="flex flex-col gap-2">
+        <Sk className="h-3 w-24" />
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="flex items-center gap-3 rounded-lg border p-3">
+            <div className="min-w-0 flex-1">
+              <Sk className="h-4 w-36" />
+              <Sk className="mt-1.5 h-3 w-44" />
+            </div>
+            <Sk className="h-5 w-14" />
+          </div>
         ))}
       </div>
     </Screen>

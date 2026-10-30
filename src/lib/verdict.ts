@@ -44,8 +44,11 @@ function distinctWeights(sets: SetLog[]): number[] {
   return [...new Set(sets.filter((s) => s.weight_value !== null).map((s) => s.weight_value as number))];
 }
 
-/** Epley. Relativo, para comparar dos apariciones a peso distinto. */
-function epley(weight: number, reps: number): number {
+/**
+ * Epley. Relativo, para comparar dos apariciones a peso distinto. Exportado para
+ * la marca de capa 2 (`lib/progress.ts`): una sola fórmula en la app.
+ */
+export function epley(weight: number, reps: number): number {
   return weight * (1 + reps / 30);
 }
 

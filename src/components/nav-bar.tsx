@@ -1,12 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { History, House, Settings } from "lucide-react";
+import { History, House, Settings, TrendingUp } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
 /**
- * Barra de navegación persistente (§2). Tres destinos fijos. La sección activa
+ * Barra de navegación persistente (§2). Cuatro destinos fijos. La sección activa
  * se marca con tinta plena; el resto queda atenuado — NO se usa el acento, que
  * está reservado a acción/sesión activa/completar y no debe competir aquí
  * (DECISIONES.md §10).
@@ -16,8 +16,9 @@ import { cn } from "@/lib/utils";
  * durante el registro). Los chevrones de vuelta de cada pantalla se conservan:
  * la barra no los sustituye.
  */
-function section(pathname: string): "inicio" | "historial" | "ajustes" {
+function section(pathname: string): "inicio" | "historial" | "progreso" | "ajustes" {
   if (pathname === "/") return "inicio";
+  if (pathname === "/progreso") return "progreso";
   // El historial de un ejercicio (/ejercicio/[id]) es historial, no ajustes.
   if (pathname.startsWith("/historial") || pathname.startsWith("/ejercicio")) return "historial";
   // /ajustes y los destinos de configuración que agrupa (mesociclos, plantillas,
@@ -28,6 +29,8 @@ function section(pathname: string): "inicio" | "historial" | "ajustes" {
 const ITEMS = [
   { key: "inicio", href: "/", label: "Inicio", Icon: House },
   { key: "historial", href: "/historial", label: "Historial", Icon: History },
+  // Capa 2 (DECISIONES.md §11.7): la lectura es el valor de la app, no va escondida.
+  { key: "progreso", href: "/progreso", label: "Progreso", Icon: TrendingUp },
   { key: "ajustes", href: "/ajustes", label: "Ajustes", Icon: Settings },
 ] as const;
 

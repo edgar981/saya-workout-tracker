@@ -35,7 +35,8 @@ build de producción.
 | `/sesion/cerrar` | `close-screen` | estática | — | Cierre (nota / contexto / peso corporal opcionales) o descarte. **Sin barra de navegación** (§2.5). |
 | `/historial` | `historial-screen` | estática | — | Lista de todas las sesiones, más reciente primero. |
 | `/historial/[sessionId]` | `session-detail-screen` | **dinámica (ƒ)** | `sessionId` | Detalle de una sesión: series, veredicto, hueco por serie, duración, tags, peso, nota. |
-| `/ejercicio/[exerciseId]` | `ejercicio-screen` | **dinámica (ƒ)** | `exerciseId` | Historial de un ejercicio (últimas 5 sesiones con series). |
+| `/ejercicio/[exerciseId]` | `ejercicio-screen` | **dinámica (ƒ)** | `exerciseId` | Historial de un ejercicio: mejor serie registrada, tarjeta de **progreso** (estado + línea de marcas tocable, `DECISIONES.md` §11) y últimas 5 sesiones con series. |
+| `/progreso` | `progreso-screen` | estática | — | Capa 2 (`DECISIONES.md` §11): semana desde la última pausa, balance semanal (últimas 8) y los ejercicios del plan vigente agrupados por estado (subiendo / estancado / por debajo / sin registrar / sin datos suficientes), cada fila con su sparkline. Solo lectura. |
 | `/mesociclos` | `mesociclos-screen` | estática | — | Lista de mesociclos: nombre, rango de fechas, activo, nº de días. Activar otro, duplicar el actual, crear vacío, renombrar y editar `iniciado_en`. |
 | `/plantillas` | `plantillas-screen` | estática | — | Días del mesociclo **activo** (dice cuál edita). El selector de mesociclo vive en `/mesociclos`, no aquí. |
 | `/plantillas/[dayId]` | `plantillas-dia-screen` | **dinámica (ƒ)** | `dayId` | Detalle de un día: slots, orden, objetivos, alternativas. |
@@ -56,7 +57,7 @@ prerenderiza estático.
 
 ### 2.1 Aristas por enlace (`<Link>`, un tap)
 
-- La **barra de navegación** (§2.5) da `→ /`, `→ /historial`, `→ /ajustes` desde cualquier ruta donde es visible; no se repite por pantalla abajo.
+- La **barra de navegación** (§2.5) da `→ /`, `→ /historial`, `→ /progreso`, `→ /ajustes` desde cualquier ruta donde es visible; no se repite por pantalla abajo.
 - `/` → la tarjeta de sesión abierta ("Continuar donde ibas →") → `/sesion` cuando hay sesión activa. Tocar un día de la lista **ya no** llama a `startSession`: abre la **hoja de vista previa** (§2.6), una capa sobre el home, no una ruta. La sesión se crea solo al tocar "Empezar" dentro de la hoja (ver §2.2). El home ya no tiene pie propio (los destinos de configuración viven en `/ajustes`, alcanzable por la barra).
 - `/ajustes` → `/mesociclos`, `/plantillas`, `/catalogo`, `/datos` (los destinos de configuración); → `/` (chevron: `/ajustes` es de primer nivel de la barra, como `/historial`).
 - `/sesion` → `/` (botón "Volver" de la cabecera: salir al home SIN cerrar); → `/sesion/cerrar` (botón "Cerrar sesión"); y la tarjeta "La pasada" → `/ejercicio/[id]`.
@@ -64,6 +65,7 @@ prerenderiza estático.
 - `/historial` → `/` (chevron); cada fila → `/historial/[id]`. `/historial` es un destino **de primer nivel** de la barra (no cuelga de `/ajustes`), así que su chevron va al home; no quedó desactualizado.
 - `/historial/[id]` → cada nombre de ejercicio → `/ejercicio/[id]`; "Sesión en curso · abrir para cerrarla o descartarla" → `/sesion` (solo si `session.activa === 1`); "Volver al historial" → `/historial` (solo cuando la sesión no existe). El chevron "volver" ya no es enlace fijo: ver §2.2.
 - `/ejercicio/[id]` → cada entrada de sesión → `/historial/[id]`.
+- `/progreso` → `/` (chevron, como `/historial`: destino de primer nivel de la barra); cada fila → `/ejercicio/[id]`.
 - `/plantillas` → cada día → `/plantillas/[dayId]`; `/plantillas/[dayId]` → `/plantillas` (chevron).
 - `/catalogo` → "Crear ejercicio" → `/catalogo/nuevo`; `/catalogo/nuevo` → `/catalogo` (chevron).
 - Los chevrones de `/mesociclos`, `/plantillas`, `/catalogo` y `/datos` ya **no** son enlace fijo: esas rutas se alcanzan desde más de un origen, así que siguen el historial real. Ver §2.2. (`/plantillas/[dayId]` y `/catalogo/nuevo` sí suben un nivel fijo a su propia lista con `<Link>`, porque tienen un solo origen.)
@@ -95,14 +97,14 @@ de rebotar. Reabrir la app en frío con una sesión activa cae en el home, no en
 - **El "volver" de `/historial/[id]` respeta el origen.** Si se llegó por cerrar una sesión (`?desde=cierre`) va al home; si se llegó desde `/historial` o `/ejercicio/[id]`, `router.back()` devuelve ahí. No se usa `router.back()` a ciegas: tras cerrar, el detalle reemplazó a `/sesion/cerrar` en el historial, así que `back()` caería en `/sesion` (ya cerrada) — por eso ese caso va explícito al home.
 - **El drill-down de `/plantillas` y el crear-ejercicio de `/catalogo` viven en la URL** (`/plantillas/[dayId]`, `/catalogo/nuevo`): el gesto atrás sube un nivel (al listado), no sale de la sección. En cambio, **expandir una fila del catálogo es estado en sitio** (divulgación, no navegación): el gesto atrás sale de `/catalogo` (a `/ajustes`) en vez de colapsar la fila — comportamiento buscado, no regresión.
 - **La restauración desde el servidor en `/datos` es in-place**: no cambia de ruta; la lista de snapshots y el resultado se renderizan en la misma pantalla.
-- **`/ejercicio/[id]` no tiene destino fijo de vuelta**: usa `history.back()`. Abierto desde la sesión activa vuelve a `/sesion`; abierto desde `/historial/[id]` vuelve a esa sesión; abierto en frío (sin historial de navegación) cae en `/historial`.
+- **`/ejercicio/[id]` no tiene destino fijo de vuelta**: usa `history.back()`. Abierto desde la sesión activa vuelve a `/sesion`; abierto desde `/historial/[id]` vuelve a esa sesión; abierto desde `/progreso` vuelve a `/progreso`; abierto en frío (sin historial de navegación) cae en `/historial`.
 
 ### 2.5 Barra de navegación persistente
 
-- **Tres destinos fijos:** `Inicio` (`/`) · `Historial` (`/historial`) · `Ajustes` (`/ajustes`). Vive en el layout (`AppShell` + `NavBar`), así que es la misma barra en todas las rutas — no se re-monta ni parpadea al navegar.
-- **Visible en:** `/`, `/historial`, `/historial/[id]`, `/ejercicio/[id]`, `/mesociclos`, `/plantillas`, `/plantillas/[dayId]`, `/catalogo`, `/catalogo/nuevo`, `/datos`, `/ajustes`. La decide `AppShell` por exclusión (todo lo que no sea `/sesion*`), así que una ruta nueva la hereda sola.
+- **Cuatro destinos fijos:** `Inicio` (`/`) · `Historial` (`/historial`) · `Progreso` (`/progreso`) · `Ajustes` (`/ajustes`). Vive en el layout (`AppShell` + `NavBar`), así que es la misma barra en todas las rutas — no se re-monta ni parpadea al navegar.
+- **Visible en:** `/`, `/historial`, `/historial/[id]`, `/ejercicio/[id]`, `/progreso`, `/mesociclos`, `/plantillas`, `/plantillas/[dayId]`, `/catalogo`, `/catalogo/nuevo`, `/datos`, `/ajustes`. La decide `AppShell` por exclusión (todo lo que no sea `/sesion*`), así que una ruta nueva la hereda sola.
 - **Ausente en `/sesion` y `/sesion/cerrar`** (exclusión no negociable): ahí el alto vale más y no hay a dónde navegar durante el registro. La decide `AppShell` por `usePathname`.
-- **Sección activa** marcada con tinta plena (el resto atenuado); NO usa el acento, reservado a acción/sesión activa/completar (`DECISIONES.md` §10). El mapa: `/` → Inicio; `/historial*` y `/ejercicio/*` → Historial; `/ajustes`, `/mesociclos`, `/plantillas*`, `/catalogo*`, `/datos` → Ajustes.
+- **Sección activa** marcada con tinta plena (el resto atenuado); NO usa el acento, reservado a acción/sesión activa/completar (`DECISIONES.md` §10). El mapa: `/` → Inicio; `/historial*` y `/ejercicio/*` → Historial; `/progreso` → Progreso; `/ajustes`, `/mesociclos`, `/plantillas*`, `/catalogo*`, `/datos` → Ajustes. La sección se decide solo por la ruta, así que `/ejercicio/[id]` marca **Historial** aunque se haya abierto desde una fila de `/progreso` — la barra no conoce el origen.
 - **No sustituye los chevrones** de vuelta de cada pantalla; conviven. El drill-down (`/plantillas/[dayId]`, `/catalogo/nuevo`) sigue subiendo un nivel con el gesto atrás.
 - **Reserva de espacio:** el CSS (`[data-nav] main`, que pone `AppShell`) añade al `<main>` un padding-bottom del alto de la barra + un respiro + el área segura, para que el último contenido no quede tapado al final del scroll.
 

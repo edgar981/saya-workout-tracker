@@ -10,6 +10,23 @@ Autoridad sobre schema y alcance: `DECISIONES.md`.
 
 ## Disparador cumplido — en curso
 
+Capa 2, lectura de progresión (2026-10-29). Disparador de `DECISIONES.md` §8
+cumplido: Mesociclo 1 se registró completo en la app.
+
+- **Definiciones escritas antes que la UI** — `DECISIONES.md` §11: marca por
+  aparición, comparables, mejor marca, estado por ejercicio (subiendo /
+  estancado / por debajo), semana desde la última pausa y balance semanal.
+  Probadas contra el snapshot real del 29 oct antes de fijar los umbrales.
+- **Construido:** (1) tarjeta de progreso en `/ejercicio/[id]` (estado + línea
+  de marcas; al tocar un punto se leen sus series); (2) pestaña `/progreso`
+  (semana desde la pausa, balance semanal, ejercicios por estado). Reglas en
+  `lib/progress.ts`, puras; verificadas contra el snapshot del 29 oct (mismos
+  estados que el prototipo, ejercicio por ejercicio). Volumen por grupo muscular
+  y balance por lado quedan abajo, con su propio disparador.
+- **A vigilar en la primera semana de descarga:** que las sesiones lleven el tag
+  `deload`. Sin él, §11 las lee como sesiones normales: la línea baja y el
+  estado puede pasar a "por debajo" por una descarga planeada.
+
 Trabajado en el prompt de mesociclos (2026-09-12) — primera migración real a `version(3)`:
 
 - **Mesociclos.** Entidad nueva (`Mesociclo`) + `RoutineDay.mesociclo_id` (indexado).
@@ -167,7 +184,19 @@ Trabajado en el prompt de correcciones y backlog (2026-08-22):
   a capa 2 sigue sin usarse, evaluar si `addSegment` y el render de giant sets
   sobran.
 
-- **Capa 2: progresión, e1RM, volumen por grupo muscular, balance por lado.**
-  Disparador: registrar un mesociclo completo sin volver a Notes (criterio de
-  validación de `DECISIONES.md` §8). Se decide aparte cuando el disparador se
-  cumpla — no es un item más de esta lista.
+- **Volumen por grupo muscular** (resto de capa 2, §11.8).
+  Disparador: la primera vez que quieras saber si un músculo recibe poco o mucho
+  trabajo, no solo si un ejercicio progresa. Pide un campo de grupo muscular en
+  `Exercise` → `version(4)` con su protocolo de migración (§6). Hoy la pregunta
+  real era "¿progreso?", y eso lo responde §11 sin tocar el esquema.
+
+- **Balance por lado** (resto de capa 2, §11.8).
+  Disparador: que L y R empiecen a diferir de verdad. Al 29 oct coinciden en 57 de
+  58 pares de series unilaterales (la única diferencia: 11 vs 12 reps en `Forearm
+  Cable Curl`), así que una vista de balance mostraría una línea plana.
+
+- **`BODYWEIGHT_PLUS` comparable entre cargas añadidas.**
+  Disparador: 4 o más `BodyweightLog`, en la misma unidad que la `added_unit` del
+  ejercicio (D5: no se convierte). Con peso corporal, la carga real es `cuerpo +
+  añadido`, y `Pull Up` a +20 kg y a +25 kg se pueden comparar. Hoy hay 0
+  registros y §11.2 compara solo dentro de la misma carga añadida.
