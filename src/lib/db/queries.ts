@@ -667,6 +667,7 @@ export interface NewExerciseInput {
   added_unit: AddedUnit | null;
   stack_label: string | null;
   laterality_default: Laterality;
+  grupos: Exercise["grupos"];
 }
 
 export async function createExercise(input: NewExerciseInput): Promise<string> {
@@ -695,6 +696,18 @@ export async function updateExerciseUnits(
     );
   }
   await db.exercises.update(exerciseId, patch);
+}
+
+/**
+ * Sin candado, a diferencia de la unidad: los grupos no se snapshotean, así que
+ * cambiarlos recalcula el volumen de todo el historial — que es lo que se quiere
+ * al corregir una clasificación (DECISIONES.md §12.2).
+ */
+export async function updateExerciseGrupos(
+  exerciseId: string,
+  grupos: Exercise["grupos"],
+): Promise<void> {
+  await db.exercises.update(exerciseId, { grupos });
 }
 
 /** Borrado suave. Nunca duro: el histórico apunta aquí. */

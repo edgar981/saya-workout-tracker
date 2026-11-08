@@ -1,5 +1,6 @@
 import { db, MESOCICLO_INICIAL_ID } from "./db";
 import type { Exercise, Mesociclo, RoutineDay, RoutineSlot, SessionTag } from "./types";
+import { gruposSemilla } from "@/lib/musculos";
 
 /**
  * Catálogo semilla. Autoridad: DECISIONES.md §4. Nada de esto se inventa.
@@ -27,7 +28,9 @@ const BW = { unit_type: "BODYWEIGHT", weight_basis: null, added_unit: null, stac
 const BW_PLUS_KG = { unit_type: "BODYWEIGHT_PLUS", weight_basis: "TOTAL", added_unit: "KG", stack_label: null } as const;
 const BW_PLUS_LB = { unit_type: "BODYWEIGHT_PLUS", weight_basis: "TOTAL", added_unit: "LB", stack_label: null } as const;
 
-export const SEED_EXERCISES: Exercise[] = [
+/** Grupos musculares aparte (`GRUPOS_SEMILLA`, §12.6): la migración v4 usa la
+ *  misma tabla, así que no se repite aquí fila por fila. */
+const SEED_EXERCISES_SIN_GRUPOS: Omit<Exercise, "grupos">[] = [
   // ── Day 1 ────────────────────────────────────────────────────────────────
   { id: "ex-pull-up", nombre: "Pull Up", ...BW_PLUS_KG, laterality_default: "BILATERAL", activo: true },
   { id: "ex-pull-down", nombre: "Pull Down", ...LB_TOTAL, laterality_default: "BILATERAL", activo: true },
@@ -70,6 +73,11 @@ export const SEED_EXERCISES: Exercise[] = [
   { id: "ex-forearm-curls", nombre: "Forearm Curls", ...LB_TOTAL, laterality_default: "BILATERAL", activo: true },
   { id: "ex-concentration-hammer-curls", nombre: "Concentration Hammer Curls", ...LB_PER_IMPLEMENT, laterality_default: "UNILATERAL", activo: true },
 ];
+
+export const SEED_EXERCISES: Exercise[] = SEED_EXERCISES_SIN_GRUPOS.map((e) => ({
+  ...e,
+  grupos: gruposSemilla(e.id),
+}));
 
 /**
  * Instalación fresca: nace con un mesociclo activo que envuelve los cinco días.

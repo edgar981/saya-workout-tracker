@@ -36,12 +36,12 @@ build de producción.
 | `/historial` | `historial-screen` | estática | — | Lista de todas las sesiones, más reciente primero. |
 | `/historial/[sessionId]` | `session-detail-screen` | **dinámica (ƒ)** | `sessionId` | Detalle de una sesión: series, veredicto, hueco por serie, duración, tags, peso, nota. |
 | `/ejercicio/[exerciseId]` | `ejercicio-screen` | **dinámica (ƒ)** | `exerciseId` | Historial de un ejercicio: mejor serie registrada, tarjeta de **progreso** (estado + línea de marcas tocable, `DECISIONES.md` §11) y últimas 5 sesiones con series. |
-| `/progreso` | `progreso-screen` | estática | — | Capa 2 (`DECISIONES.md` §11): semana desde la última pausa, balance semanal (últimas 8) y los ejercicios del plan vigente agrupados por estado (subiendo / estancado / por debajo / sin registrar / sin datos suficientes), cada fila con su sparkline. Solo lectura. |
+| `/progreso` | `progreso-screen` | estática | — | Capa 2 (`DECISIONES.md` §11 y §12): semana desde la última pausa, balance semanal (últimas 8), volumen por grupo muscular (series por semana típica; cada grupo se expande en sitio con su tira de 8 semanas y los ejercicios que suman) y los ejercicios del plan vigente agrupados por estado (subiendo / estancado / por debajo / sin registrar / sin datos suficientes), cada fila con su sparkline. Solo lectura. |
 | `/mesociclos` | `mesociclos-screen` | estática | — | Lista de mesociclos: nombre, rango de fechas, activo, nº de días. Activar otro, duplicar el actual, crear vacío, renombrar y editar `iniciado_en`. |
 | `/plantillas` | `plantillas-screen` | estática | — | Días del mesociclo **activo** (dice cuál edita). El selector de mesociclo vive en `/mesociclos`, no aquí. |
 | `/plantillas/[dayId]` | `plantillas-dia-screen` | **dinámica (ƒ)** | `dayId` | Detalle de un día: slots, orden, objetivos, alternativas. |
-| `/catalogo` | `catalogo-screen` | estática | — | Lista del catálogo: renombrar, cambiar unidad, dar de baja (fila que se expande en sitio). |
-| `/catalogo/nuevo` | `catalogo-nuevo-screen` | estática | — | Formulario de crear ejercicio. |
+| `/catalogo` | `catalogo-screen` | estática | — | Lista del catálogo: renombrar, cambiar unidad, grupos musculares, dar de baja (fila que se expande en sitio). |
+| `/catalogo/nuevo` | `catalogo-nuevo-screen` | estática | — | Formulario de crear ejercicio (incluye grupos musculares). |
 | `/datos` | `data-screen` | estática | — | Respaldo/restauración: servidor, archivo, integridad, diagnóstico. |
 | `/ajustes` | `ajustes-screen` | estática | — | Lista simple con los destinos de configuración (Mesociclos · Plantillas · Catálogo · Respaldo). Sin Dexie, así que **no** usa `dynamic(ssr:false)`: se prerenderiza y abre al instante. Alcanzable desde la barra (§2.5); reemplazó al disclosure del pie del home. |
 | `/api/snapshot` · `/api/snapshot/latest` · `/api/snapshot/[id]` | rutas de API | **dinámicas (ƒ)** | — | No navegables por el usuario. Las consume el cliente de respaldo. |
@@ -65,7 +65,7 @@ prerenderiza estático.
 - `/historial` → `/` (chevron); cada fila → `/historial/[id]`. `/historial` es un destino **de primer nivel** de la barra (no cuelga de `/ajustes`), así que su chevron va al home; no quedó desactualizado.
 - `/historial/[id]` → cada nombre de ejercicio → `/ejercicio/[id]`; "Sesión en curso · abrir para cerrarla o descartarla" → `/sesion` (solo si `session.activa === 1`); "Volver al historial" → `/historial` (solo cuando la sesión no existe). El chevron "volver" ya no es enlace fijo: ver §2.2.
 - `/ejercicio/[id]` → cada entrada de sesión → `/historial/[id]`.
-- `/progreso` → `/` (chevron, como `/historial`: destino de primer nivel de la barra); cada fila → `/ejercicio/[id]`.
+- `/progreso` → `/` (chevron, como `/historial`: destino de primer nivel de la barra); cada fila → `/ejercicio/[id]`; en el volumen, cada ejercicio de un grupo expandido → `/ejercicio/[id]`, y el aviso de ejercicios sin grupo → `/catalogo` (cuyo chevron vuelve por historial, así que regresa a `/progreso`).
 - `/plantillas` → cada día → `/plantillas/[dayId]`; `/plantillas/[dayId]` → `/plantillas` (chevron).
 - `/catalogo` → "Crear ejercicio" → `/catalogo/nuevo`; `/catalogo/nuevo` → `/catalogo` (chevron).
 - Los chevrones de `/mesociclos`, `/plantillas`, `/catalogo` y `/datos` ya **no** son enlace fijo: esas rutas se alcanzan desde más de un origen, así que siguen el historial real. Ver §2.2. (`/plantillas/[dayId]` y `/catalogo/nuevo` sí suben un nivel fijo a su propia lista con `<Link>`, porque tienen un solo origen.)

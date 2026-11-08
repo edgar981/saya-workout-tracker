@@ -11,6 +11,7 @@ import type {
   SetLog,
 } from "./types";
 import { TABLE_NAMES } from "./tables";
+import { gruposSemilla } from "@/lib/musculos";
 
 // Reexportadas desde su módulo puro (sin Dexie) para no romper los imports
 // existentes de `@/lib/db/db`. La lista canónica vive en `./tables`.
@@ -29,7 +30,7 @@ export type { TableName } from "./tables";
  * el que valida el import — un archivo de otra versión se rechaza entero en vez
  * de migrarse al vuelo.
  */
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
 /** Id determinista del mesociclo que la migración v3 y el seed crean. Ninguno
  *  de los dos corre en la misma base (upgrade solo sobre datos previos, seed
@@ -150,6 +151,23 @@ class WorkoutDB extends Dexie {
           .toCollection()
           .modify((d) => {
             d.mesociclo_id = MESOCICLO_INICIAL_ID;
+          });
+      });
+
+    // ── v4 ──────────────────────────────────────────────────────────────────
+    // Grupos musculares (DECISIONES.md §12.5). `exercises` gana `grupos`, que NO
+    // se indexa: el bump no es por un índice sino por el relleno — los ejercicios
+    // semilla de una base existente reciben aquí su clasificación, una vez. Los
+    // creados por el usuario quedan vacíos (no hay de dónde derivarlos); /progreso
+    // los señala para asignarlos en el catálogo.
+    this.version(4)
+      .stores({})
+      .upgrade(async (tx) => {
+        await tx
+          .table<Exercise>("exercises")
+          .toCollection()
+          .modify((e) => {
+            e.grupos ??= gruposSemilla(e.id);
           });
       });
   }

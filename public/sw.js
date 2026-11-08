@@ -19,7 +19,7 @@
  * entra a mitad de entrenamiento.
  */
 
-const CACHE = "saya-shell-v5";
+const CACHE = "saya-shell-v6";
 const APP_SHELL = [
   "/",
   "/sesion",

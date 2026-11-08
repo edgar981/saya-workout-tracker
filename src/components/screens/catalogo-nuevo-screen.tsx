@@ -5,11 +5,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 
+import { GruposPicker } from "@/components/grupos-picker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createExercise } from "@/lib/db/queries";
-import type { AddedUnit, Laterality, UnitType, WeightBasis } from "@/lib/db/types";
+import type { AddedUnit, Exercise, Laterality, UnitType, WeightBasis } from "@/lib/db/types";
 import { UNIDADES, usaAddedUnit, usaBasis, usaStackLabel } from "@/lib/catalogo-units";
 
 /**
@@ -27,6 +28,7 @@ export default function CatalogoNuevoScreen() {
   const [addedUnit, setAddedUnit] = useState<AddedUnit>("KG");
   const [stackLabel, setStackLabel] = useState("disc");
   const [lateralidad, setLateralidad] = useState<Laterality>("BILATERAL");
+  const [grupos, setGrupos] = useState<Exercise["grupos"]>({});
 
   const crear = async () => {
     if (nombre.trim() === "") return;
@@ -37,6 +39,7 @@ export default function CatalogoNuevoScreen() {
       added_unit: usaAddedUnit(unitType) ? addedUnit : null,
       stack_label: usaStackLabel(unitType) ? stackLabel.trim() || "disc" : null,
       laterality_default: lateralidad,
+      grupos,
     });
     router.push("/catalogo");
   };
@@ -151,6 +154,11 @@ export default function CatalogoNuevoScreen() {
             Unilateral
           </Button>
         </div>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <Label>Grupos musculares</Label>
+        <GruposPicker value={grupos} onChange={setGrupos} />
       </div>
 
       <p className="text-muted-foreground text-xs">

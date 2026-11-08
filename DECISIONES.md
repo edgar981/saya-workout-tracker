@@ -47,6 +47,7 @@ El registro actual vive en un archivo de Notes con notación libre. Funciona par
 | `weight_basis` | enum | `TOTAL` \| `PER_IMPLEMENT` — solo aplica a `KG`/`LB`. Resuelve mancuernas: ¿30 lb es por mancuerna o la suma? |
 | `stack_label` | string? | Etiqueta de la unidad de stack cuando `unit_type = STACK_POSITION` (ej. `"disc"`) |
 | `laterality_default` | enum | `BILATERAL` \| `UNILATERAL` |
+| `grupos` | objeto | grupo muscular → `directo` \| `indirecto` (v4, §12). Clasificación, no se snapshotea |
 | `activo` | bool | |
 
 `unit_type` es **por ejercicio, no global**. Es la decisión central del modelo.
@@ -422,4 +423,74 @@ Por semana de lunes a domingo, la suma de los netos de sesión (`mejor − peor`
 
 ### 11.8 Fuera de esta entrega
 
-Con su disparador en BACKLOG: volumen por grupo muscular (pide un campo nuevo en `Exercise` → `version(4)`), balance por lado (hoy L y R coinciden en 57 de 58 pares de series: no hay señal que mostrar), y comparar `BODYWEIGHT_PLUS` entre cargas usando el peso corporal.
+Con su disparador en BACKLOG: balance por lado (hoy L y R coinciden en 57 de 58 pares de series: no hay señal que mostrar) y comparar `BODYWEIGHT_PLUS` entre cargas usando el peso corporal. El volumen por grupo muscular, que también estaba aquí, se construyó después: §12.
+
+---
+
+## 12. Capa 2 — volumen por grupo muscular
+
+**Disparador (BACKLOG): cumplido el 8 nov.** La pregunta pasó de "¿progresa este ejercicio?" a "¿este músculo recibe poco o mucho trabajo?", y §11 no la contesta: un ejercicio puede ir subiendo con dos series por semana.
+
+**Lo que no cambia.** Nada derivado se almacena (§3.5): el volumen se cuenta en lectura, cada vez. Lo único nuevo en el esquema es la clasificación de cada ejercicio (§12.5), que no es derivada: no hay de dónde calcularla.
+
+### 12.1 Qué se cuenta: series, no tonelaje
+
+**Unidad: series por semana.** El tonelaje (peso × reps) no se puede sumar en esta base: kg y lb no se convierten (D5), `BODYWEIGHT` no tiene peso, `BODYWEIGHT_PLUS` registra solo el añadido y `STACK_POSITION` "no entra en volumen total" (§3.1). Una serie es la misma cosa en cualquier unidad, y es la medida con la que se estudia el volumen para hipertrofia.
+
+**Serie** = un `set_index` distinto con reps > 0 dentro de una aparición. De ahí:
+
+- Un giant set es **una** serie (§3.2: "no son 6 series").
+- L y R con el mismo índice son **una** serie: cada lado recibió una.
+- Una serie extra cuenta: es trabajo hecho.
+- Solo sesiones cerradas: la activa contaría una semana a medias.
+- Un ejercicio dado de baja cuenta: su trabajo ocurrió.
+
+### 12.2 Grupos y roles
+
+Once grupos: **Pecho, Espalda, Hombros, Bíceps, Tríceps, Antebrazo, Cuádriceps, Isquiotibiales, Glúteos, Pantorrillas, Abdomen.** Gruesos a propósito: el registro no distingue deltoides anterior de lateral ni dorsal de trapecio, y una división más fina pediría clasificaciones que nadie puede verificar desde los datos.
+
+Cada ejercicio marca, por grupo, **directo**, **indirecto** o nada. Una serie cuenta **1** para cada grupo directo y **½** para cada indirecto. Sin el indirecto, el press inclinado no sumaría nada al tríceps ni la dominada al bíceps, y el brazo saldría subcontado. Con 1 completo, un press contaría como trabajo de tríceps lo mismo que un press francés. El ½ es el conteo fraccional del meta-análisis de dosis-respuesta de volumen de Pelland et al. (2024): la mejor referencia disponible, no una verdad.
+
+La clasificación vive en `Exercise.grupos`, un objeto grupo → rol, para que un grupo no pueda ser directo e indirecto a la vez. **No se snapshotea:** es una clasificación, no una medida. Corregirla recalcula el volumen de todo el historial, que es lo que se quiere, igual que `laterality_default`. Se edita en el catálogo (al crear y en cada fila), sin candado: el candado de unidad protege snapshots y aquí no hay ninguno.
+
+### 12.3 Semana típica
+
+Semanas de lunes a domingo (§11.6). La **semana típica** de un grupo es el promedio de sus series ponderadas en las **4** últimas semanas **completas** (la actual no entra) que tengan al menos una sesión y **ninguna sesión `deload`** (por id, §11.2). Una semana vacía es una pausa y una de descarga es volumen recortado a propósito: ninguna describe una semana normal. Al 8 nov: semanas del 5, 12, 19 y 26 oct (en pantalla, "4 semanas (5 oct – 1 nov)").
+
+Se muestra redondeada a media serie, que es la resolución real del conteo.
+
+### 12.4 Dónde vive y qué muestra
+
+En `/progreso`, después del balance semanal. Una tarjeta "Volumen por grupo muscular":
+
+- Los once grupos, **de mayor a menor semana típica**. Cada uno con una barra partida en directo (tinta) e indirecto ya ponderado (atenuado), y el número. §10 manda: nada de acento ni rojo.
+- Al tocar un grupo: la tira de sus últimas 8 semanas (la del balance: hueco = sin sesiones, "desc." = descarga) y los ejercicios que suman, con su rol.
+- **Sin rango de referencia.** Solo tus números. Un "10–20 series" sería un consejo, y la app no los da (§11.5, §7.5). Lo poco se ve por posición: queda al fondo de la lista.
+- **Lo que no se cuenta se dice.** Los ejercicios sin grupo con series en la tira se listan aparte, con enlace al catálogo, para que un hueco en el volumen no parezca un músculo sin trabajo.
+
+Al 8 nov: Tríceps 11.5 · Bíceps 10.5 · Hombros 8.5 · Espalda 6.5 · Pecho 6 · Antebrazo 5 · Cuádriceps 4 · Abdomen 4 · Isquiotibiales 2 · Pantorrillas 1.5 · Glúteos 1. Sin grupo: `Forearm Cable Curl` y `DB Preacher Curl`, creados en la app.
+
+### 12.5 Esquema: `version(4)`
+
+`Exercise.grupos`, **no indexado**. El bump no es por un índice —`creado_en` (§3.2) se ahorró uno justamente por eso— sino por el **relleno**: una base existente necesita la clasificación de sus ejercicios semilla, y el lugar legítimo para escribir una vez sobre filas existentes es un `upgrade`. La migración pone `GRUPOS_SEMILLA` (§12.6) por id; los ejercicios creados por el usuario quedan vacíos, porque no hay de dónde derivarlos. Una instalación fresca nace con la misma tabla. Editarla después del deploy solo llega a instalaciones nuevas: una base ya migrada se corrige en el catálogo.
+
+**Costo, el mismo de v3:** tras el deploy, los respaldos y snapshots con `schema_version 3` dejan de restaurarse (§6: no se migra durante un restore). Protocolo §6: export manual → desplegar → abrir la app → verificar conteos contra el export → cerrar una sesión, que sube el primer snapshot v4.
+
+### 12.6 Clasificación semilla
+
+Propuesta, no observada: se corrige en el catálogo.
+
+| Ejercicios | Directo | Indirecto |
+|---|---|---|
+| Incline Bench Press (Medium y Wide), Incline DB Press, Weighted Dips | Pecho | Hombros, Tríceps |
+| Close Grip Bench Press | Tríceps | Pecho, Hombros |
+| Pull Up, Pull Down, Wide Grip Pull Down, Wide Grip Pull Up, Chest Supported Rows | Espalda | Bíceps |
+| Barbell Bicep Curls, EZ Bar Curl, DB Bicep Curl, Cable Curl, Single Arm Cable Curl, Concentration Hammer Curls | Bíceps | Antebrazo |
+| DB Skull Crushers, DB OH Triceps Extension, Single Arm Cable Push Down | Tríceps | — |
+| DB Lateral Raises, Cable Lateral Raises | Hombros | — |
+| Barbell Standing Wrist Curl, Forearm Curls | Antebrazo | — |
+| Squats, Hack Squats, Matrix Hack Squats | Cuádriceps | Glúteos |
+| Leg Extensions | Cuádriceps | — |
+| Leg Curl, Lying Leg Curl | Isquiotibiales | — |
+| Calf Raises | Pantorrillas | — |
+| Hanging Leg Raises, Weighted Decline Crunches | Abdomen | — |

@@ -10,6 +10,26 @@ Autoridad sobre schema y alcance: `DECISIONES.md`.
 
 ## Disparador cumplido — en curso
 
+Capa 2, volumen por grupo muscular (2026-11-08) — segunda migración real, a
+`version(4)`. Disparador: la pregunta pasó a "¿este músculo recibe poco o mucho
+trabajo?".
+
+- **Definiciones antes que la UI** — `DECISIONES.md` §12: series por semana (no
+  tonelaje), directo 1 / indirecto ½, semana típica = 4 últimas semanas completas
+  sin descarga, sin rango de referencia. Probadas contra el snapshot del 5 nov.
+- **Construido:** `Exercise.grupos` + migración v4 (rellena los semilla por id;
+  los creados en la app quedan vacíos), selector de grupos en `/catalogo` y
+  `/catalogo/nuevo`, tarjeta de volumen en `/progreso`. Reglas en
+  `lib/volumen.ts` y clasificación en `lib/musculos.ts`, puras. Migración
+  verificada v3 → v4 con el snapshot del 5 nov: conteos iguales y filas
+  idénticas salvo el campo nuevo.
+- **Protocolo del deploy (§6):** export manual antes de desplegar → abrir la app
+  → `/datos` dice `schema_version 4` y los conteos cuadran con el export → cerrar
+  una sesión (sube el primer snapshot v4). Desde el deploy, los respaldos v3 ya no
+  se restauran.
+- **Primera tarea tras migrar:** asignar grupos a `DB Preacher Curl` y `Forearm
+  Cable Curl` (creados en la app; `/progreso` los lista como "sin grupo").
+
 Capa 2, lectura de progresión (2026-10-29). Disparador de `DECISIONES.md` §8
 cumplido: Mesociclo 1 se registró completo en la app.
 
@@ -21,8 +41,9 @@ cumplido: Mesociclo 1 se registró completo en la app.
   de marcas; al tocar un punto se leen sus series); (2) pestaña `/progreso`
   (semana desde la pausa, balance semanal, ejercicios por estado). Reglas en
   `lib/progress.ts`, puras; verificadas contra el snapshot del 29 oct (mismos
-  estados que el prototipo, ejercicio por ejercicio). Volumen por grupo muscular
-  y balance por lado quedan abajo, con su propio disparador.
+  estados que el prototipo, ejercicio por ejercicio). Balance por lado queda
+  abajo, con su propio disparador; el volumen por grupo muscular se hizo después
+  (arriba).
 - **A vigilar en la primera semana de descarga:** que las sesiones lleven el tag
   `deload`. Sin él, §11 las lee como sesiones normales: la línea baja y el
   estado puede pasar a "por debajo" por una descarga planeada.
@@ -139,7 +160,8 @@ Trabajado en el prompt de correcciones y backlog (2026-08-22):
   lo usa (los stacks del gym están marcados en libras, §7.4). Mientras tanto, el
   render toma `stack_label` de `Exercise`, no del snapshot — inofensivo porque no
   es ni peso ni unidad y no hay filas que dependan de ello. (Ya no sería
-  `version(3)`: esa la consumió mesociclos; el próximo bump es `version(4)`.)
+  `version(3)` ni `version(4)`: las consumieron mesociclos y grupos musculares;
+  el próximo bump es `version(5)`.)
 
 - **Precarga arrastrando *offset* en vez de valor absoluto.**
   Disparador: la primera vez que se rampee el peso dentro de una misma sesión y la
@@ -183,12 +205,6 @@ Trabajado en el prompt de correcciones y backlog (2026-08-22):
   archivo de Notes original sí los tenía (wrist curls, forearm curls). Si al llegar
   a capa 2 sigue sin usarse, evaluar si `addSegment` y el render de giant sets
   sobran.
-
-- **Volumen por grupo muscular** (resto de capa 2, §11.8).
-  Disparador: la primera vez que quieras saber si un músculo recibe poco o mucho
-  trabajo, no solo si un ejercicio progresa. Pide un campo de grupo muscular en
-  `Exercise` → `version(4)` con su protocolo de migración (§6). Hoy la pregunta
-  real era "¿progreso?", y eso lo responde §11 sin tocar el esquema.
 
 - **Balance por lado** (resto de capa 2, §11.8).
   Disparador: que L y R empiecen a diferir de verdad. Al 29 oct coinciden en 57 de

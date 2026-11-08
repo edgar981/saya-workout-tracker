@@ -13,6 +13,7 @@ import {
   fechaCorta,
 } from "@/components/progress/estado";
 import { Sparkline } from "@/components/progress/sparkline";
+import { VolumenCard } from "@/components/progress/volumen-card";
 import { Button } from "@/components/ui/button";
 import { loadProgreso, type ProgresoFila, type ProgresoView } from "@/lib/db/progress";
 import { SEMANAS_BALANCE, type EstadoProgreso } from "@/lib/progress";
@@ -86,6 +87,8 @@ export default function ProgresoScreen() {
             </div>
             <BalanceChart semanas={data.semanas} />
           </section>
+
+          <VolumenCard volumen={data.volumen} />
 
           {GRUPOS.map(({ titulo, estados }) => {
             const filas = data.filas.filter((f) => estados.includes(f.progreso.estado));

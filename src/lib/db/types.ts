@@ -24,6 +24,23 @@ export type AddedUnit = "KG" | "LB";
 export type Side = "L" | "R";
 export type Laterality = "BILATERAL" | "UNILATERAL";
 
+/** Grupos del volumen (DECISIONES.md §12.2). Nombres en pantalla: `lib/musculos`. */
+export type GrupoMuscular =
+  | "pecho"
+  | "espalda"
+  | "hombros"
+  | "biceps"
+  | "triceps"
+  | "antebrazo"
+  | "cuadriceps"
+  | "isquios"
+  | "gluteos"
+  | "pantorrillas"
+  | "abdomen";
+
+/** Directo cuenta 1 serie para el grupo; indirecto, media (§12.2). */
+export type RolMuscular = "directo" | "indirecto";
+
 export interface Exercise {
   id: string;
   nombre: string;
@@ -35,6 +52,15 @@ export interface Exercise {
   /** solo si STACK_POSITION */
   stack_label: string | null;
   laterality_default: Laterality;
+  /**
+   * Qué grupos trabaja y cómo (v4, DECISIONES.md §12.2). Es una CLASIFICACIÓN, no
+   * una medida: no se snapshotea en SetLog, así que cambiarla recalcula el volumen
+   * de todo el histórico — lo que se quiere al corregir una clasificación, igual
+   * que `laterality_default`. Un objeto (y no dos listas) para que un grupo no
+   * pueda ser directo e indirecto a la vez. Vacío = sin grupo: sus series no
+   * cuentan en ninguno y /progreso lo dice.
+   */
+  grupos: Partial<Record<GrupoMuscular, RolMuscular>>;
   /**
    * Borrado suave. Nunca se borra duro un Exercise: el histórico lo referencia
    * por `SessionExercise.exercise_id` y borrarlo dejaría el puntero colgando.

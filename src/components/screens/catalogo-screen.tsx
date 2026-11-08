@@ -6,6 +6,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { ChevronDown, ChevronLeft, Lock, Plus, Trash2 } from "lucide-react";
 
 import { unitTag } from "@/components/exercise-picker";
+import { GruposPicker } from "@/components/grupos-picker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,10 +15,12 @@ import {
   listActiveExercises,
   renameExercise,
   softDeleteExercise,
+  updateExerciseGrupos,
   updateExerciseUnits,
 } from "@/lib/db/queries";
 import type { Exercise, UnitType } from "@/lib/db/types";
 import { UNIDADES, usaAddedUnit, usaBasis, usaStackLabel } from "@/lib/catalogo-units";
+import { nombresDirectos } from "@/lib/musculos";
 import { useAutosave } from "@/lib/use-autosave";
 import { cn } from "@/lib/utils";
 import { CatalogoSkeleton } from "@/components/skeletons";
@@ -109,6 +112,7 @@ function FilaEjercicio({ exercise }: { exercise: Exercise }) {
             {unitTag(exercise)}
             {exercise.laterality_default === "UNILATERAL" ? " · unilateral" : ""}
             {series !== undefined ? ` · ${series} series` : ""}
+            {` · ${nombresDirectos(exercise.grupos ?? {}) || "sin grupo"}`}
           </span>
         </span>
         <ChevronDown className={cn("text-muted-foreground size-4", abierto && "rotate-180")} />
@@ -161,6 +165,15 @@ function FilaEjercicio({ exercise }: { exercise: Exercise }) {
               </p>
             )}
             {error && <p className="text-destructive text-xs">{error}</p>}
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <Label>Grupos musculares</Label>
+            {/* Sin candado, a diferencia de la unidad: no se snapshotea (§12.2). */}
+            <GruposPicker
+              value={exercise.grupos ?? {}}
+              onChange={(grupos) => void updateExerciseGrupos(exercise.id, grupos)}
+            />
           </div>
 
           <Button

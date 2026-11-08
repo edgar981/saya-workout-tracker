@@ -229,6 +229,19 @@ export function ProgresoSkeleton() {
         <Sk className="h-16 w-full rounded-sm" />
         <Sk className="h-3 w-full" />
       </Card>
+      {/* Volumen por grupo: título, leyenda y once filas de 40px. */}
+      <Card className="flex flex-col gap-3">
+        <Sk className="h-4 w-44" />
+        <Sk className="h-3 w-40" />
+        <div className="flex flex-col">
+          {Array.from({ length: 11 }).map((_, i) => (
+            <div key={i} className="flex h-10 items-center gap-3">
+              <Sk className="h-3.5 w-20" />
+              <Sk className="h-2 flex-1" />
+            </div>
+          ))}
+        </div>
+      </Card>
       <div className="flex flex-col gap-2">
         <Sk className="h-3 w-24" />
         {Array.from({ length: 4 }).map((_, i) => (

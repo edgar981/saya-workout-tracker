@@ -6,8 +6,9 @@ import {
   loadDaySlots,
   todayISO,
 } from "./queries";
+import { db } from "./db";
 import { loadSessionVerdictNets } from "./verdicts";
-import type { Exercise, Mesociclo } from "./types";
+import type { Exercise, Mesociclo, SetLog } from "./types";
 import {
   aparicionesDe,
   balanceSemanal,
@@ -22,6 +23,7 @@ import {
   type ProgresoEjercicio,
   type SemanaBalance,
 } from "@/lib/progress";
+import { calcularVolumen, seriesDeAparicion, type SesionVolumen, type Volumen } from "@/lib/volumen";
 
 /**
  * Loader de `/progreso` (DECISIONES.md §11.7). Solo LECTURA. Reusa lo que ya
@@ -40,6 +42,7 @@ export interface ProgresoView {
   semanas: SemanaBalance[];
   /** Ejercicios del plan vigente, en el orden del plan (día, luego slot). */
   filas: ProgresoFila[];
+  volumen: Volumen;
 }
 
 export async function loadProgreso(): Promise<ProgresoView> {
@@ -85,5 +88,45 @@ export async function loadProgreso(): Promise<ProgresoView> {
     SEMANAS_BALANCE,
   );
 
-  return { mesociclo, bloque, semanas, filas };
+  return { mesociclo, bloque, semanas, filas, volumen: await loadVolumen(hoy) };
+}
+
+/**
+ * Volumen por grupo (§12). TODOS los ejercicios hechos, no solo los del plan: una
+ * sustitución o un ad-hoc también son trabajo. Por eso no sale de las travesías
+ * de arriba (que son por ejercicio del plan) sino de una lectura de las cuatro
+ * tablas — chicas, y se cuentan una vez.
+ */
+async function loadVolumen(hoy: string): Promise<Volumen> {
+  const [sessions, instancias, sets, exercises] = await Promise.all([
+    db.sessions.where("activa").equals(0).toArray(),
+    db.sessionExercises.toArray(),
+    db.setLogs.toArray(),
+    db.exercises.toArray(),
+  ]);
+
+  const setsPorInstancia = new Map<string, SetLog[]>();
+  for (const s of sets) {
+    const lista = setsPorInstancia.get(s.session_exercise_id) ?? [];
+    lista.push(s);
+    setsPorInstancia.set(s.session_exercise_id, lista);
+  }
+  const porSesion = new Map<string, SesionVolumen["series"]>();
+  for (const se of instancias) {
+    const series = seriesDeAparicion(setsPorInstancia.get(se.id) ?? []);
+    if (series === 0) continue;
+    const lista = porSesion.get(se.session_id) ?? [];
+    lista.push({ exerciseId: se.exercise_id, series });
+    porSesion.set(se.session_id, lista);
+  }
+
+  const sesiones: SesionVolumen[] = sessions
+    .filter((s) => porSesion.has(s.id))
+    .map((s) => ({
+      fecha: s.fecha,
+      deload: s.tag_ids.includes(TAG_DELOAD),
+      series: porSesion.get(s.id)!,
+    }));
+
+  return calcularVolumen(sesiones, new Map(exercises.map((e) => [e.id, e])), hoy);
 }
