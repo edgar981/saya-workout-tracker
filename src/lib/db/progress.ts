@@ -53,12 +53,13 @@ export async function loadProgreso(): Promise<ProgresoView> {
   // sus alternativas). Un ejercicio en dos días aparece una vez, en el primero.
   const filas: ProgresoFila[] = [];
   const vistos = new Set<string>();
+  const pesos = await db.bodyweightLogs.toArray();
   for (const day of await listRoutineDays()) {
     for (const { exercise } of await loadDaySlots(day.id)) {
       if (!exercise || vistos.has(exercise.id)) continue;
       vistos.add(exercise.id);
       const todas = await getPerformanceHistory(exercise.id, { limit: Number.MAX_SAFE_INTEGER });
-      filas.push({ exercise, progreso: evaluarProgreso(aparicionesDe(todas), hoy) });
+      filas.push({ exercise, progreso: evaluarProgreso(aparicionesDe(todas, pesos), hoy) });
     }
   }
 

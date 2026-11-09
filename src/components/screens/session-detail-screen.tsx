@@ -4,14 +4,20 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { ChevronLeft, Clock, Trash2 } from "lucide-react";
+import { ChevronLeft, Clock, Tag, Trash2 } from "lucide-react";
 
 import { SetLines } from "@/components/history/set-lines";
 import { VerdictBadge } from "@/components/history/verdict-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { discardSession, loadSessionDetail, type SessionExerciseView } from "@/lib/db/queries";
+import { db } from "@/lib/db/db";
+import {
+  discardSession,
+  loadSessionDetail,
+  updateSessionTags,
+  type SessionExerciseView,
+} from "@/lib/db/queries";
 import { loadSessionVerdicts } from "@/lib/db/verdicts";
 import { formatGap, gapsBySetId, sessionDurationMs } from "@/lib/rest-gap";
 import type { VerdictCategory } from "@/lib/verdict";
@@ -211,6 +217,8 @@ export default function SessionDetailScreen() {
         </div>
       )}
 
+      {session.activa === 0 && <EditarTags sessionId={session.id} seleccion={session.tag_ids} />}
+
       <Separator />
 
       <div className="flex flex-col gap-3">
@@ -302,5 +310,66 @@ export default function SessionDetailScreen() {
         </Button>
       )}
     </main>
+  );
+}
+
+/**
+ * Tags de una sesión cerrada (DECISIONES.md §3.3): mismo chip que el cierre, y
+ * cada toque guarda. Existe por la descarga del 5 nov, que se cerró sin `deload`
+ * y Progreso la leía como una sesión normal.
+ */
+function EditarTags({ sessionId, seleccion }: { sessionId: string; seleccion: string[] }) {
+  const [abierto, setAbierto] = useState(false);
+  const todos = useLiveQuery(() => db.sessionTags.toArray(), []);
+
+  if (!abierto) {
+    return (
+      <Button
+        variant="ghost"
+        size="sm"
+        className="text-muted-foreground self-start"
+        onClick={() => setAbierto(true)}
+      >
+        <Tag />
+        {seleccion.length > 0 ? "Editar tags" : "Agregar tags"}
+      </Button>
+    );
+  }
+
+  const tocar = (id: string) =>
+    void updateSessionTags(
+      sessionId,
+      seleccion.includes(id) ? seleccion.filter((t) => t !== id) : [...seleccion, id],
+    );
+
+  return (
+    <div className="flex flex-col gap-2 rounded-lg border p-3">
+      <div className="flex flex-wrap gap-1.5">
+        {(todos ?? []).map((tag) => {
+          const on = seleccion.includes(tag.id);
+          return (
+            <button
+              key={tag.id}
+              type="button"
+              aria-pressed={on}
+              onClick={() => tocar(tag.id)}
+              className={cn(
+                "rounded-full border px-3 py-1.5 text-sm",
+                on ? "bg-primary text-primary-foreground border-transparent" : "text-foreground",
+              )}
+            >
+              {tag.nombre}
+            </button>
+          );
+        })}
+      </div>
+      <p className="text-muted-foreground text-xs">
+        Cada toque se guarda. Con deload, Progreso saca esta sesión de la línea de cada ejercicio
+        y del promedio de volumen.
+      </p>
+      <Button variant="outline" size="sm" className="self-start" onClick={() => setAbierto(false)}>
+        Listo
+      </Button>
+    </div>
   );
 }

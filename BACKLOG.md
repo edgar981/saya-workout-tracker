@@ -10,6 +10,18 @@ Autoridad sobre schema y alcance: `DECISIONES.md`.
 
 ## Disparador cumplido — en curso
 
+Dos cosas que trajo el snapshot del 5 nov (2026-11-08):
+
+- **Tags editables en sesiones cerradas** (`DECISIONES.md` §3.3). Disparador: la
+  sesión del 5 nov (Day 4, semana de descarga) se cerró sin `deload`. Solo tags;
+  series y notas siguen abajo.
+- **`BODYWEIGHT_PLUS` comparable entre cargas añadidas** (§11.2). Su disparador
+  se cumplió: 4 `BodyweightLog` en kg (1–4 nov). Antes del primer registro se usa
+  el primero (peso estable desde agosto, confirmado). `Weighted Dips` pasa de 2 a
+  10 sesiones comparables; `Pull Up` suma la del 19 oct a +20 kg.
+- **A vigilar:** si el peso corporal cambia, registrarlo al cerrar; la línea de
+  dominadas y fondos lo toma desde esa fecha.
+
 Capa 2, volumen por grupo muscular (2026-11-08) — segunda migración real, a
 `version(4)`. Disparador: la pregunta pasó a "¿este músculo recibe poco o mucho
 trabajo?".
@@ -169,10 +181,12 @@ Trabajado en el prompt de correcciones y backlog (2026-08-22):
   del valor absoluto; el offset sería más fino pero no hay evidencia de que haga
   falta.
 
-- **Editar sesiones pasadas.**
+- **Editar series o notas de sesiones pasadas.**
   Disparador: el primer typo concreto que haya que corregir en una sesión ya
   cerrada. Necesita una guarda contra reescribir en silencio datos que la capa 2
-  ya haya leído. Eliminar la sesión completa ya existe; editar in situ no.
+  ya haya leído. Eliminar la sesión completa ya existe; los **tags** ya se editan
+  (`DECISIONES.md` §3.3, por la descarga del 5 nov sin `deload`); series y notas
+  in situ, no.
 
 - **`getLastPerformance` excluye por sesión, no por instancia.**
   Disparador: si un día un mismo `exercise_id` aparece en dos slots de la misma
@@ -210,9 +224,3 @@ Trabajado en el prompt de correcciones y backlog (2026-08-22):
   Disparador: que L y R empiecen a diferir de verdad. Al 29 oct coinciden en 57 de
   58 pares de series unilaterales (la única diferencia: 11 vs 12 reps en `Forearm
   Cable Curl`), así que una vista de balance mostraría una línea plana.
-
-- **`BODYWEIGHT_PLUS` comparable entre cargas añadidas.**
-  Disparador: 4 o más `BodyweightLog`, en la misma unidad que la `added_unit` del
-  ejercicio (D5: no se convierte). Con peso corporal, la carga real es `cuerpo +
-  añadido`, y `Pull Up` a +20 kg y a +25 kg se pueden comparar. Hoy hay 0
-  registros y §11.2 compara solo dentro de la misma carga añadida.

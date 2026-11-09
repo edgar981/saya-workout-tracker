@@ -186,6 +186,21 @@ export async function closeSession(
 }
 
 /**
+ * Tags de una sesión YA cerrada (DECISIONES.md §3.3). Solo los tags: editar series
+ * o notas de una sesión pasada sigue en BACKLOG. No es reescribir en silencio lo
+ * que capa 2 ya leyó: el cambio es explícito, y su efecto —con `deload`, la sesión
+ * sale de la línea de progreso y del promedio de volumen— es justo lo que se busca.
+ * La activa no: sus tags se ponen al cerrarla, y el cierre los pisaría.
+ */
+export async function updateSessionTags(sessionId: string, tagIds: string[]): Promise<void> {
+  const session = await db.sessions.get(sessionId);
+  if (!session || session.activa === 1) {
+    throw new Error("Solo se editan los tags de una sesión cerrada.");
+  }
+  await db.sessions.update(sessionId, { tag_ids: tagIds });
+}
+
+/**
  * Borrado duro en cascada (D8). Dexie no tiene claves foráneas ni ON DELETE
  * CASCADE: si esto no barre a mano, quedan SetLog huérfanos que la verificación
  * de conteos del import NO detecta — cuenta lo que hay, y los huérfanos están
@@ -1136,6 +1151,8 @@ export interface ExerciseHistory {
    * segunda. El cálculo NO vive aquí: este módulo entra al bundle de /sesion.
    */
   todas: PerformanceEntry[];
+  /** Todos los registros de peso corporal: la carga de BODYWEIGHT_PLUS en capa 2 (§11.2). */
+  pesos: BodyweightLog[];
 }
 
 /**
@@ -1218,5 +1235,6 @@ export async function loadExerciseHistory(exerciseId: string): Promise<ExerciseH
     entries.push({ ...entry, isSubstitution, slotExerciseNombre, unitKey });
   }
 
-  return { exercise, entries, recentSnapshot, esUnilateral, totalSeries, bestSet, todas: full };
+  const pesos = await db.bodyweightLogs.toArray();
+  return { exercise, entries, recentSnapshot, esUnilateral, totalSeries, bestSet, todas: full, pesos };
 }

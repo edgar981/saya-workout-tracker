@@ -1,6 +1,8 @@
 import { db } from "./db";
 import { getPerformanceHistory } from "./queries";
+import { pesoCorporalEn } from "@/lib/progress";
 import { compareAppearances, type Verdict } from "@/lib/verdict";
+import type { SetLog } from "./types";
 
 /**
  * Loader del veredicto por sesión (Dexie). Vive aparte de la sesión activa: solo
@@ -25,6 +27,12 @@ export async function loadSessionVerdicts(
 
   const instances = await db.sessionExercises.where("session_id").equals(sessionId).toArray();
   const result: Record<string, InstanceVerdict> = {};
+  const pesos = await db.bodyweightLogs.toArray();
+  // BODYWEIGHT_PLUS: el peso corporal de cada aparición, en la unidad de su añadido.
+  const cuerpo = (sets: SetLog[], fecha: string) =>
+    sets[0]?.weight_unit === "BODYWEIGHT_PLUS" && sets[0].added_unit
+      ? pesoCorporalEn(pesos, fecha, sets[0].added_unit)
+      : null;
 
   for (const inst of instances) {
     const sets = await db.setLogs.where("session_exercise_id").equals(inst.id).toArray();
@@ -45,7 +53,10 @@ export async function loadSessionVerdicts(
     const prev = history.find((h) => h.session.iniciada_en < session.iniciada_en) ?? null;
 
     result[inst.id] = {
-      verdict: compareAppearances(reales, prev?.sets ?? null),
+      verdict: compareAppearances(reales, prev?.sets ?? null, {
+        actual: cuerpo(reales, session.fecha),
+        previo: prev ? cuerpo(prev.sets, prev.session.fecha) : null,
+      }),
       referenceFecha: prev?.session.fecha ?? null,
     };
   }

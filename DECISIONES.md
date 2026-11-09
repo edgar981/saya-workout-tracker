@@ -147,13 +147,15 @@ Es un campo **no indexado**: se agrega solo a la interfaz de TypeScript, sin dec
 **`SessionTagLink`** — many-to-many con `Session`.
 
 Semilla inicial: `dormí mal`, `deload`, `máquina distinta`, `molestia`, `sin tiempo`, `bajó la fuerza`.
+
+**Los tags se editan también después del cierre**, desde el detalle de la sesión (`/historial/[id]`), con el mismo chip del cierre; cada toque guarda. Disparador: la sesión del 5 nov, de la semana de descarga, se cerró sin `deload` y capa 2 la leía como una sesión normal (§11.2 excluye por ese tag). No es reescribir en silencio lo que capa 2 ya leyó: el cambio es explícito y su efecto es justo el que se busca. Solo tags, y solo de sesiones cerradas: los de la activa se ponen al cerrarla. Editar series o notas de una sesión pasada sigue en BACKLOG.
 [Guessing] — sale de una sola anotación en cinco días de datos. Los chips reales emergen del uso: si terminas escribiendo lo mismo a mano tres veces, se vuelve chip.
 
 ### 3.4 Peso corporal
 
 **`BodyweightLog`**: `fecha`, `valor`, `unidad`.
 
-Sin esto, `+25kg` en dominadas no tiene denominador y la progresión en `BODYWEIGHT_PLUS` es no interpretable. No hay UI dedicada en capa 1: un campo opcional en el cierre de sesión.
+Sin esto, `+25kg` en dominadas no tiene denominador y la progresión en `BODYWEIGHT_PLUS` es no interpretable. No hay UI dedicada en capa 1: un campo opcional en el cierre de sesión. Capa 2 lo usa para comparar `BODYWEIGHT_PLUS` entre cargas añadidas (§11.2).
 
 ### 3.5 Estado derivado
 
@@ -360,7 +362,7 @@ Un número por aparición de un ejercicio, para compararla contra **meses** de h
 **Definición.** Por lado (en unilateral, L y R por separado y luego el promedio de los lados presentes): el **promedio de las dos mejores series**, cada una valorada así:
 
 - **Carga variable** (`KG`, `LB`, `STACK_POSITION`): e1RM de Epley, `peso × (1 + reps/30)`, con el mismo tope de 12 reps del veredicto (`MAX_REPS_E1RM`). Una serie de más de 12 reps no cuenta; una aparición sin ninguna serie ≤ 12 no tiene marca y no se grafica.
-- **Carga fija** (`BODYWEIGHT`, y `BODYWEIGHT_PLUS` dentro de su carga añadida, §11.2): el factor de Epley sin peso, `1 + reps/30`, **sin tope**. El tope protege estimaciones *entre cargas distintas*; aquí la carga es siempre la misma, así que solo comprime la escala. Se usa el factor y no reps crudas para que una rep pese lo mismo (~3%) en todos los ejercicios: así un solo umbral (§11.4) sirve para todos.
+- **Carga fija** (`BODYWEIGHT`, y `BODYWEIGHT_PLUS` sin peso corporal, dentro de su carga añadida, §11.2): el factor de Epley sin peso, `1 + reps/30`, **sin tope**. El tope protege estimaciones *entre cargas distintas*; aquí la carga es siempre la misma, así que solo comprime la escala. Se usa el factor y no reps crudas para que una rep pese lo mismo (~3%) en todos los ejercicios: así un solo umbral (§11.4) sirve para todos.
 
 **Por qué las dos mejores y no la mejor serie.** Probado contra los datos reales: con la mejor serie sola, una rep de diferencia ponía `Pull Up` y `Hack Squats` como "bajando", y escondía el progreso de `DB Skull Crushers` (35 lb × 6, 4 → 7, 7: el avance está en la segunda serie). Con todas las series promediadas, dejar de hacer una tercera serie (`Single Arm Cable Push Down`, 3 → 2 desde el 17 oct) subía la marca artificialmente. Dos mejores: robusta a 2 ↔ 3 series e incluye la serie de respaldo.
 
@@ -372,7 +374,8 @@ Una aparición es **comparable** con la más reciente del ejercicio si comparte:
 
 - La tupla de unidad `(weight_unit, weight_basis, added_unit)` — §3.5, sin conversión (D5).
 - La **lateralidad observada** (unilateral si alguna serie lleva lado). Pasar de bilateral a unilateral cambia lo que se mide: `DB OH Triceps Extension` desde el 22 sep.
-- En `BODYWEIGHT_PLUS`, además, la **misma carga añadida** (la mayor de la aparición). Sin peso corporal, +25 kg y +20 kg no tienen denominador común (§3.4): `Pull Up` a +20 kg el 19 oct no se compara con las de +25 kg. Hoy hay 0 `BodyweightLog`; ver BACKLOG.
+- En `BODYWEIGHT_PLUS`, **la carga es cuerpo + añadido** cuando hay `BodyweightLog` en la unidad del añadido (D5: no se convierte). Entonces cualquier carga añadida compara, y la marca es la de carga variable (§11.1: e1RM con tope) sobre `peso corporal + añadido`. Cada aparición usa el último registro en o antes de su fecha; **antes del primer registro, el primero**: los registros empiezan el 1 nov (77 kg) y el usuario confirmó el 8 nov que su peso fue estable desde agosto. Un error de 2 kg movería la línea ~1.5%. Con esto, `Weighted Dips` —a +25, +30, +34.5, +35 y +40 kg— pasa de 2 sesiones comparables a toda su historia. La línea lo dice en su leyenda. El veredicto por aparición (§3.5) usa la misma carga: entre añadidos distintos, su e1RM es sobre cuerpo + añadido. Antes era sobre el añadido solo, y +30 × 8 contra +40 × 4 salía "peor" cuando en carga total es "mejor".
+- Sin registros en esa unidad, la comparación queda dentro de la **misma carga añadida** (la mayor de la aparición), como antes: +25 kg y +20 kg no tienen denominador común sin el cuerpo (§3.4). Hoy es el caso de `Weighted Decline Crunches`, que registra el añadido en lb — y en un crunch el cuerpo entero tampoco es la carga.
 
 Se excluyen las sesiones con el tag `deload` —por id (`tag-deload`), no por nombre, que es editable— y la sesión activa. Solo series reales (reps > 0), como en toda la cadena de lectura.
 
@@ -423,7 +426,7 @@ Por semana de lunes a domingo, la suma de los netos de sesión (`mejor − peor`
 
 ### 11.8 Fuera de esta entrega
 
-Con su disparador en BACKLOG: balance por lado (hoy L y R coinciden en 57 de 58 pares de series: no hay señal que mostrar) y comparar `BODYWEIGHT_PLUS` entre cargas usando el peso corporal. El volumen por grupo muscular, que también estaba aquí, se construyó después: §12.
+Con su disparador en BACKLOG: balance por lado (hoy L y R coinciden en 57 de 58 pares de series: no hay señal que mostrar). Dos que estaban aquí se construyeron después: comparar `BODYWEIGHT_PLUS` entre cargas con el peso corporal (§11.2, al llegar a 4 registros) y el volumen por grupo muscular (§12).
 
 ---
 

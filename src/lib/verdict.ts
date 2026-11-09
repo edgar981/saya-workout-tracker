@@ -52,12 +52,13 @@ export function epley(weight: number, reps: number): number {
   return weight * (1 + reps / 30);
 }
 
-/** La mejor serie por e1RM (solo filas con peso). */
-function bestE1rm(sets: SetLog[]): { e1rm: number; reps: number } | null {
+/** La mejor serie por e1RM (solo filas con peso). `cuerpo`: el peso corporal que
+ *  se suma al añadido en BODYWEIGHT_PLUS (§11.2); 0 en el resto. */
+function bestE1rm(sets: SetLog[], cuerpo = 0): { e1rm: number; reps: number } | null {
   let best: { e1rm: number; reps: number } | null = null;
   for (const s of sets) {
     if (s.weight_value === null) continue;
-    const v = epley(s.weight_value, s.reps);
+    const v = epley(cuerpo + s.weight_value, s.reps);
     if (!best || v > best.e1rm) best = { e1rm: v, reps: s.reps };
   }
   return best;
@@ -85,9 +86,16 @@ function byTotalReps(current: SetLog[], previous: SetLog[]): Verdict {
 
 /**
  * Compara la aparición de esta sesión contra la anterior. `previous` es null
- * cuando no hay aparición previa con series.
+ * cuando no hay aparición previa con series. `pesoCorporal`: en BODYWEIGHT_PLUS,
+ * el de cada aparición (`pesoCorporalEn`, §11.2); con los dos, el e1RM entre
+ * cargas añadidas distintas es sobre cuerpo + añadido — la misma carga que mide
+ * la línea de progreso.
  */
-export function compareAppearances(current: SetLog[], previous: SetLog[] | null): Verdict {
+export function compareAppearances(
+  current: SetLog[],
+  previous: SetLog[] | null,
+  pesoCorporal: { actual: number | null; previo: number | null } = { actual: null, previo: null },
+): Verdict {
   // Una serie sin teclear (reps 0) no es una serie realizada: no cuenta para el
   // veredicto. El cero se filtra en toda la cadena de lectura; aquí, además,
   // como defensa del comparador puro. Sin esto, una serie creada y no tecleada
@@ -107,6 +115,10 @@ export function compareAppearances(current: SetLog[], previous: SetLog[] | null)
   if (unit === "BODYWEIGHT") return byTotalReps(cur, prev);
 
   // Con peso (KG, LB, BODYWEIGHT_PLUS=añadido, STACK_POSITION).
+  // BODYWEIGHT_PLUS con peso corporal en las dos: cuerpo + añadido (§11.2). Sin
+  // él, el e1RM queda sobre el añadido solo.
+  const conCuerpo =
+    unit === "BODYWEIGHT_PLUS" && pesoCorporal.actual !== null && pesoCorporal.previo !== null;
   const wCur = distinctWeights(cur);
   const wPrev = distinctWeights(prev);
 
@@ -121,8 +133,8 @@ export function compareAppearances(current: SetLog[], previous: SetLog[] | null)
   if (mismoPeso) return byTotalReps(cur, prev);
 
   // Peso distinto: e1RM de la mejor serie, con límite duro de 12 reps.
-  const bestCur = bestE1rm(cur);
-  const bestPrev = bestE1rm(prev);
+  const bestCur = bestE1rm(cur, conCuerpo ? (pesoCorporal.actual as number) : 0);
+  const bestPrev = bestE1rm(prev, conCuerpo ? (pesoCorporal.previo as number) : 0);
   if (!bestCur || !bestPrev) return byTotalReps(cur, prev);
   if (bestCur.reps > MAX_REPS_E1RM || bestPrev.reps > MAX_REPS_E1RM) {
     return sinComparacion("fuera_rango_e1rm");

@@ -1,4 +1,4 @@
-import type { Session, SetLog } from "@/lib/db/types";
+import type { AddedUnit, BodyweightLog, Session, SetLog } from "@/lib/db/types";
 import { epley, MAX_REPS_E1RM } from "@/lib/verdict";
 
 /**
@@ -68,15 +68,36 @@ function cargaAñadida(sets: SetLog[]): number | null {
 }
 
 /**
- * Clave de comparabilidad (§11.2): tupla de unidad (§3.5) + lateralidad observada
- * + en BODYWEIGHT_PLUS, la carga añadida. Dos apariciones solo se comparan si
- * comparten clave. Sale de la primera serie, como `unitKey` del historial.
+ * Peso corporal de una aparición de BODYWEIGHT_PLUS (§11.2): el último registro en
+ * la unidad del añadido en o antes de la fecha. Antes del primer registro se usa
+ * el primero: el usuario confirmó (8 nov) que su peso fue estable desde agosto.
+ * null si no hay registros en esa unidad — no se convierte (D5).
  */
-export function claveComparable(sets: SetLog[]): string {
+export function pesoCorporalEn(
+  pesos: Pick<BodyweightLog, "fecha" | "valor" | "unidad">[],
+  fecha: string,
+  unidad: AddedUnit,
+): number | null {
+  const enUnidad = pesos
+    .filter((p) => p.unidad === unidad)
+    .sort((a, b) => a.fecha.localeCompare(b.fecha));
+  if (enUnidad.length === 0) return null;
+  return (enUnidad.filter((p) => p.fecha <= fecha).at(-1) ?? enUnidad[0]).valor;
+}
+
+/**
+ * Clave de comparabilidad (§11.2): tupla de unidad (§3.5) + lateralidad observada
+ * + en BODYWEIGHT_PLUS, la carga añadida — salvo que haya peso corporal: entonces
+ * la carga es cuerpo + añadido y cualquier añadido compara. Dos apariciones solo
+ * se comparan si comparten clave. Sale de la primera serie, como `unitKey` del
+ * historial.
+ */
+export function claveComparable(sets: SetLog[], pesoCorporal: number | null = null): string {
   const s = sets[0];
   const lado = sets.some((x) => x.side !== null) ? "U" : "B";
   const base = `${s.weight_unit}|${s.weight_basis ?? "NA"}|${s.added_unit ?? "NA"}|${lado}`;
-  return s.weight_unit === "BODYWEIGHT_PLUS" ? `${base}|${cargaAñadida(sets) ?? "NA"}` : base;
+  if (s.weight_unit !== "BODYWEIGHT_PLUS") return base;
+  return pesoCorporal !== null ? `${base}|cuerpo` : `${base}|${cargaAñadida(sets) ?? "NA"}`;
 }
 
 /**
@@ -84,22 +105,26 @@ export function claveComparable(sets: SetLog[]): string {
  * y luego el promedio de los lados presentes). null si ninguna serie es valorable
  * — esa aparición no se grafica.
  *
- * Carga fija (BODYWEIGHT, y BODYWEIGHT_PLUS dentro de su carga): factor de Epley
- * sin peso y sin tope — el tope protege estimaciones entre cargas distintas, y
- * aquí la carga es la misma. Carga variable: e1RM con el tope del veredicto.
+ * Carga fija (BODYWEIGHT, y BODYWEIGHT_PLUS sin peso corporal, dentro de su
+ * carga): factor de Epley sin peso y sin tope — el tope protege estimaciones entre
+ * cargas distintas, y aquí la carga es la misma. Carga variable (y
+ * BODYWEIGHT_PLUS con peso corporal, cuya carga es cuerpo + añadido): e1RM con el
+ * tope del veredicto.
  */
-export function marcaDeAparicion(sets: SetLog[]): number | null {
+export function marcaDeAparicion(sets: SetLog[], pesoCorporal: number | null = null): number | null {
   if (sets.length === 0) return null;
   const unidad = sets[0].weight_unit;
-  const cargaFija = unidad === "BODYWEIGHT" || unidad === "BODYWEIGHT_PLUS";
-  // En BODYWEIGHT_PLUS solo cuentan las series a la carga de la clave.
-  const ref = unidad === "BODYWEIGHT_PLUS" ? cargaAñadida(sets) : null;
+  const conCuerpo = unidad === "BODYWEIGHT_PLUS" && pesoCorporal !== null;
+  const cargaFija = unidad === "BODYWEIGHT" || (unidad === "BODYWEIGHT_PLUS" && !conCuerpo);
+  // En BODYWEIGHT_PLUS sin cuerpo solo cuentan las series a la carga de la clave.
+  const ref = unidad === "BODYWEIGHT_PLUS" && !conCuerpo ? cargaAñadida(sets) : null;
 
   const valor = (s: SetLog): number | null => {
-    if (unidad === "BODYWEIGHT_PLUS" && s.weight_value !== ref) return null;
+    if (ref !== null && s.weight_value !== ref) return null;
     if (cargaFija) return 1 + s.reps / 30;
+    // Sin peso tecleado (el aviso ámbar) la serie no se valora: null no es cero.
     if (s.weight_value === null || s.reps > MAX_REPS_E1RM) return null;
-    return epley(s.weight_value, s.reps);
+    return epley(conCuerpo ? pesoCorporal + s.weight_value : s.weight_value, s.reps);
   };
 
   const porLado = new Map<string, number[]>();
@@ -124,6 +149,8 @@ export interface Aparicion {
   fecha: string;
   sets: SetLog[];
   deload: boolean;
+  /** Solo BODYWEIGHT_PLUS con registros en la unidad del añadido (§11.2). */
+  pesoCorporal: number | null;
 }
 
 export interface PuntoMarca {
@@ -159,22 +186,35 @@ export interface ProgresoEjercicio {
   cambio: number | null;
   /** Semanas desde la mejor marca (estancado). */
   semanasSinMejorar: number | null;
+  /** La línea mide cuerpo + añadido (BODYWEIGHT_PLUS con peso corporal). */
+  conPesoCorporal: boolean;
 }
 
 /**
  * De las entradas de `getPerformanceHistory` (descendentes, con series reales) a
  * apariciones cronológicas. La sesión activa queda fuera (§11.2): se está
- * registrando y llegaría incompleta, igual que en el veredicto.
+ * registrando y llegaría incompleta, igual que en el veredicto. `pesos`: todos
+ * los `BodyweightLog`; cada aparición de BODYWEIGHT_PLUS toma el suyo.
  */
-export function aparicionesDe(entries: { session: Session; sets: SetLog[] }[]): Aparicion[] {
+export function aparicionesDe(
+  entries: { session: Session; sets: SetLog[] }[],
+  pesos: Pick<BodyweightLog, "fecha" | "valor" | "unidad">[] = [],
+): Aparicion[] {
   return entries
     .filter((e) => e.session.activa === 0)
     .sort((a, b) => a.session.iniciada_en.localeCompare(b.session.iniciada_en))
-    .map((e) => ({
-      fecha: e.session.fecha,
-      sets: e.sets,
-      deload: e.session.tag_ids.includes(TAG_DELOAD),
-    }));
+    .map((e) => {
+      const s = e.sets[0];
+      return {
+        fecha: e.session.fecha,
+        sets: e.sets,
+        deload: e.session.tag_ids.includes(TAG_DELOAD),
+        pesoCorporal:
+          s?.weight_unit === "BODYWEIGHT_PLUS" && s.added_unit
+            ? pesoCorporalEn(pesos, e.session.fecha, s.added_unit)
+            : null,
+      };
+    });
 }
 
 const promedio = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
@@ -193,6 +233,7 @@ export function evaluarProgreso(apariciones: Aparicion[], hoy: string): Progreso
     deload: 0,
     cambio: null,
     semanasSinMejorar: null,
+    conPesoCorporal: false,
   };
   if (apariciones.length === 0) return vacio;
 
@@ -205,11 +246,11 @@ export function evaluarProgreso(apariciones: Aparicion[], hoy: string): Progreso
 
   const puntos: PuntoMarca[] = [];
   if (referencia) {
-    const clave = claveComparable(referencia.sets);
+    const clave = claveComparable(referencia.sets, referencia.pesoCorporal);
     let mejor = -Infinity;
     for (const a of normales) {
-      if (claveComparable(a.sets) !== clave) continue;
-      const marca = marcaDeAparicion(a.sets);
+      if (claveComparable(a.sets, a.pesoCorporal) !== clave) continue;
+      const marca = marcaDeAparicion(a.sets, a.pesoCorporal);
       if (marca === null) continue;
       // Estrictamente mayor: un empate no es mejor marca. El epsilon relativo
       // solo absorbe el ruido de coma flotante.
@@ -227,6 +268,7 @@ export function evaluarProgreso(apariciones: Aparicion[], hoy: string): Progreso
     ultimaFecha,
     otraCarga: normales.length - puntos.length,
     deload,
+    conPesoCorporal: (referencia?.pesoCorporal ?? null) !== null,
   };
 
   if (diasEntre(ultimaFecha, hoy) > DIAS_SIN_REGISTRAR) return { ...base, estado: "sin_registrar" };

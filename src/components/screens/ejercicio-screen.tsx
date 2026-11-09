@@ -8,7 +8,7 @@ import { ChevronLeft, ScissorsLineDashed } from "lucide-react";
 
 import { unitTag } from "@/components/exercise-picker";
 import { SetLines } from "@/components/history/set-lines";
-import { EstadoLinea } from "@/components/progress/estado";
+import { EstadoLinea, fechaCorta } from "@/components/progress/estado";
 import { MarcaChart } from "@/components/progress/marca-chart";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -53,19 +53,32 @@ export default function EjercicioScreen() {
   // Capa 2 (§11) sale de la MISMA travesía: `todas` ya viene en el historial.
   const history = useLiveQuery(async () => {
     const h = await loadExerciseHistory(exerciseId);
-    return { ...h, progreso: evaluarProgreso(aparicionesDe(h.todas), todayISO()) };
+    return { ...h, progreso: evaluarProgreso(aparicionesDe(h.todas, h.pesos), todayISO()) };
   }, [exerciseId]);
 
   if (history === undefined) {
     return <EjercicioSkeleton />;
   }
 
-  const { exercise, entries, recentSnapshot, esUnilateral, totalSeries, bestSet, progreso } = history;
+  const { exercise, entries, recentSnapshot, esUnilateral, totalSeries, bestSet, progreso, pesos } =
+    history;
   const fuera = [
     progreso.otraCarga > 0 &&
       `${progreso.otraCarga} ${progreso.otraCarga === 1 ? "sesión no comparable" : "sesiones no comparables"} (otra carga, unidad o lateralidad)`,
     progreso.deload > 0 && `${progreso.deload} de descarga`,
   ].filter(Boolean);
+
+  // BODYWEIGHT_PLUS con peso corporal (§11.2): se dice qué mide la línea, y si
+  // hay puntos anteriores al primer registro, qué peso se les puso.
+  const primerPeso = pesos
+    .filter((p) => p.unidad === recentSnapshot?.added_unit)
+    .sort((a, b) => a.fecha.localeCompare(b.fecha))[0];
+  const notaCuerpo =
+    progreso.conPesoCorporal && primerPeso
+      ? progreso.puntos.some((p) => p.fecha < primerPeso.fecha)
+        ? ` Carga: tu peso corporal + el añadido; antes de tu primer registro (${fechaCorta(primerPeso.fecha)}) se usa ese peso, ${primerPeso.valor} ${primerPeso.unidad.toLowerCase()}.`
+        : " Carga: tu peso corporal + el añadido."
+      : "";
 
   // Línea de metadatos (§4): unidad del snapshot vigente · lateralidad · total de
   // series. Sin apariciones, cae a la unidad del catálogo.
@@ -128,6 +141,7 @@ export default function EjercicioScreen() {
           <p className="text-muted-foreground text-xs">
             Cada punto: el promedio de tus dos mejores series de esa sesión. El anillo marca tu
             mejor sesión.
+            {notaCuerpo}
             {fuera.length > 0 && ` Fuera de la línea: ${fuera.join(" y ")}.`}
           </p>
         </section>
