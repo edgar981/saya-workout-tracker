@@ -326,6 +326,8 @@ La conclusión no es abandonar el local-first. Dexie sigue siendo la fuente de v
 
 **Modelo de auth — proporcional, no fuerte.** Sin auth de usuario, el endpoint queda abierto a que cualquiera escriba. La barrera es un token en variable de entorno (`BACKUP_TOKEN`), comparado en cada ruta en tiempo constante. El cliente lo lleva embebido en el bundle (`NEXT_PUBLIC_BACKUP_TOKEN`), a la vista de quien inspeccione el JavaScript. Esto **no** protege de alguien que mire el bundle: protege de escrituras casuales de terceros. Es proporcional — son datos de gimnasio de una persona. Documentarlo como lo que es evita creer que es más. (Se exige el token también en las lecturas: la misma barrera débil, pero no se expone el histórico entero en abierto.)
 
+*El login de §14 reemplaza este modelo; sigue vigente hasta que termine la transición de §14.*
+
 **Lo que no cambia.** Sin `version(3)` de Dexie. El export/import a archivo sigue existiendo tal cual — es la copia que no depende de que el backend esté vivo. La app prerenderiza estática; solo las rutas `/api/snapshot` son dinámicas (Node runtime, Prisma/Neon).
 
 ## 10. Piel — tokens, color y fuentes
@@ -523,3 +525,50 @@ in", para que la parsee una máquina); la decide Edgar, no un slice.
 Dio dos archivos, ambos cubiertos por la frase de Tier 1 de `CLAUDE.md`:
 `src/app/api/snapshot/route.ts` (dentro de `src/app/api/snapshot/`) y
 `src/lib/db/db.ts` (nombrado directo).
+
+---
+
+## 14. Login (SAYA-LOGIN-2, 2026-11-09)
+
+Edgar decidió el login el 2026-11-09, tras una investigación de solo lectura del
+repo (SAYA-LOGIN-1) y una comparación de librerías. Este asiento escribe lo
+decidido; la implementación llega en otros slices que lo citan.
+
+**Qué protege el login: sólo lo que vive en el servidor.** La app sigue abriendo
+y registrando sin sesión y sin señal (§6, §9). La comprobación va en las rutas de
+la API, en cada route handler; no hay un `proxy` delante de las páginas. La razón,
+medida: ninguna página lee el servidor (lo que muestra cada pantalla sale de
+Dexie), y el service worker guarda en cache cualquier respuesta de una navegación,
+así que una redirección a una pantalla de entrada podría quedar en el cache y
+abrirse sin red en lugar de la app.
+
+**Con qué: Better Auth, desde 1.7.18**, corriendo dentro de la app. Las cuentas
+viven en la misma base de Neon, en tablas nuevas, sin tocar `Snapshot`.
+
+**Cómo entra Edgar: passkey y contraseña.** El passkey para el día a día; la
+contraseña, guardada en su gestor de contraseñas, como la vuelta si el passkey
+falla dentro de la app instalada o si pierde el teléfono. El registro está
+cerrado: sólo puede existir la cuenta de un correo permitido, que vive en una
+variable de entorno del servidor, nunca en el código ni en una `NEXT_PUBLIC_`. Sin
+enlaces por correo: en iPhone abren en Safari, que guarda sus cookies aparte de la
+app instalada.
+
+**La sesión dura 30 días** y se renueva cada vez que la app habla con el servidor.
+Cuando vence, el respaldo queda pendiente hasta que Edgar vuelve a entrar; no se
+pierde (§9: un snapshot cubre todo).
+
+**La base cambia por migraciones** desde una línea base (la tabla `Snapshot` tal
+como está), que aplica Edgar con un runbook, primero en la base de prueba y después
+en producción. Ningún build migra.
+
+**Se prueba antes en un preview con su propia base**: una rama de Neon, con
+variables de Preview en Vercel, y una cuenta de prueba propia, porque un passkey
+queda atado a la dirección exacta del sitio.
+
+**La transición del token.** Mientras el teléfono no tenga el cliente nuevo, el
+servidor acepta sesión o token. Después se quita el token del código y Edgar borra
+`BACKUP_TOKEN` y `NEXT_PUBLIC_BACKUP_TOKEN` en Vercel. No se rota: su valor ya está
+en cada bundle construido, así que lo único que lo apaga es dejar de aceptarlo.
+
+**Tier 1.** Edgar aprobó el 2026-11-09 que `prisma/migrations/`, `src/lib/auth/` y
+`src/app/api/auth/` entren a la lista de `CLAUDE.md`.

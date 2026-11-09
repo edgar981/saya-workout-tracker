@@ -50,17 +50,18 @@ Las que todo cambio respeta:
 
 El orquestador decide qué slices son de dos etapas leyendo esta frase:
 
-Tier 1 slices run in a separate read-only session first, then a second stage that writes only after the go, over these surfaces: prisma/schema.prisma, src/lib/prisma.ts, src/lib/db/db.ts, src/lib/db/types.ts, src/lib/db/tables.ts, src/lib/db/backup.ts, src/lib/db/seed.ts, src/lib/musculos.ts, src/lib/backup/, src/app/api/snapshot/, src/components/db-boot.tsx, src/components/sw-register.tsx, src/components/backup-sync.tsx, public/sw.js and next.config.ts.
+Tier 1 slices run in a separate read-only session first, then a second stage that writes only after the go, over these surfaces: prisma/schema.prisma, prisma/migrations/, src/lib/prisma.ts, src/lib/db/db.ts, src/lib/db/types.ts, src/lib/db/tables.ts, src/lib/db/backup.ts, src/lib/db/seed.ts, src/lib/musculos.ts, src/lib/backup/, src/app/api/snapshot/, src/lib/auth/, src/app/api/auth/, src/components/db-boot.tsx, src/components/sw-register.tsx, src/components/backup-sync.tsx, public/sw.js and next.config.ts.
 
 | Superficie | Rutas | Por qué |
 | --- | --- | --- |
-| Esquema y modelo | `prisma/schema.prisma`, `src/lib/prisma.ts`, `src/lib/db/db.ts`, `src/lib/db/types.ts`, `src/lib/db/tables.ts` | los bloques `version(n)` de Dexie y `SCHEMA_VERSION`; un campo no indexado también es esquema (§3.2); las nueve tablas son el cable del respaldo |
+| Esquema y modelo | `prisma/schema.prisma`, `prisma/migrations/`, `src/lib/prisma.ts`, `src/lib/db/db.ts`, `src/lib/db/types.ts`, `src/lib/db/tables.ts` | los bloques `version(n)` de Dexie y `SCHEMA_VERSION`; un campo no indexado también es esquema (§3.2); las nueve tablas son el cable del respaldo |
 | Respaldo y restauración | `src/lib/db/backup.ts`, `src/lib/backup/`, `src/app/api/snapshot/`, `src/components/backup-sync.tsx` | el único camino de restore, el cable cliente-servidor, su token y cuándo se empuja un snapshot (§9) |
+| Cuentas y sesiones | `src/lib/auth/`, `src/app/api/auth/` | quién entra y con qué credencial: la configuración del login, la regla del único correo permitido, la comprobación de sesión que usan las rutas del respaldo, y los handlers que escriben las tablas de cuentas (§14) |
 | Lo que escribe al arrancar | `src/lib/db/seed.ts`, `src/components/db-boot.tsx`, `src/lib/musculos.ts` | el seed y las correcciones de catálogo, quien los corre, y `GRUPOS_SEMILLA`, que alimenta la migración v4 (§12.5) |
 | Actualización y offline | `public/sw.js`, `src/components/sw-register.tsx`, `next.config.ts` | el service worker, la actualización que entra sólo sin sesión activa, y el `no-cache` de `sw.js` |
 
 (a) **La lista es de Edgar**: una ruta entra o sale por decisión suya, no por un
-slice; el login va a traer las suyas. (b) **Regla de ubicación:** una escritura
+slice; Edgar aprobó las del login el 2026-11-09 (§14). (b) **Regla de ubicación:** una escritura
 nueva a `Snapshot` (o a las tablas de cuentas que traiga el login: `User`,
 `Session`, `Account`, `Verification`, `Passkey`) o un bloque `version(n)` de Dexie
 fuera de estas rutas hace que el orquestador **bloquee todo despacho** hasta que
