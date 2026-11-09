@@ -71,7 +71,7 @@ alguien la clasifique.
 Para el worker que lea este archivo:
 
 - Su gate es `npx prisma generate`, `npx tsc --noEmit`, `npx eslint .` y
-  `npm test` (este último cuando exista el script; hoy no existe). Nada más.
+  `npm test` (vitest; corre `src/**/*.test.ts`). Nada más.
 - **No son suyos**: `npm run build` y `next build` (los corre el orquestador en su
   gate), `npm run dev`/`next dev` (además de levantar un servidor, **escribe en
   este `CLAUDE.md`** si le falta su bloque, y en un repo sin `CLAUDE.md` crea
