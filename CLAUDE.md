@@ -77,8 +77,10 @@ Para el worker que lea este archivo:
   gate), `npm run dev`/`next dev` (además de levantar un servidor, cuando
   lo corre un agente **escribe `AGENTS.md`** en la raíz, que está ignorado; ya no
   toca `CLAUDE.md`), `next start`, cualquier navegador contra la app,
-  `prisma migrate`, `prisma db` y cualquier `--env-file`. La verificación visual la
-  hace el orquestador; el preview de `pasada/reestructura` lo revisa Edgar.
+  `prisma migrate`, `prisma db` y cualquier `--env-file`. La excepción es
+  `prisma migrate diff` entre archivos de esquema, que no toca ninguna base: así el
+  SQL de una migración sale de Prisma y no de la mano del worker. La verificación
+  visual la hace el orquestador; el preview de `pasada/reestructura` lo revisa Edgar.
 - **La identidad de git ya está fijada** en la config local y el orquestador la
   mide antes de despachar (y otra vez antes de mergear, sobre cada commit): un
   slice despachado no corre `git config`.
