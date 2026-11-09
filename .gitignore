@@ -10,3 +10,5 @@ npm-debug.log*
 .vercel
 next-env.d.ts
 tsconfig.tsbuildinfo
+# archivos temporales de los slices despachados
+.scratch/
