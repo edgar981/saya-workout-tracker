@@ -12,3 +12,5 @@ next-env.d.ts
 tsconfig.tsbuildinfo
 # archivos temporales de los slices despachados
 .scratch/
+# lo escribe `next dev` (16.4+) cuando lo corre un agente
+AGENTS.md

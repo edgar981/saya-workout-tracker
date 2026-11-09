@@ -73,9 +73,9 @@ Para el worker que lea este archivo:
 - Su gate es `npx prisma generate`, `npx tsc --noEmit`, `npx eslint .` y
   `npm test` (vitest; corre `src/**/*.test.ts`). Nada más.
 - **No son suyos**: `npm run build` y `next build` (los corre el orquestador en su
-  gate), `npm run dev`/`next dev` (además de levantar un servidor, **escribe en
-  este `CLAUDE.md`** si le falta su bloque, y en un repo sin `CLAUDE.md` crea
-  `AGENTS.md` y `CLAUDE.md`), `next start`, cualquier navegador contra la app,
+  gate), `npm run dev`/`next dev` (además de levantar un servidor, cuando
+  lo corre un agente **escribe `AGENTS.md`** en la raíz, que está ignorado; ya no
+  toca `CLAUDE.md`), `next start`, cualquier navegador contra la app,
   `prisma migrate`, `prisma db` y cualquier `--env-file`. La verificación visual la
   hace el orquestador; el preview de `pasada/reestructura` lo revisa Edgar.
 - **La identidad de git ya está fijada** en la config local y el orquestador la
@@ -86,12 +86,11 @@ Para el worker que lea este archivo:
   se mueve sólo con el «sí» de Edgar.
 - Los archivos de usar y tirar van en `.scratch/`, en la raíz, que está ignorado.
 
-<!-- BEGIN:nextjs-agent-rules -->
+## Next.js en este repo
 
-## This is NOT the Next.js you know
-
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
-
-This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
-
-<!-- END:nextjs-agent-rules -->
+Esta versión de Next tiene cambios que rompen con lo que un modelo aprendió (APIs,
+convenciones, estructura de archivos). Antes de escribir código se lee la guía que
+viene con la versión instalada, en `node_modules/next/dist/docs/` (resuelta desde
+la raíz de este repo), y se atienden los avisos de deprecación. Desde next 16.4,
+`next dev` escribe sus reglas para agentes en `AGENTS.md`, que está ignorado
+(`.gitignore`); ya no toca este archivo.
