@@ -39,8 +39,9 @@ Las que todo cambio respeta:
   uno desplegado, y sigue su protocolo de export → deploy → verificación (§6, §12.5).
 - Sin conversión entre unidades: solo se compara dentro de la misma tupla
   `(exercise_id, weight_unit, weight_basis)` (§3.5, D5).
-- Los colores siguen las reglas fijas de §10 (el acento es único, los veredictos
-  nunca usan rojo, el ámbar está reservado a dato incompleto).
+- Los colores siguen las reglas fijas de §10 (el acento es único; un veredicto
+  nunca usa rojo ni el acento verde: «mejor» va en tinta plena con su flecha, la
+  dirección la carga la flecha; el ámbar está reservado a dato incompleto).
 - Hechos, no consejos, en pantalla: la app no sugiere, muestra (§11.5, §7.5).
 - Nada sin disparador: un pendiente nuevo se escribe en `BACKLOG.md` con su
   disparador, no se construye "por si acaso".
