@@ -497,3 +497,29 @@ Propuesta, no observada: se corrige en el catálogo.
 | Leg Curl, Lying Leg Curl | Isquiotibiales | — |
 | Calf Raises | Pantorrillas | — |
 | Hanging Leg Raises, Weighted Decline Crunches | Abdomen | — |
+
+---
+
+## 13. Slices despachados por un orquestador (SAYA-TIER1-1, 2026-11-08)
+
+Desde ahora los cambios de la reestructura (login y rediseño) llegan por slices
+que un orquestador despacha, revisa y mergea a `pasada/reestructura`.
+`CLAUDE.md` (nuevo en este commit) es donde viven las reglas para esos slices:
+identidad de git, entornos, flujo de ramas, reglas de dominio transversales y qué
+corre y qué no corre un worker despachado.
+
+**Tier 1.** Un subconjunto de rutas —esquema y modelo, respaldo y restauración, lo
+que escribe al arrancar, actualización y offline— corre en dos etapas: una sesión
+de solo lectura primero, y una segunda que escribe solo tras el visto bueno. El
+orquestador la lee de una sola frase en `CLAUDE.md` (empieza con "Tier 1 slices run
+in", para que la parsee una máquina); la decide Edgar, no un slice.
+
+**Medición de qué escribe hoy sobre el eje** (`prisma`/`tx`.`snapshot`/`user`/
+`session`/`account`/`verification`/`passkey`.`create`/`update`/`delete`/`upsert`/
+`createMany`/`updateMany`/`deleteMany`, o un bloque `.version(n)`):
+
+    grep -rlE "(prisma|tx)\.(snapshot|user|session|account|verification|passkey)\.(create|update|delete|upsert|createMany|updateMany|deleteMany)|\.version\([0-9]+\)" src prisma | sort
+
+Dio dos archivos, ambos cubiertos por la frase de Tier 1 de `CLAUDE.md`:
+`src/app/api/snapshot/route.ts` (dentro de `src/app/api/snapshot/`) y
+`src/lib/db/db.ts` (nombrado directo).
