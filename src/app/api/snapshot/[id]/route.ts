@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { tokenFromRequest, tokenOk } from "@/lib/backup/server-auth";
+import { comprobarAcceso, conCookies } from "@/lib/backup/server-auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -13,8 +13,12 @@ export async function GET(
   req: Request,
   { params }: { params: Promise<{ id: string }> },
 ): Promise<Response> {
-  if (!tokenOk(tokenFromRequest(req))) {
-    return Response.json({ error: "Token inválido o ausente." }, { status: 401 });
+  const acceso = await comprobarAcceso(req);
+  if (!acceso.ok) {
+    return conCookies(
+      Response.json({ error: "Token inválido o ausente." }, { status: 401 }),
+      acceso,
+    );
   }
 
   const { id } = await params;
@@ -23,6 +27,11 @@ export async function GET(
     select: { payload: true },
   });
 
-  if (!row) return Response.json({ error: "Snapshot no encontrado." }, { status: 404 });
-  return Response.json(row.payload);
+  if (!row) {
+    return conCookies(
+      Response.json({ error: "Snapshot no encontrado." }, { status: 404 }),
+      acceso,
+    );
+  }
+  return conCookies(Response.json(row.payload), acceso);
 }

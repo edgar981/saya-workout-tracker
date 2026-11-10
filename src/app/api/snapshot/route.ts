@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { validateSnapshotBody, type SnapshotMeta } from "@/lib/backup/protocol";
-import { tokenFromRequest, tokenOk } from "@/lib/backup/server-auth";
+import { comprobarAcceso, conCookies } from "@/lib/backup/server-auth";
 
 // Prisma necesita Node (no edge). Y estas rutas leen/escriben la base: nunca se
 // prerenderizan ni se cachean.
@@ -15,17 +15,23 @@ const unauthorized = () =>
  * Valida antes de tocar la base; si algo no cuadra, 4xx sin escribir.
  */
 export async function POST(req: Request): Promise<Response> {
-  if (!tokenOk(tokenFromRequest(req))) return unauthorized();
+  const acceso = await comprobarAcceso(req);
+  if (!acceso.ok) return conCookies(unauthorized(), acceso);
 
   let raw: unknown;
   try {
     raw = await req.json();
   } catch {
-    return Response.json({ error: "El cuerpo no es JSON válido." }, { status: 400 });
+    return conCookies(
+      Response.json({ error: "El cuerpo no es JSON válido." }, { status: 400 }),
+      acceso,
+    );
   }
 
   const parsed = validateSnapshotBody(raw);
-  if (!parsed.ok) return Response.json({ error: parsed.error }, { status: 400 });
+  if (!parsed.ok) {
+    return conCookies(Response.json({ error: parsed.error }, { status: 400 }), acceso);
+  }
 
   const snap = await prisma.snapshot.create({
     data: {
@@ -42,12 +48,13 @@ export async function POST(req: Request): Promise<Response> {
     schema_version: snap.schema_version,
     counts: snap.counts as Record<string, number>,
   };
-  return Response.json(meta, { status: 201 });
+  return conCookies(Response.json(meta, { status: 201 }), acceso);
 }
 
 /** Lista los snapshots recientes (metadata, sin payload) para la restauración. */
 export async function GET(req: Request): Promise<Response> {
-  if (!tokenOk(tokenFromRequest(req))) return unauthorized();
+  const acceso = await comprobarAcceso(req);
+  if (!acceso.ok) return conCookies(unauthorized(), acceso);
 
   const rows = await prisma.snapshot.findMany({
     orderBy: { creado_en: "desc" },
@@ -61,5 +68,5 @@ export async function GET(req: Request): Promise<Response> {
     schema_version: r.schema_version,
     counts: r.counts as Record<string, number>,
   }));
-  return Response.json({ snapshots });
+  return conCookies(Response.json({ snapshots }), acceso);
 }
