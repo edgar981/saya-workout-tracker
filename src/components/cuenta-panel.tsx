@@ -1,13 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { KeyRound } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { authClient } from "@/lib/auth/cliente";
-import { textoDeError } from "@/lib/auth/errores";
+import { MENSAJE_NO_SE_PUDO, esSinRed } from "@/lib/auth/errores";
 import { alEntrar } from "@/lib/backup/client";
 
 type Accion = "passkey" | "password" | "crear" | "agregar" | "salir";
@@ -36,12 +35,12 @@ export function CuentaPanel({ onEntro }: { onEntro: () => void }) {
     try {
       const res = await llamada();
       if (res.error) {
-        setError(textoDeError(res.error));
+        setError(MENSAJE_NO_SE_PUDO);
       } else {
         alTerminar?.();
       }
-    } catch (err) {
-      setError(textoDeError(err));
+    } catch {
+      setError(MENSAJE_NO_SE_PUDO);
     } finally {
       setAccion(null);
     }
@@ -69,19 +68,10 @@ export function CuentaPanel({ onEntro }: { onEntro: () => void }) {
 
   const salir = () => void correr("salir", () => authClient.signOut());
 
-  const sinRed = sesion.error ? textoDeError(sesion.error) === "Sin señal." : false;
+  const sinRed = sesion.error ? esSinRed(sesion.error) : false;
 
   return (
     <div className="flex flex-col gap-3 rounded-lg border p-3">
-      <div className="flex items-center gap-2">
-        <KeyRound className="size-4" />
-        <span className="text-sm font-medium">Cuenta</span>
-      </div>
-
-      <p className="text-muted-foreground text-xs">
-        Entrar sólo hace falta para el respaldo del servidor. La app abre y registra igual sin sesión ni señal.
-      </p>
-
       {sesion.isPending ? (
         <p className="text-muted-foreground text-xs">Consultando la sesión…</p>
       ) : sesion.data ? (
@@ -96,7 +86,7 @@ export function CuentaPanel({ onEntro }: { onEntro: () => void }) {
         <p className="text-muted-foreground text-xs">
           {sinRed
             ? "Sin señal: la sesión se consulta al volver la red."
-            : `No se pudo consultar la sesión: ${textoDeError(sesion.error)}`}
+            : "No se pudo consultar la sesión."}
         </p>
       ) : (
         <div className="flex flex-col gap-3">
@@ -131,13 +121,6 @@ export function CuentaPanel({ onEntro }: { onEntro: () => void }) {
                 onChange={(e) => setContrasena(e.target.value)}
               />
             </div>
-
-            {crear && (
-              <p className="text-muted-foreground text-xs">
-                Sólo el correo permitido puede tener cuenta. Guarda la contraseña en tu gestor: es la vuelta si el
-                passkey falla.
-              </p>
-            )}
 
             <Button type="submit" size="sm" disabled={ocupado}>
               {crear

@@ -22,8 +22,6 @@ export interface BackupState {
 
 export const ESTADO_VACIO: BackupState = { pending: false, lastError: null, last: null, sinSesion: false };
 
-export const MENSAJE_401 = "El servidor pide entrar (401).";
-
 /** Lee lo guardado; un estado de antes de este campo se lee como «sin sesión» desmarcado. */
 export function leerEstado(guardado: Partial<BackupState> | null | undefined): BackupState {
   return {
@@ -34,9 +32,9 @@ export function leerEstado(guardado: Partial<BackupState> | null | undefined): B
   };
 }
 
-/** Un 401: sigue pendiente y queda marcado «sin sesión». */
+/** Un 401: sigue pendiente y queda marcado «sin sesión», sin guardar mensaje. */
 export function tras401(prev: BackupState): BackupState {
-  return { ...prev, pending: true, lastError: MENSAJE_401, sinSesion: true };
+  return { ...prev, pending: true, lastError: null, sinSesion: true };
 }
 
 /** Cualquier otro fallo: sigue pendiente y se desmarca «sin sesión». */

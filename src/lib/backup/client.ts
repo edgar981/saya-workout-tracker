@@ -2,7 +2,6 @@ import { buildBackup } from "@/lib/db/backup";
 import type { SnapshotBody, SnapshotMeta } from "./protocol";
 import {
   ESTADO_VACIO,
-  MENSAJE_401,
   leerEstado,
   tras401,
   trasEntrar,
@@ -156,8 +155,15 @@ export function alEntrar(): void {
   if (next.pending) void backupNow();
 }
 
+/** Una lectura recibió 401: falta la sesión. El panel lo reconoce sin leer ningún texto. */
+export class ErrorSinSesion extends Error {
+  constructor() {
+    super("401");
+    this.name = "ErrorSinSesion";
+  }
+}
+
 async function errorMessage(res: Response): Promise<string> {
-  if (res.status === 401) return MENSAJE_401;
   try {
     const body = (await res.json()) as { error?: string };
     if (body?.error) return body.error;
@@ -169,10 +175,14 @@ async function errorMessage(res: Response): Promise<string> {
 
 // ── Lecturas para /datos ──────────────────────────────────────────────────────
 
+async function errorDeLectura(res: Response): Promise<Error> {
+  return res.status === 401 ? new ErrorSinSesion() : new Error(await errorMessage(res));
+}
+
 /** Metadata del último snapshot en el SERVIDOR (no el cache local). */
 export async function fetchLatest(): Promise<SnapshotMeta | null> {
   const res = await fetch(`${ENDPOINT}/latest`, { headers: authHeaders(), cache: "no-store" });
-  if (!res.ok) throw new Error(await errorMessage(res));
+  if (!res.ok) throw await errorDeLectura(res);
   const body = (await res.json()) as { latest: SnapshotMeta | null };
   return body.latest;
 }
@@ -180,7 +190,7 @@ export async function fetchLatest(): Promise<SnapshotMeta | null> {
 /** Lista de snapshots recientes (metadata) para elegir cuál restaurar. */
 export async function listSnapshots(): Promise<SnapshotMeta[]> {
   const res = await fetch(ENDPOINT, { headers: authHeaders(), cache: "no-store" });
-  if (!res.ok) throw new Error(await errorMessage(res));
+  if (!res.ok) throw await errorDeLectura(res);
   const body = (await res.json()) as { snapshots: SnapshotMeta[] };
   return body.snapshots;
 }
@@ -188,6 +198,6 @@ export async function listSnapshots(): Promise<SnapshotMeta[]> {
 /** Payload completo de un snapshot: el `{ manifest, data }` para restaurar. */
 export async function fetchSnapshotPayload(id: string): Promise<unknown> {
   const res = await fetch(`${ENDPOINT}/${id}`, { headers: authHeaders(), cache: "no-store" });
-  if (!res.ok) throw new Error(await errorMessage(res));
+  if (!res.ok) throw await errorDeLectura(res);
   return res.json();
 }

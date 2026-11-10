@@ -7,11 +7,11 @@ const META = { id: "s1", creado_en: "2026-11-09T10:00:00.000Z", schema_version: 
 const AL_DIA: BackupState = { pending: false, lastError: null, last: { ...META, at: "2026-11-09T10:00:01.000Z" }, sinSesion: false };
 
 describe("estado del respaldo", () => {
-  it("un 401 deja pendiente, marca «sin sesión» y usa el mensaje de entrar", () => {
-    const s = tras401(AL_DIA);
+  it("un 401 deja pendiente, marca «sin sesión» y no guarda mensaje", () => {
+    const s = tras401({ ...AL_DIA, lastError: "x" });
     expect(s.pending).toBe(true);
     expect(s.sinSesion).toBe(true);
-    expect(s.lastError).toBe("El servidor pide entrar (401).");
+    expect(s.lastError).toBeNull();
     expect(s.last).toEqual(AL_DIA.last);
   });
 
