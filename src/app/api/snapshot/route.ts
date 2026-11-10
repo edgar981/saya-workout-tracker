@@ -8,7 +8,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const unauthorized = () =>
-  Response.json({ error: "Token inválido o ausente." }, { status: 401 });
+  Response.json({ error: "Sin sesión." }, { status: 401 });
 
 /**
  * Recibe un volcado completo y lo guarda como una fila nueva (append-only).

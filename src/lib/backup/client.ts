@@ -14,19 +14,10 @@ import {
  * Lado cliente del respaldo: arma el volcado, lo empuja al endpoint, y lleva en
  * localStorage si hay uno pendiente y cómo fue el último intento. Nada de esto
  * bloquea la app — un push fallido queda "pendiente" y se reintenta al abrir.
- *
- * El token viaja embebido en el bundle (NEXT_PUBLIC_*), a la vista de quien mire
- * el JavaScript. Es a propósito y proporcional (DECISIONES.md §9).
  */
 
-const TOKEN = process.env.NEXT_PUBLIC_BACKUP_TOKEN ?? "";
 const ENDPOINT = "/api/snapshot";
-const HEADER = "x-backup-token";
 const STORE_KEY = "saya:backup:state";
-
-function authHeaders(extra?: Record<string, string>): HeadersInit {
-  return { [HEADER]: TOKEN, ...extra };
-}
 
 export type { BackupState };
 
@@ -115,7 +106,7 @@ async function pushSnapshot(): Promise<PushResult> {
     const backup = (await buildBackup()) as unknown as SnapshotBody;
     const res = await fetch(ENDPOINT, {
       method: "POST",
-      headers: authHeaders({ "content-type": "application/json" }),
+      headers: { "content-type": "application/json" },
       body: JSON.stringify(backup),
     });
 
@@ -181,7 +172,7 @@ async function errorDeLectura(res: Response): Promise<Error> {
 
 /** Metadata del último snapshot en el SERVIDOR (no el cache local). */
 export async function fetchLatest(): Promise<SnapshotMeta | null> {
-  const res = await fetch(`${ENDPOINT}/latest`, { headers: authHeaders(), cache: "no-store" });
+  const res = await fetch(`${ENDPOINT}/latest`, { cache: "no-store" });
   if (!res.ok) throw await errorDeLectura(res);
   const body = (await res.json()) as { latest: SnapshotMeta | null };
   return body.latest;
@@ -189,7 +180,7 @@ export async function fetchLatest(): Promise<SnapshotMeta | null> {
 
 /** Lista de snapshots recientes (metadata) para elegir cuál restaurar. */
 export async function listSnapshots(): Promise<SnapshotMeta[]> {
-  const res = await fetch(ENDPOINT, { headers: authHeaders(), cache: "no-store" });
+  const res = await fetch(ENDPOINT, { cache: "no-store" });
   if (!res.ok) throw await errorDeLectura(res);
   const body = (await res.json()) as { snapshots: SnapshotMeta[] };
   return body.snapshots;
@@ -197,7 +188,7 @@ export async function listSnapshots(): Promise<SnapshotMeta[]> {
 
 /** Payload completo de un snapshot: el `{ manifest, data }` para restaurar. */
 export async function fetchSnapshotPayload(id: string): Promise<unknown> {
-  const res = await fetch(`${ENDPOINT}/${id}`, { headers: authHeaders(), cache: "no-store" });
+  const res = await fetch(`${ENDPOINT}/${id}`, { cache: "no-store" });
   if (!res.ok) throw await errorDeLectura(res);
   return res.json();
 }

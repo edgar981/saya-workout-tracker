@@ -16,7 +16,7 @@ export async function GET(
   const acceso = await comprobarAcceso(req);
   if (!acceso.ok) {
     return conCookies(
-      Response.json({ error: "Token inválido o ausente." }, { status: 401 }),
+      Response.json({ error: "Sin sesión." }, { status: 401 }),
       acceso,
     );
   }
