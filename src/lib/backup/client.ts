@@ -1,5 +1,15 @@
 import { buildBackup } from "@/lib/db/backup";
 import type { SnapshotBody, SnapshotMeta } from "./protocol";
+import {
+  ESTADO_VACIO,
+  MENSAJE_401,
+  leerEstado,
+  tras401,
+  trasEntrar,
+  trasExito,
+  trasFallo,
+  type BackupState,
+} from "./estado";
 
 /**
  * Lado cliente del respaldo: arma el volcado, lo empuja al endpoint, y lleva en
@@ -19,16 +29,9 @@ function authHeaders(extra?: Record<string, string>): HeadersInit {
   return { [HEADER]: TOKEN, ...extra };
 }
 
-export interface BackupState {
-  /** Se debe un push (el último falló, o cerró una sesión sin red). */
-  pending: boolean;
-  /** Razón del último intento fallido, para mostrarla en /datos. */
-  lastError: string | null;
-  /** Metadata del último push exitoso, más cuándo se hizo (reloj del cliente). */
-  last: (SnapshotMeta & { at: string }) | null;
-}
+export type { BackupState };
 
-const EMPTY: BackupState = { pending: false, lastError: null, last: null };
+const EMPTY = ESTADO_VACIO;
 
 // ── Estado persistente + suscripción (para useSyncExternalStore) ──────────────
 
@@ -40,12 +43,7 @@ function readRaw(): BackupState {
   try {
     const raw = window.localStorage.getItem(STORE_KEY);
     if (!raw) return EMPTY;
-    const parsed = JSON.parse(raw) as Partial<BackupState>;
-    return {
-      pending: parsed.pending ?? false,
-      lastError: parsed.lastError ?? null,
-      last: parsed.last ?? null,
-    };
+    return leerEstado(JSON.parse(raw) as Partial<BackupState>);
   } catch {
     return EMPTY;
   }
@@ -124,30 +122,42 @@ async function pushSnapshot(): Promise<PushResult> {
 
     if (!res.ok) {
       const error = await errorMessage(res);
-      setBackupState({ ...getBackupState(), pending: true, lastError: error });
+      const current = getBackupState();
+      setBackupState(res.status === 401 ? tras401(current) : trasFallo(current, error));
       return { ok: false, error };
     }
 
     const meta = (await res.json()) as SnapshotMeta;
-    setBackupState({ pending: false, lastError: null, last: { ...meta, at: new Date().toISOString() } });
+    setBackupState(trasExito(meta, new Date().toISOString()));
     return { ok: true, meta };
   } catch (err) {
     const error =
       err instanceof Error && err.message ? err.message : "Sin conexión con el servidor de respaldo.";
-    setBackupState({ ...getBackupState(), pending: true, lastError: error });
+    setBackupState(trasFallo(getBackupState(), error));
     return { ok: false, error };
   }
 }
 
-/** Reintenta un push pendiente, solo si hay red. Silencioso: dispara y olvida. */
+/**
+ * Reintenta un push pendiente, solo si hay red y no está marcado «sin sesión»
+ * (un 401 se repetiría en cada apertura). Silencioso: dispara y olvida.
+ */
 export function retryIfPending(): void {
   if (typeof navigator !== "undefined" && !navigator.onLine) return;
-  if (!getBackupState().pending) return;
+  const state = getBackupState();
+  if (!state.pending || state.sinSesion) return;
   void backupNow();
 }
 
+/** Edgar entró: se desmarca «sin sesión» y, si había pendiente, se empuja. */
+export function alEntrar(): void {
+  const next = trasEntrar(getBackupState());
+  setBackupState(next);
+  if (next.pending) void backupNow();
+}
+
 async function errorMessage(res: Response): Promise<string> {
-  if (res.status === 401) return "El servidor rechazó el token (401).";
+  if (res.status === 401) return MENSAJE_401;
   try {
     const body = (await res.json()) as { error?: string };
     if (body?.error) return body.error;

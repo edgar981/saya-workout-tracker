@@ -42,9 +42,12 @@ function countsLine(counts: Record<string, number>): string {
 export function BackupPanel({
   onRestoreStart,
   onRestoreDone,
+  refrescar = 0,
 }: {
   onRestoreStart: () => void;
   onRestoreDone: (outcome: ImportOutcome) => void;
+  /** Sube cuando Edgar entra: se vuelve a consultar la última copia del servidor. */
+  refrescar?: number;
 }) {
   const state = useSyncExternalStore(subscribeBackupState, getBackupState, getBackupState);
 
@@ -85,7 +88,7 @@ export function BackupPanel({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [refrescar]);
 
   useEffect(() => {
     if (!armedId) return;
@@ -134,11 +137,15 @@ export function BackupPanel({
     }
   };
 
-  const chip = state.pending
-    ? state.lastError
-      ? { label: "Falló", cls: "text-destructive border-destructive/50" }
-      : { label: "Pendiente", cls: "text-foreground border-foreground/30" }
-    : { label: "Al día", cls: "text-muted-foreground border-border" };
+  // «Sin sesión» lleva las clases de «Pendiente» (§10): ni rojo ni ámbar, no es
+  // un fallo del respaldo sino una credencial que falta.
+  const chip = state.sinSesion
+    ? { label: "Sin sesión", cls: "text-foreground border-foreground/30" }
+    : state.pending
+      ? state.lastError
+        ? { label: "Falló", cls: "text-destructive border-destructive/50" }
+        : { label: "Pendiente", cls: "text-foreground border-foreground/30" }
+      : { label: "Al día", cls: "text-muted-foreground border-border" };
 
   return (
     <div className="flex flex-col gap-3 rounded-lg border p-3">
@@ -156,7 +163,9 @@ export function BackupPanel({
       </p>
 
       {state.pending && state.lastError && (
-        <p className="text-destructive text-xs">Último intento: {state.lastError}</p>
+        <p className={cn("text-xs", state.sinSesion ? "text-muted-foreground" : "text-destructive")}>
+          Último intento: {state.lastError}
+        </p>
       )}
 
       {/* Última copia: el dato que hace del respaldo un hecho verificable. */}

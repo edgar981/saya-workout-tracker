@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { BackupPanel } from "@/components/backup-panel";
+import { CuentaPanel } from "@/components/cuenta-panel";
 import { exportNow, importBackup, type ImportOutcome } from "@/lib/db/backup";
 import { SCHEMA_VERSION, TABLE_NAMES, db } from "@/lib/db/db";
 import { checkIntegrity, type IntegrityReport } from "@/lib/db/integrity";
@@ -29,6 +30,7 @@ export default function DataScreen() {
   const [status, setStatus] = useState<Status>({ kind: "idle" });
   const [integridad, setIntegridad] = useState<IntegrityReport | null>(null);
   const [segmentos, setSegmentos] = useState<SegmentDiagnostic | null>(null);
+  const [refrescarRespaldo, setRefrescarRespaldo] = useState(0);
   const fileInput = useRef<HTMLInputElement>(null);
 
   const counts = useLiveQuery(async () => {
@@ -88,7 +90,10 @@ export default function DataScreen() {
         ))}
       </div>
 
+      <CuentaPanel onEntro={() => setRefrescarRespaldo((n) => n + 1)} />
+
       <BackupPanel
+        refrescar={refrescarRespaldo}
         onRestoreStart={() =>
           setStatus({ kind: "working", label: "Respaldando el estado actual antes de restaurar…" })
         }
