@@ -1,14 +1,18 @@
 import { prisma } from "@/lib/prisma";
 import type { SnapshotMeta } from "@/lib/backup/protocol";
-import { tokenFromRequest, tokenOk } from "@/lib/backup/server-auth";
+import { comprobarAcceso, conCookies } from "@/lib/backup/server-auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /** Metadata del último snapshot (fecha, schema_version, counts). Sin payload. */
 export async function GET(req: Request): Promise<Response> {
-  if (!tokenOk(tokenFromRequest(req))) {
-    return Response.json({ error: "Token inválido o ausente." }, { status: 401 });
+  const acceso = await comprobarAcceso(req);
+  if (!acceso.ok) {
+    return conCookies(
+      Response.json({ error: "Token inválido o ausente." }, { status: 401 }),
+      acceso,
+    );
   }
 
   const row = await prisma.snapshot.findFirst({
@@ -25,5 +29,5 @@ export async function GET(req: Request): Promise<Response> {
       }
     : null;
 
-  return Response.json({ latest });
+  return conCookies(Response.json({ latest }), acceso);
 }
