@@ -7,7 +7,9 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { TABLE_NAMES } from "@/lib/db/db";
 import { restoreFromServerPayload, type ImportOutcome } from "@/lib/db/backup";
+import { MENSAJE_NO_SE_PUDO } from "@/lib/auth/errores";
 import {
+  ErrorSinSesion,
   backupNow,
   fetchLatest,
   fetchSnapshotPayload,
@@ -42,14 +44,18 @@ function countsLine(counts: Record<string, number>): string {
 export function BackupPanel({
   onRestoreStart,
   onRestoreDone,
+  refrescar = 0,
 }: {
   onRestoreStart: () => void;
   onRestoreDone: (outcome: ImportOutcome) => void;
+  /** Sube cuando Edgar entra: se vuelve a consultar la última copia del servidor. */
+  refrescar?: number;
 }) {
   const state = useSyncExternalStore(subscribeBackupState, getBackupState, getBackupState);
 
   const [latest, setLatest] = useState<SnapshotMeta | null | undefined>(undefined);
-  const [latestErr, setLatestErr] = useState<string | null>(null);
+  const [latestFalla, setLatestFalla] = useState(false);
+  const [latestSinSesion, setLatestSinSesion] = useState(false);
   const [pushing, setPushing] = useState(false);
 
   const [showRestore, setShowRestore] = useState(false);
@@ -60,12 +66,14 @@ export function BackupPanel({
   const [restoringId, setRestoringId] = useState<string | null>(null);
 
   const refreshLatest = async () => {
-    setLatestErr(null);
+    setLatestFalla(false);
+    setLatestSinSesion(false);
     try {
       setLatest(await fetchLatest());
     } catch (err) {
       setLatest(null);
-      setLatestErr(err instanceof Error ? err.message : "No se pudo consultar el servidor.");
+      if (err instanceof ErrorSinSesion) setLatestSinSesion(true);
+      else setLatestFalla(true);
     }
   };
 
@@ -75,17 +83,26 @@ export function BackupPanel({
     let cancelled = false;
     fetchLatest()
       .then((l) => {
-        if (!cancelled) setLatest(l);
+        if (cancelled) return;
+        setLatestFalla(false);
+        setLatestSinSesion(false);
+        setLatest(l);
       })
       .catch((err) => {
         if (cancelled) return;
         setLatest(null);
-        setLatestErr(err instanceof Error ? err.message : "No se pudo consultar el servidor.");
+        if (err instanceof ErrorSinSesion) {
+          setLatestFalla(false);
+          setLatestSinSesion(true);
+        } else {
+          setLatestSinSesion(false);
+          setLatestFalla(true);
+        }
       });
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [refrescar]);
 
   useEffect(() => {
     if (!armedId) return;
@@ -109,7 +126,9 @@ export function BackupPanel({
       try {
         setSnapshots(await listSnapshots());
       } catch (err) {
-        setListErr(err instanceof Error ? err.message : "No se pudo listar el servidor.");
+        if (!(err instanceof ErrorSinSesion)) {
+          setListErr(err instanceof Error ? err.message : "No se pudo listar el servidor.");
+        }
       } finally {
         setLoadingList(false);
       }
@@ -126,7 +145,12 @@ export function BackupPanel({
       onRestoreDone({
         ok: false,
         autoExportFilename: null,
-        error: err instanceof Error ? err.message : "No se pudo descargar el snapshot.",
+        error:
+          err instanceof ErrorSinSesion
+            ? MENSAJE_NO_SE_PUDO
+            : err instanceof Error
+              ? err.message
+              : "No se pudo descargar el snapshot.",
       });
     } finally {
       setRestoringId(null);
@@ -160,15 +184,20 @@ export function BackupPanel({
       )}
 
       {/* Última copia: el dato que hace del respaldo un hecho verificable. */}
+      {latestSinSesion && !state.last ? null : (
       <div className="bg-muted/40 rounded-md px-3 py-2 text-xs">
         {latest === undefined ? (
           <span className="text-muted-foreground">Consultando el servidor…</span>
-        ) : latestErr ? (
+        ) : latestSinSesion ? (
+          state.last && (
+            <span className="text-muted-foreground">Última conocida (local): {fmtDate(state.last.at)}</span>
+          )
+        ) : latestFalla ? (
           <div className="flex flex-col gap-0.5">
-            <span className="text-muted-foreground">No se pudo consultar el servidor: {latestErr}</span>
+            <span className="text-muted-foreground">No se pudo consultar el servidor.</span>
             {state.last && (
               <span className="text-muted-foreground">
-                Última conocida (local): {fmtDate(state.last.at)} · schema {state.last.schema_version}
+                Última conocida (local): {fmtDate(state.last.at)}
               </span>
             )}
           </div>
@@ -177,11 +206,10 @@ export function BackupPanel({
         ) : (
           <div className="flex flex-col gap-0.5">
             <span className="font-medium">Última copia: {fmtDate(latest.creado_en)}</span>
-            <span className="text-muted-foreground">schema_version {latest.schema_version}</span>
-            <span className="text-muted-foreground font-mono break-words">{countsLine(latest.counts)}</span>
           </div>
         )}
       </div>
+      )}
 
       <div className="flex gap-2">
         <Button variant="outline" size="sm" className="flex-1" disabled={pushing} onClick={() => void doBackup()}>
