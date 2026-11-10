@@ -54,7 +54,7 @@ export function BackupPanel({
   const state = useSyncExternalStore(subscribeBackupState, getBackupState, getBackupState);
 
   const [latest, setLatest] = useState<SnapshotMeta | null | undefined>(undefined);
-  const [latestErr, setLatestErr] = useState<string | null>(null);
+  const [latestFalla, setLatestFalla] = useState(false);
   const [latestSinSesion, setLatestSinSesion] = useState(false);
   const [pushing, setPushing] = useState(false);
 
@@ -66,14 +66,14 @@ export function BackupPanel({
   const [restoringId, setRestoringId] = useState<string | null>(null);
 
   const refreshLatest = async () => {
-    setLatestErr(null);
+    setLatestFalla(false);
     setLatestSinSesion(false);
     try {
       setLatest(await fetchLatest());
     } catch (err) {
       setLatest(null);
       if (err instanceof ErrorSinSesion) setLatestSinSesion(true);
-      else setLatestErr(err instanceof Error ? err.message : "No se pudo consultar el servidor.");
+      else setLatestFalla(true);
     }
   };
 
@@ -84,7 +84,7 @@ export function BackupPanel({
     fetchLatest()
       .then((l) => {
         if (cancelled) return;
-        setLatestErr(null);
+        setLatestFalla(false);
         setLatestSinSesion(false);
         setLatest(l);
       })
@@ -92,11 +92,11 @@ export function BackupPanel({
         if (cancelled) return;
         setLatest(null);
         if (err instanceof ErrorSinSesion) {
-          setLatestErr(null);
+          setLatestFalla(false);
           setLatestSinSesion(true);
         } else {
           setLatestSinSesion(false);
-          setLatestErr(err instanceof Error ? err.message : "No se pudo consultar el servidor.");
+          setLatestFalla(true);
         }
       });
     return () => {
@@ -192,9 +192,9 @@ export function BackupPanel({
           state.last && (
             <span className="text-muted-foreground">Última conocida (local): {fmtDate(state.last.at)}</span>
           )
-        ) : latestErr ? (
+        ) : latestFalla ? (
           <div className="flex flex-col gap-0.5">
-            <span className="text-muted-foreground">No se pudo consultar el servidor: {latestErr}</span>
+            <span className="text-muted-foreground">No se pudo consultar el servidor.</span>
             {state.last && (
               <span className="text-muted-foreground">
                 Última conocida (local): {fmtDate(state.last.at)}
