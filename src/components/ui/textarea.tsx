@@ -2,14 +2,16 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
+/** Textarea: el aspecto de `Input` variante `texto` (.tin), con alto mínimo. */
 function Textarea({ className, ...props }: React.ComponentProps<"textarea">) {
   return (
     <textarea
       data-slot="textarea"
       className={cn(
-        "border-input bg-background flex min-h-20 w-full rounded-md border px-3 py-2 text-base shadow-xs transition-colors outline-none",
-        "placeholder:text-muted-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50",
-        "disabled:pointer-events-none disabled:opacity-50",
+        "bg-fbg text-ink flex min-h-28 w-full rounded-2xl px-4 py-3.5 text-base font-normal outline-none",
+        "[box-shadow:var(--fsh)] transition-[box-shadow] duration-200 ease-[var(--ease)]",
+        "focus-visible:[box-shadow:var(--fsh-f)]",
+        "disabled:pointer-events-none disabled:opacity-[.55]",
         className,
       )}
       {...props}

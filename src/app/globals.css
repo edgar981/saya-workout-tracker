@@ -1,32 +1,42 @@
 @import "tailwindcss";
 
 /*
- * PIEL — sistema de tokens (§0).
+ * CROMO LÍQUIDO — sistema de tokens (§0, §10).
  *
  * Fuente única de color: las variables semánticas de `:root` de abajo. Ningún
  * componente vuelve a hardcodear un hex; consume estos tokens vía las utilidades
  * de Tailwind registradas aquí.
  *
- * La app es OSCURA siempre. No sigue a `prefers-color-scheme`: la propuesta v2 es
- * un tema oscuro fijo, pensado para leerse frente a la máquina. Por eso no hay
- * bloque `@media (prefers-color-scheme)` — el tema no cambia con el sistema.
+ * La app es OSCURA siempre. No sigue a `prefers-color-scheme`: el tema es
+ * oscuro fijo, pensado para leerse frente a la máquina. Por eso no hay bloque
+ * `@media (prefers-color-scheme)`.
  *
  * Los nombres shadcn (`--background`, `--card`, `--muted-foreground`, `--primary`…)
  * se conservan como CAPA DE COMPATIBILIDAD: todo el árbol de componentes ya los
  * consume por sus clases (`bg-card`, `text-muted-foreground`, `bg-primary`…), así
- * que remapear sus VALORES a la paleta v2 recolorea cada pantalla sin tocar su
- * markup. Cada rol shadcn apunta a un token semántico.
+ * que remapear sus VALORES a Cromo recolorea cada pantalla sin tocar su markup.
+ * Los nombres viejos (`--muted`, `--faint`, `--border`, `--surface`) siguen
+ * existiendo como alias de los roles nuevos, porque las gráficas los leen con
+ * `var(--muted)` y similares.
  */
 
 @theme inline {
-  /* Tokens semánticos → utilidades propias (bg-surface, text-ink, text-amber…). */
+  /* Tokens semánticos → utilidades propias (bg-surface, text-ink, text-ink2…). */
   --color-bg: var(--bg);
   --color-surface: var(--surface);
   --color-surface-2: var(--surface-2);
   --color-ink: var(--ink);
+  --color-ink2: var(--ink2);
+  --color-ink3: var(--ink3);
   --color-faint: var(--faint);
+  --color-hair: var(--hair);
+  --color-sheet: var(--sheet);
+  --color-tabbg: var(--tabbg);
+  --color-fbg: var(--fbg);
   --color-accent-ink: var(--accent-ink);
   --color-danger: var(--danger);
+  --color-red: var(--red);
+  --color-red-t: var(--red-t);
   --color-amber: var(--amber);
   --color-border-strong: var(--border-strong);
 
@@ -37,7 +47,9 @@
   --color-card-foreground: var(--ink);
   --color-popover: var(--surface);
   --color-popover-foreground: var(--ink);
-  /* Acción primaria = el acento verde. Es el ÚNICO acento. */
+  /* Acción primaria = el acento (cromo). `--accent` es un color SÓLIDO de
+     respaldo: `bg-primary`/`text-primary` son utilidades de color y un degradado
+     no cabe ahí. El degradado `--chrome` lo aplica `ui/button` (variante default). */
   --color-primary: var(--accent);
   --color-primary-foreground: var(--accent-ink);
   --color-secondary: var(--surface-2);
@@ -45,10 +57,12 @@
   /* `muted` shadcn es una SUPERFICIE tenue; el texto atenuado es `muted-foreground`. */
   --color-muted: var(--surface-2);
   --color-muted-foreground: var(--muted);
-  /* `accent` shadcn = superficie de hover (outline/ghost). NO es el verde de marca. */
+  /* `accent` shadcn = superficie de hover (outline/ghost). NO es el cromo de marca. */
   --color-accent: var(--surface-2);
   --color-accent-foreground: var(--ink);
-  --color-destructive: var(--danger);
+  /* Hoy todo `text-destructive` es TEXTO, y el texto rojo es --red-t. Los
+     RELLENOS destructivos usan --red por su cuenta (ui/button, ui/badge). */
+  --color-destructive: var(--red-t);
   --color-destructive-foreground: var(--ink);
   --color-border: var(--border);
   --color-input: var(--border);
@@ -59,8 +73,8 @@
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
 
-  /* Fuentes autoalojadas por next/font (ver layout.tsx). Archivo para UI, DM Mono
-     para numerales y datos. Sin `<link>` a ningún CDN en runtime. */
+  /* Fuentes autoalojadas por next/font (ver layout.tsx). Archivo para UI (con eje
+     de ancho), DM Mono para marcas de gráficas. Sin `<link>` a ningún CDN. */
   --font-sans: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-dm-mono), ui-monospace, "SF Mono", monospace;
 }
@@ -68,19 +82,44 @@
 :root {
   --radius: 0.75rem;
 
-  /* Paleta v2 — fuente única de verdad. */
-  --bg: #08090a; /* fondo de la app */
-  --surface: #1a1c1f; /* tarjetas */
-  --surface-2: #1f2226; /* superficie anidada / hover / chips */
-  --border: #26292e; /* borde base */
-  --border-strong: #2e3238; /* divisores algo más claros */
-  --ink: #f2f4f3; /* tinta */
-  --muted: #8b9199; /* atenuado */
-  --faint: #5a6169; /* aún más tenue (numerales de índice) */
-  --accent: #c6f24e; /* acento: acción, sesión activa, completar */
-  --accent-ink: #0e0f11; /* tinta sobre el acento */
-  --danger: #ff5c5c; /* solo destructivo/armado/error */
-  --amber: #e6b450; /* SOLO "dato incompleto arreglable ahora" (serie sin peso) */
+  /* Cromo líquido — fuente única de verdad. */
+  --bg: #000; /* el lienzo va encima; el color de fondo es el del póster */
+  --ink: #f4f5f8; /* texto y cifras; ↑ */
+  --ink2: rgba(238, 240, 246, 0.78); /* atenuado, unidades; ↓ e «= igual» */
+  --ink3: rgba(238, 240, 246, 0.66); /* solo placeholders y rótulos de ejes */
+  --hair: rgba(255, 255, 255, 0.11); /* divisores de fila, aros de badge */
+  --sheet: rgba(8, 8, 11, 0.78); /* la hoja esmerilada, una sola */
+  --tabbg: rgba(10, 10, 14, 0.72); /* pestañas y píldora de atrás (aquí solo se declara) */
+  --velo: rgba(0, 0, 0, 0.66); /* velo de la cabeza */
+  --velo2: rgba(0, 0, 0, 0.6);
+  --fbg: rgba(255, 255, 255, 0.06); /* campos */
+  --fsh: inset 0 1px 0 rgba(255, 255, 255, 0.12), inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  --fsh-f: inset 0 0 0 1.5px #fff; /* foco de TODO campo */
+  --glass: inset 0 1px 0 rgba(255, 255, 255, 0.16), inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  /* EL acento: acción primaria y sesión abierta. Texto encima: --accent-ink. */
+  --chrome: linear-gradient(180deg, #fbfbfd 0%, #dcdfe5 38%, #aab0ba 52%, #e6e8ed 70%, #c7cbd3 100%);
+  --red: #ff4d5e; /* disco de error, bordes y aros rojos, rellenos destructivos */
+  --red-t: #ff8a94; /* texto rojo SOLAMENTE */
+  --amber: #ffc940; /* SOLO el triángulo de peso que falta */
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1); /* toda transición */
+  --pad: 20px; /* relleno lateral de la hoja */
+
+  /* Anchos del eje `wdth` de Archivo (62–125), por rol. */
+  --w-ancho: 125%; /* títulos, cifras, campos grandes */
+  --w-kicker: 112%;
+  --w-btn: 110%;
+  --w-valor: 108%;
+
+  /* Capa de compatibilidad (alias de los roles nuevos). */
+  --accent: #dcdfe5; /* respaldo sólido del cromo */
+  --accent-ink: #0b0c0f;
+  --surface: var(--fbg); /* tarjetas, campos */
+  --surface-2: rgba(255, 255, 255, 0.08); /* superficie anidada / hover / chips */
+  --border: var(--hair);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  --muted: var(--ink2);
+  --faint: var(--ink3);
+  --danger: #ff4d5e; /* solo destructivo/armado/error */
 }
 
 @layer base {
@@ -102,7 +141,242 @@
     padding-top: env(safe-area-inset-top);
     padding-bottom: env(safe-area-inset-bottom);
     overscroll-behavior-y: contain;
+    /* La cabeza sangra su velo hasta los bordes de pantalla (100vw): sin esto un
+       scrollbar añadiría scroll horizontal. `clip` no crea contenedor de scroll. */
+    overflow-x: clip;
   }
+
+  ::placeholder {
+    color: var(--ink3);
+  }
+}
+
+/*
+ * TIPO (§1). Cada valor de la tabla de tipo se escribe UNA vez, aquí. Las cifras
+ * usan Archivo con `tabular-nums`; el ancho va por `font-stretch` (eje wdth).
+ */
+@layer components {
+  .cabeza-titulo {
+    font-weight: 600;
+    font-stretch: var(--w-ancho);
+    font-size: 30px;
+    line-height: 33px;
+    letter-spacing: -0.02em;
+    max-width: 280px;
+    text-shadow: 0 2px 18px rgba(0, 0, 0, 0.7);
+  }
+  .cabeza[data-empujada] .cabeza-titulo {
+    font-size: 27px;
+    line-height: 31px;
+    max-width: 300px;
+  }
+  .cabeza-sub {
+    font-weight: 500;
+    font-size: 13px;
+    line-height: 18px;
+    color: rgba(244, 245, 248, 0.94);
+    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.8);
+  }
+  .cifra {
+    font-weight: 500;
+    font-stretch: var(--w-ancho);
+    font-size: 42px;
+    line-height: 1.08;
+    letter-spacing: -0.015em;
+    font-variant-numeric: tabular-nums;
+  }
+  .cifra-menor {
+    /* Una segunda cifra en la misma pantalla. */
+    font-size: 36px;
+  }
+  .cifra-u {
+    font-size: 22px;
+    color: var(--ink2);
+  }
+  .tit-2,
+  .tit-3 {
+    font-weight: 600;
+    font-stretch: var(--w-ancho);
+  }
+  .tit-2 {
+    font-size: 28px;
+  }
+  .tit-3 {
+    font-size: 21px;
+  }
+  .kicker {
+    font-weight: 600;
+    font-size: 11px;
+    line-height: 14px;
+    font-stretch: var(--w-kicker);
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--ink2);
+  }
+  .kicker-d {
+    /* A la derecha del kicker: sin mayúsculas. */
+    font-weight: 500;
+    font-size: 12px;
+    text-transform: none;
+    letter-spacing: normal;
+  }
+  .fila-t {
+    font-weight: 400;
+    font-size: 16px;
+    line-height: 22px;
+  }
+  .fila-s {
+    font-weight: 400;
+    font-size: 13px;
+    line-height: 18px;
+    color: var(--ink2);
+  }
+  .fila-v {
+    font-weight: 500;
+    font-size: 16px;
+    line-height: 22px;
+    font-stretch: var(--w-valor);
+    font-variant-numeric: tabular-nums;
+  }
+  .dek {
+    font-weight: 400;
+    font-size: 15px;
+    line-height: 22px;
+    color: var(--ink2);
+  }
+
+  /* Enlace de texto `.tl` (ui/button, variante link). */
+  .tl {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    color: var(--ink);
+  }
+  .tl.danger {
+    color: var(--red-t);
+  }
+}
+
+/*
+ * EL LIENZO LÍQUIDO (§2). Un solo `<canvas>` para toda la app (liquido.tsx).
+ * El póster CSS se pinta desde el primer byte de HTML y se queda si no hay
+ * WebGL; el lienzo entra encima al dibujar su primer cuadro.
+ *
+ * Apilado (todo en el contexto raíz, sin crear contextos de apilado en medio):
+ *   -2 lienzo/póster · -1 cristal de la hoja · 0 contenido · 30 velo · 40 barra
+ * La hoja NO usa `backdrop-filter` en sí misma sino en su `::before`: un
+ * `backdrop-filter` en un ancestro convertiría en relativo a la hoja a todo
+ * `position: fixed` de sus pantallas (la vista previa del día, por ejemplo).
+ */
+.liquido {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 0.5s var(--ease);
+}
+.liquido[data-tenue] {
+  opacity: 0.4;
+}
+.liquido-poster {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(30% 18% at 82% 9%, rgba(255, 214, 71, 0.55), transparent 70%),
+    radial-gradient(42% 22% at 95% 16%, rgba(255, 106, 61, 0.55), transparent 70%),
+    radial-gradient(36% 22% at 70% 22%, rgba(63, 176, 255, 0.45), transparent 70%),
+    radial-gradient(30% 20% at 8% 70%, rgba(92, 242, 181, 0.25), transparent 70%), #000;
+}
+.liquido-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  visibility: hidden;
+}
+.liquido[data-modo="canvas"] .liquido-canvas {
+  visibility: visible;
+}
+.liquido[data-modo="canvas"] .liquido-poster {
+  display: none;
+}
+
+/* La hoja `.lam`: esmerilada, una sola. Las pantallas de hoy siguen siendo un
+   `<main class="p-4 min-h-dvh">`; el relleno lateral de 4px de la hoja + su p-4
+   completan los 20px (--pad) del diseño. */
+.hoja {
+  --hoja-pt: 6px;
+  --hoja-pb: env(safe-area-inset-bottom);
+  position: relative;
+  margin-top: var(--ventana);
+  margin-bottom: calc(-1 * env(safe-area-inset-bottom));
+  padding: var(--hoja-pt) 4px var(--hoja-pb);
+  min-height: calc(100dvh - var(--ventana) - env(safe-area-inset-top));
+  border-radius: 32px 32px 0 0;
+}
+[data-nav] .hoja {
+  /* La barra de hoy ya reserva el área segura abajo (`[data-nav] main`). */
+  --hoja-pb: 0px;
+}
+.hoja::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+  background: var(--sheet);
+  -webkit-backdrop-filter: blur(30px) saturate(160%);
+  backdrop-filter: blur(30px) saturate(160%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .hoja::before {
+    background: rgba(10, 10, 13, 0.95);
+  }
+}
+/* Asa: solo decoración (pseudo-elemento, fuera del árbol de accesibilidad). */
+.hoja::after {
+  content: "";
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  width: 38px;
+  height: 4px;
+  margin-left: -19px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.18);
+  pointer-events: none;
+}
+/* El `min-h-dvh` de cada `<main>` de hoy empujaría la hoja más allá de la pantalla
+   y daría scroll vacío: se acota desde el shell. Fuera de `@layer` para ganarle a
+   la utilidad. */
+.hoja main {
+  min-height: calc(
+    100dvh - var(--ventana) - env(safe-area-inset-top) - var(--hoja-pt) - var(--hoja-pb)
+  );
+}
+
+/* Velo superior `.tscrim`: el contenido se desvanece bajo la barra de estado. */
+.tscrim {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 108px;
+  z-index: 30;
+  pointer-events: none;
+  background: linear-gradient(#000 0, rgba(0, 0, 0, 0.92) 62px, transparent 108px);
+  opacity: 0;
+  transition: opacity 0.25s var(--ease);
+}
+.tscrim[data-on] {
+  opacity: 1;
 }
 
 /*
@@ -118,4 +392,211 @@
      `p-4` original) + el área segura, para que el último contenido no toque la
      barra al final del scroll. */
   padding-bottom: calc(3.5rem + 1rem + env(safe-area-inset-bottom));
+}
+
+/*
+ * PIEZAS COMPARTIDAS (§3) que no se resuelven en una utilidad.
+ */
+@layer components {
+  /* Cabeza (ui/hoja.tsx): una ventana de cromo; el texto va sobre un velo. */
+  .cabeza {
+    position: relative;
+    padding: 82px 4px 0;
+    min-height: 236px;
+  }
+  .cabeza[data-empujada] {
+    padding-top: 76px;
+    min-height: 196px;
+  }
+  .cabeza::before {
+    content: "";
+    position: absolute;
+    top: 36px;
+    bottom: -24px;
+    left: calc(50% - 50vw);
+    right: calc(50% - 50vw);
+    pointer-events: none;
+    background: linear-gradient(90deg, var(--velo), var(--velo2) 80%, transparent);
+    -webkit-mask-image: linear-gradient(180deg, transparent, #000 18%, #000 88%, transparent);
+    mask-image: linear-gradient(180deg, transparent, #000 18%, #000 88%, transparent);
+  }
+  .cabeza > * {
+    position: relative;
+  }
+
+  /* Filas (ui/fila.tsx). */
+  .fila {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    min-height: 60px;
+    padding: 12px 0;
+    text-align: left;
+    color: inherit;
+    text-decoration: none;
+  }
+  .fila:not(:first-child) {
+    border-top: 1px solid var(--hair);
+  }
+  .fila-m {
+    flex: 1;
+    min-width: 0;
+  }
+  .fila-ix {
+    min-width: 1.5rem;
+    font-variant-numeric: tabular-nums;
+  }
+  .fila-chev {
+    flex-shrink: 0;
+    color: var(--ink2);
+  }
+
+  /* Bloques de estado (ui/estados.tsx). */
+  .err,
+  .errbox {
+    border: 1px solid rgba(255, 77, 94, 0.45);
+    background: rgba(255, 77, 94, 0.07);
+  }
+  .err {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px;
+    border-radius: 20px;
+  }
+  .errbox {
+    padding: 14px 16px;
+    border-radius: 16px;
+  }
+  .err-disco {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 9999px;
+    background: var(--red);
+    color: #1a0306;
+    font-weight: 700;
+    font-size: 14px;
+    line-height: 1;
+  }
+  .err-t {
+    font-weight: 500;
+    font-size: 16px;
+    line-height: 22px;
+    color: var(--ink);
+  }
+  .err-s {
+    font-weight: 400;
+    font-size: 14px;
+    line-height: 20px;
+    color: var(--ink2);
+  }
+
+  /* Panel y aviso (ui/panel.tsx): sólidos, sin desenfoque. */
+  .scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    background: rgba(0, 0, 0, 0.6);
+    animation: aparece 0.35s var(--ease) both;
+  }
+  .pane {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 61;
+    display: flex;
+    flex-direction: column;
+    max-height: 90%;
+    border-radius: 30px 30px 0 0;
+    background: #121216;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    outline: none;
+    animation: pane-entra 0.45s var(--ease) both;
+  }
+  .pane-cab {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 18px 20px 0;
+  }
+  .pane-cuerpo {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 0 20px calc(22px + env(safe-area-inset-bottom));
+  }
+  .toast {
+    position: fixed;
+    left: 16px;
+    right: 16px;
+    bottom: calc(90px + env(safe-area-inset-bottom));
+    z-index: 62;
+    padding: 13px 16px;
+    border-radius: 16px;
+    background: #16161b;
+    border: 1px solid var(--hair);
+    font-weight: 500;
+    font-size: 14px;
+    line-height: 19px;
+    animation: toast-sube 0.35s var(--ease) both;
+  }
+  .toast[data-barra-agente] {
+    bottom: 84px;
+  }
+  @keyframes aparece {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes pane-entra {
+    from {
+      transform: translateY(102%);
+    }
+  }
+  @keyframes toast-sube {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .pane {
+      animation-name: aparece;
+    }
+  }
+
+  /* Esqueleto (skeletons.tsx): barrido que solo anima `transform`. */
+  .sk {
+    position: relative;
+    overflow: hidden;
+    border-radius: 9999px;
+    background: rgba(255, 255, 255, 0.08);
+  }
+  .sk::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(100deg, transparent 20%, rgba(255, 255, 255, 0.12) 50%, transparent 80%);
+    transform: translate3d(-100%, 0, 0);
+    animation: sk-barrido 1.6s linear infinite;
+  }
+  @keyframes sk-barrido {
+    to {
+      transform: translate3d(100%, 0, 0);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .sk::after {
+      animation: none;
+      display: none;
+    }
+  }
 }

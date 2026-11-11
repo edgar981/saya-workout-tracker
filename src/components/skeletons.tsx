@@ -16,12 +16,14 @@ import { cn } from "@/lib/utils";
  * (el page importaría el screen entero). El mismo esqueleto se reusa en la rama
  * `=== undefined` del screen, así que loading → datos es continuo.
  *
- * Sin animación todavía (§3.6): son placeholders estáticos, no un shimmer.
+ * Cromo líquido: el bloque `Sk` lleva un barrido de 1.6 s (`.sk` en globals.css,
+ * solo anima `transform`; sin barrido bajo `prefers-reduced-motion`). La forma de
+ * cada esqueleto por pantalla es la de antes; cada slice de pantalla rehace la suya.
  */
 
-/** Bloque de relleno. `bg-surface-2` se lee como placeholder sobre el fondo. */
+/** Bloque de relleno en forma de píldora, con barrido. */
 function Sk({ className }: { className?: string }) {
-  return <div className={cn("bg-surface-2 rounded-md", className)} />;
+  return <div className={cn("sk", className)} />;
 }
 
 /** El mismo contenedor que usan las pantallas reales, para que el ancho, el
