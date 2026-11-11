@@ -33,6 +33,8 @@
   --color-sheet: var(--sheet);
   --color-tabbg: var(--tabbg);
   --color-fbg: var(--fbg);
+  --color-panel-solido: var(--panel-solido);
+  --color-aviso-solido: var(--aviso-solido);
   --color-accent-ink: var(--accent-ink);
   --color-danger: var(--danger);
   --color-red: var(--red);
@@ -93,6 +95,8 @@
   --velo: rgba(0, 0, 0, 0.66); /* velo de la cabeza */
   --velo2: rgba(0, 0, 0, 0.6);
   --fbg: rgba(255, 255, 255, 0.06); /* campos */
+  --panel-solido: #121216; /* panel y hoja del día: opacos, nada se lee a través */
+  --aviso-solido: #16161b; /* aviso (.toast): opaco */
   --fsh: inset 0 1px 0 rgba(255, 255, 255, 0.12), inset 0 0 0 1px rgba(255, 255, 255, 0.08);
   --fsh-f: inset 0 0 0 1.5px #fff; /* foco de TODO campo */
   --glass: inset 0 1px 0 rgba(255, 255, 255, 0.16), inset 0 0 0 1px rgba(255, 255, 255, 0.08);
@@ -514,7 +518,7 @@
     flex-direction: column;
     max-height: 90%;
     border-radius: 30px 30px 0 0;
-    background: #121216;
+    background: var(--panel-solido);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
     outline: none;
     animation: pane-entra 0.45s var(--ease) both;
@@ -541,7 +545,7 @@
     z-index: 62;
     padding: 13px 16px;
     border-radius: 16px;
-    background: #16161b;
+    background: var(--aviso-solido);
     border: 1px solid var(--hair);
     font-weight: 500;
     font-size: 14px;

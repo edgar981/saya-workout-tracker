@@ -161,7 +161,7 @@ export function DayPreviewSheet({
       <div
         ref={panelRef}
         tabIndex={-1}
-        className="bg-surface border-border absolute inset-x-0 bottom-0 mx-auto flex max-h-[88dvh] w-full max-w-md flex-col rounded-t-2xl border-t pb-[env(safe-area-inset-bottom)] outline-none"
+        className="bg-panel-solido border-border absolute inset-x-0 bottom-0 mx-auto flex max-h-[88dvh] w-full max-w-md flex-col rounded-t-2xl border-t pb-[env(safe-area-inset-bottom)] outline-none"
         style={{
           transform: shown ? `translateY(${dragY}px)` : "translateY(100%)",
           transition: dragging ? "none" : `transform ${SLIDE_MS}ms cubic-bezier(0.32,0.72,0,1)`,
