@@ -55,27 +55,38 @@ function claseDeLaHoja(): string {
   return m![1];
 }
 
+/** Los tres canales de un `rgb(...)` / `rgba(...)`. */
+function canales(valor: string): number[] {
+  const m = valor.match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i);
+  expect(m, `${valor} no es rgb()/rgba()`).not.toBeNull();
+  return [Number(m![1]), Number(m![2]), Number(m![3])];
+}
+
 describe("superficies sólidas", () => {
   const panel = tokenDeFondo("pane");
   const aviso = tokenDeFondo("toast");
 
-  it(".pane y .toast consumen cada uno un token, y son distintos", () => {
-    expect(panel).not.toBe(aviso);
+  it(".pane y .toast consumen --panel-solido, el único sólido", () => {
+    expect(panel).toBe("--panel-solido");
+    expect(aviso).toBe("--panel-solido");
   });
 
-  it.each([
-    ["panel", panel],
-    ["aviso", aviso],
-  ])("el token del %s existe y es opaco (alfa 1)", (_nombre, token) => {
-    expect(esOpaco(valorEnRoot(token))).toBe(true);
+  it("--panel-solido existe y es opaco (alfa 1)", () => {
+    expect(esOpaco(valorEnRoot("--panel-solido"))).toBe(true);
   });
 
-  it("ningún valor sólido está escrito dos veces en globals.css", () => {
-    for (const token of [panel, aviso]) {
-      const valor = valorEnRoot(token);
-      const veces = css.split(valor).length - 1;
-      expect(veces, `${valor} aparece ${veces} veces`).toBe(1);
-    }
+  it("--panel-solido es --sheet hecho opaco: los mismos tres canales", () => {
+    expect(canales(valorEnRoot("--panel-solido"))).toEqual(canales(valorEnRoot("--sheet")));
+  });
+
+  it("--aviso-solido ya no existe", () => {
+    expect(css).not.toMatch(/aviso-solido/);
+  });
+
+  it("el valor sólido no está escrito dos veces en globals.css", () => {
+    const valor = valorEnRoot("--panel-solido");
+    const veces = css.split(valor).length - 1;
+    expect(veces, `${valor} aparece ${veces} veces`).toBe(1);
   });
 
   it("la hoja del día consume la utilidad del panel sólido", () => {
