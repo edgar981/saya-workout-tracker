@@ -9,11 +9,14 @@ import { AppShell } from "@/components/app-shell";
 // Autoalojadas: next/font descarga los archivos EN BUILD y los sirve desde el
 // propio origen (/_next/static/media/*.woff2). No hay <link> a ningún CDN de
 // fuentes en runtime — requisito para abrir sin señal (DECISIONES.md). Archivo
-// es fuente variable (todo el rango de peso); DM Mono va con sus dos pesos.
+// es fuente variable (todo el rango de peso) y aquí suma el eje de ancho `wdth`
+// (62–125, según font-data.json de next 16.4.5); sin `weight` es la variable.
+// DM Mono va con sus dos pesos.
 const archivo = Archivo({
   subsets: ["latin"],
   display: "swap",
   variable: "--font-archivo",
+  axes: ["wdth"],
 });
 
 const dmMono = DM_Mono({

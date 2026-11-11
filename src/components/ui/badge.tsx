@@ -3,15 +3,24 @@ import { cva, type VariantProps } from "class-variance-authority";
 
 import { cn } from "@/lib/utils";
 
+/*
+ * Badge `.bd`: alto 24, aro --hair. Un badge ya no es un relleno de acento (un
+ * veredicto nunca es acento): `default`, `secondary` y `outline` se aplanan al
+ * mismo `.bd`; los nombres se conservan para no tocar a los llamadores.
+ * `destructive` es `.bd.ko`: aro rojo a .6 con texto en tinta.
+ */
+const BD =
+  "text-ink2 [box-shadow:inset_0_0_0_1px_var(--hair)]";
+
 const badgeVariants = cva(
-  "inline-flex items-center justify-center gap-1 rounded-md border px-2 py-0.5 text-xs font-medium whitespace-nowrap",
+  "inline-flex h-6 items-center justify-center gap-1 rounded-xl px-[9px] text-xs leading-none font-medium whitespace-nowrap",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground border-transparent",
-        secondary: "bg-secondary text-secondary-foreground border-transparent",
-        destructive: "bg-destructive text-destructive-foreground border-transparent",
-        outline: "text-foreground",
+        default: BD,
+        secondary: BD,
+        outline: BD,
+        destructive: "text-ink [box-shadow:inset_0_0_0_1px_rgba(255,77,94,.6)]",
       },
     },
     defaultVariants: { variant: "default" },

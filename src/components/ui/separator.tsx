@@ -7,7 +7,7 @@ function Separator({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="separator"
       role="separator"
-      className={cn("bg-border h-px w-full shrink-0", className)}
+      className={cn("bg-hair h-px w-full shrink-0", className)}
       {...props}
     />
   );
