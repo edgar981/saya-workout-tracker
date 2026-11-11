@@ -14,6 +14,7 @@ import { describe, expect, it } from "vitest";
 const raiz = join(__dirname, "..", "..");
 const css = readFileSync(join(raiz, "src/app/globals.css"), "utf8");
 const hoja = readFileSync(join(raiz, "src/components/day-preview-sheet.tsx"), "utf8");
+const swRegister = readFileSync(join(raiz, "src/components/sw-register.tsx"), "utf8");
 
 /** Cuerpo de la regla `.<clase> { … }` (la primera que aparezca). */
 function regla(clase: string): string {
@@ -52,6 +53,14 @@ function utilidadDe(token: string): string {
 function claseDeLaHoja(): string {
   const m = hoja.match(/ref=\{panelRef\}[\s\S]*?className="([^"]*)"/);
   expect(m, "no se encontró el contenedor de la hoja").not.toBeNull();
+  return m![1];
+}
+
+/** El className del contenedor interior del aviso «Hay una versión nueva»
+ *  (el div que lleva `max-w-md` y `shadow-lg`). */
+function claseDelAviso(): string {
+  const m = swRegister.match(/className="([^"]*max-w-md[^"]*)"/);
+  expect(m, "no se encontró el contenedor del aviso en sw-register.tsx").not.toBeNull();
   return m![1];
 }
 
@@ -99,5 +108,16 @@ describe("superficies sólidas", () => {
     expect(clases).not.toContain("bg-card");
     expect(clases).not.toContain("bg-surface-2");
     expect(clases.some((c) => /backdrop/.test(c))).toBe(false);
+  });
+
+  it("el aviso de versión nueva consume la utilidad del panel sólido", () => {
+    expect(claseDelAviso().split(/\s+/)).toContain(utilidadDe(aviso));
+  });
+
+  it("el aviso de versión nueva ya no usa un fondo translúcido", () => {
+    const clases = claseDelAviso().split(/\s+/);
+    expect(clases).not.toContain("bg-card");
+    expect(clases).not.toContain("bg-surface");
+    expect(clases).not.toContain("bg-surface-2");
   });
 });

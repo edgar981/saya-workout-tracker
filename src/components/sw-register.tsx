@@ -92,7 +92,7 @@ export function SwRegister() {
 
   return (
     <div className="fixed inset-x-0 bottom-0 z-50 flex justify-center px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-      <div className="bg-card flex w-full max-w-md items-center gap-3 rounded-lg border px-3 py-2 shadow-lg">
+      <div className="bg-panel-solido flex w-full max-w-md items-center gap-3 rounded-lg border px-3 py-2 shadow-lg">
         <p className="min-w-0 flex-1 text-sm">Hay una versión nueva.</p>
         <button
           type="button"
