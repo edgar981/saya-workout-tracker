@@ -12,7 +12,7 @@ export interface CuerpoView {
   /** Descendente por fecha; incluye la abierta. */
   sesiones: SessionSummary[];
   progreso: ProgresoView;
-  /** Neto de las `ULTIMAS_SESIONES` primeras de `sesiones`, por id. */
+  /** Neto de las cerradas entre las `ULTIMAS_SESIONES` primeras de `sesiones`, por id. */
   nets: Record<string, SessionVerdictNet>;
 }
 
@@ -27,8 +27,12 @@ export async function loadCuerpo(): Promise<CuerpoView> {
     listSessionSummaries(),
     loadProgreso(),
   ]);
+  // La sesión abierta no lleva neto: sólo se piden las cerradas.
   const nets = await loadSessionVerdictNets(
-    sesiones.slice(0, ULTIMAS_SESIONES).map((s) => s.session.id),
+    sesiones
+      .slice(0, ULTIMAS_SESIONES)
+      .filter((s) => s.session.activa !== 1)
+      .map((s) => s.session.id),
   );
   return { pesos, sesiones, progreso, nets };
 }

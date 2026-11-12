@@ -165,6 +165,42 @@ export function contarEstados(estados: readonly EstadoProgreso[]): ConteoEstados
   return c;
 }
 
+export interface NetoFila {
+  texto: string;
+  positivo: boolean;
+  /** Ejercicios sin comparación: si > 0 la fila lleva la marca «•». */
+  sinComparacion: number;
+}
+
+/**
+ * El neto de una fila de «Últimas sesiones». Null si la sesión está abierta, si
+ * no hay neto, o si no se comparó ningún ejercicio (un hueco no es un cero).
+ */
+export function netoDeFila(
+  abierta: boolean,
+  net: { net: number; comparados: number; sinComparacion: number } | undefined,
+): NetoFila | null {
+  if (abierta || net === undefined || net.comparados <= 0) return null;
+  return { texto: formatoNeto(net.net), positivo: net.net > 0, sinComparacion: net.sinComparacion };
+}
+
+export interface TeselaEstado {
+  estado: "subiendo" | "estancado" | "por_debajo" | "pocos_datos" | "sin_registrar";
+  cuenta: number;
+}
+
+/** Las teselas de «Estados», en orden; «Sin registrar» sólo si su cuenta es > 0. */
+export function teselasDeEstados(c: ConteoEstados): TeselaEstado[] {
+  const t: TeselaEstado[] = [
+    { estado: "subiendo", cuenta: c.subiendo },
+    { estado: "estancado", cuenta: c.estancado },
+    { estado: "por_debajo", cuenta: c.por_debajo },
+    { estado: "pocos_datos", cuenta: c.pocos_datos },
+  ];
+  if (c.sin_registrar > 0) t.push({ estado: "sin_registrar", cuenta: c.sin_registrar });
+  return t;
+}
+
 export function textoSeries(n: number): string {
   return `${n} ${n === 1 ? "serie" : "series"}`;
 }

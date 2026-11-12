@@ -8,6 +8,8 @@ import {
   formatoDiferencia,
   formatoNeto,
   formatoPeso,
+  netoDeFila,
+  teselasDeEstados,
   polilinea,
   puntosGrafica,
   resumirPeso,
@@ -138,5 +140,55 @@ describe("contarEstados", () => {
       sin_registrar: 1,
       conSeries: 6,
     });
+  });
+});
+
+describe("netoDeFila", () => {
+  const net = (n: number, comparados = 3, sinComparacion = 0) => ({ net: n, comparados, sinComparacion });
+  it("sesión abierta con neto: null", () => {
+    expect(netoDeFila(true, net(2))).toBeNull();
+  });
+  it("sesión cerrada sin neto: null", () => {
+    expect(netoDeFila(false, undefined)).toBeNull();
+  });
+  it("comparados 0: null", () => {
+    expect(netoDeFila(false, net(0, 0))).toBeNull();
+  });
+  it("positivo", () => {
+    expect(netoDeFila(false, net(3))).toEqual({ texto: "+3", positivo: true, sinComparacion: 0 });
+  });
+  it("negativo con U+2212", () => {
+    expect(netoDeFila(false, net(-2))).toEqual({ texto: "−2", positivo: false, sinComparacion: 0 });
+  });
+  it("cero", () => {
+    expect(netoDeFila(false, net(0))).toEqual({ texto: "0", positivo: false, sinComparacion: 0 });
+  });
+  it("lleva la cuenta de sin comparación", () => {
+    expect(netoDeFila(false, net(1, 4, 2))?.sinComparacion).toBe(2);
+  });
+});
+
+describe("teselasDeEstados", () => {
+  const conteo = (sin_registrar: number) => ({
+    subiendo: 1,
+    estancado: 2,
+    por_debajo: 3,
+    pocos_datos: 4,
+    sin_registrar,
+    conSeries: 10 + sin_registrar,
+  });
+  it("con sin_registrar 0: cuatro teselas", () => {
+    expect(teselasDeEstados(conteo(0)).map((t) => t.estado)).toEqual([
+      "subiendo",
+      "estancado",
+      "por_debajo",
+      "pocos_datos",
+    ]);
+  });
+  it("con sin_registrar 2: cinco, la última Sin registrar", () => {
+    const t = teselasDeEstados(conteo(2));
+    expect(t).toHaveLength(5);
+    expect(t[4]).toEqual({ estado: "sin_registrar", cuenta: 2 });
+    expect(t.map((x) => x.cuenta)).toEqual([1, 2, 3, 4, 2]);
   });
 });

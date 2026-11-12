@@ -17,11 +17,13 @@ import {
   etiquetaGrafica,
   formatoNeto,
   formatoPeso,
+  netoDeFila,
   polilinea,
   puntosGrafica,
   resumirPeso,
   sesionesDeSemana,
   subtituloSesiones,
+  teselasDeEstados,
   textoSeries,
   type PesoResumen,
 } from "@/lib/cuerpo";
@@ -150,8 +152,7 @@ function Contenido({ vista }: { vista: CuerpoView }) {
               <div>
                 {sesiones.slice(0, ULTIMAS_SESIONES).map((s) => {
                   const abierta = s.session.activa === 1;
-                  const net = nets[s.session.id];
-                  const conNeto = !abierta && net !== undefined && net.comparados > 0;
+                  const neto = netoDeFila(abierta, nets[s.session.id]);
                   return (
                     <Fila
                       key={s.session.id}
@@ -169,9 +170,25 @@ function Contenido({ vista }: { vista: CuerpoView }) {
                       }
                       subtitulo={`${fechaCorta(s.session.fecha)} · ${textoSeries(s.totalSeries)}`}
                       valor={
-                        conNeto ? (
-                          <span className={cn(net.net > 0 ? "text-ink" : "text-ink2")}>
-                            {formatoNeto(net.net)}
+                        neto ? (
+                          <span
+                            className={cn(neto.positivo ? "text-ink" : "text-ink2")}
+                            title={
+                              neto.sinComparacion > 0
+                                ? `${neto.sinComparacion} sin comparación`
+                                : undefined
+                            }
+                          >
+                            {neto.texto}
+                            {neto.sinComparacion > 0 && (
+                              <span
+                                className="align-super text-[9px]"
+                                style={{ color: "var(--ink3)" }}
+                              >
+                                {" "}
+                                •
+                              </span>
+                            )}
                           </span>
                         ) : undefined
                       }
@@ -190,13 +207,9 @@ function Contenido({ vista }: { vista: CuerpoView }) {
             derecha={`${conteo.conSeries} ${conteo.conSeries === 1 ? "ejercicio" : "ejercicios"} con series`}
           >
             <div className="teselas">
-              <Tesela cuenta={conteo.subiendo} etiqueta={ESTADO_LABEL.subiendo} />
-              <Tesela cuenta={conteo.estancado} etiqueta={ESTADO_LABEL.estancado} />
-              <Tesela cuenta={conteo.por_debajo} etiqueta={ESTADO_LABEL.por_debajo} />
-              <Tesela cuenta={conteo.pocos_datos} etiqueta={ESTADO_LABEL.pocos_datos} />
-              {conteo.sin_registrar > 0 && (
-                <Tesela cuenta={conteo.sin_registrar} etiqueta={ESTADO_LABEL.sin_registrar} />
-              )}
+              {teselasDeEstados(conteo).map((t) => (
+                <Tesela key={t.estado} cuenta={t.cuenta} etiqueta={ESTADO_LABEL[t.estado]} />
+              ))}
             </div>
             <Link href="/progreso" className="tl mt-1">
               Ver progreso ›

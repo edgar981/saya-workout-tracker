@@ -144,23 +144,27 @@ export function SessionSkeleton() {
  *  pantalla: kicker, cifra, gráfica y cuatro líneas. */
 export function CuerpoSkeleton() {
   return (
-    <div role="status" aria-busy="true">
-      <span className="sr-only">Cargando…</span>
+    <>
       <div className="px-4">
         <Cabeza titulo="Cuerpo" subtitulo="Peso, sesiones y progreso" ajustes />
       </div>
       <Hoja>
-        <main className="mx-auto w-full max-w-md p-4" aria-hidden="true">
-          <Sk className="h-[11px] w-[34%]" />
-          <Sk className="mt-4 h-[38px] w-[58%] rounded-[14px]" />
-          <Sk className="mt-[22px] h-[132px] w-full rounded-3xl" />
-          <Sk className="mt-[22px] h-4 w-[86%]" />
-          <Sk className="mt-[22px] h-4 w-full" />
-          <Sk className="mt-[22px] h-4 w-[72%]" />
-          <Sk className="mt-[22px] h-4 w-[94%]" />
+        <main className="mx-auto w-full max-w-md p-4">
+          <div role="status" aria-busy="true">
+            <span className="sr-only">Cargando…</span>
+            <div aria-hidden="true">
+              <Sk className="h-[11px] w-[34%]" />
+              <Sk className="mt-4 h-[38px] w-[58%] rounded-[14px]" />
+              <Sk className="mt-[22px] h-[132px] w-full rounded-3xl" />
+              <Sk className="mt-[22px] h-4 w-[86%]" />
+              <Sk className="mt-[22px] h-4 w-full" />
+              <Sk className="mt-[22px] h-4 w-[72%]" />
+              <Sk className="mt-[22px] h-4 w-[94%]" />
+            </div>
+          </div>
         </main>
       </Hoja>
-    </div>
+    </>
   );
 }
 
