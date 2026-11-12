@@ -1,10 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
-import { ChevronDown, ChevronLeft, Plus, Trash2, X } from "lucide-react";
+import { ChevronDown, Plus, Trash2, X } from "lucide-react";
 
 import { ExercisePicker, unitTag } from "@/components/exercise-picker";
 import { Badge } from "@/components/ui/badge";
@@ -48,11 +47,6 @@ export default function PlantillaDiaScreen() {
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-3 p-4">
       <header className="flex items-center gap-2 pt-2">
-        <Button asChild variant="ghost" size="icon-sm">
-          <Link href="/plantillas" aria-label="Volver">
-            <ChevronLeft />
-          </Link>
-        </Button>
         <h1 className="text-lg font-semibold">{day?.nombre ?? "Día"}</h1>
         <span className="text-muted-foreground ml-auto text-xs">{slots.length} ejercicios</span>
       </header>

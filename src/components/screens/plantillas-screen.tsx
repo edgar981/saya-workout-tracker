@@ -2,19 +2,13 @@
 
 import Link from "next/link";
 import { useLiveQuery } from "dexie-react-hooks";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { getActiveMesociclo, listRoutineDays, loadDaySlots } from "@/lib/db/queries";
 import { PlantillasSkeleton } from "@/components/skeletons";
-import { useVolver } from "@/lib/use-volver";
 
 export default function PlantillasScreen() {
-  // /plantillas es alcanzable desde /ajustes y desde /plantillas/[dayId] (chevron
-  // de vuelta), así que el chevron sigue el historial real (= el edge-swipe), con
-  // respaldo a /ajustes en frío. Ver src/lib/use-volver.ts.
-  const volver = useVolver("/ajustes");
-
   // Muestra los días del mesociclo ACTIVO. El selector de mesociclo vive en
   // /mesociclos, no aquí: esta pantalla edita el plan vigente.
   const data = useLiveQuery(async () => {
@@ -38,9 +32,6 @@ export default function PlantillasScreen() {
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-4 p-4">
       <header className="flex items-center gap-2 pt-2">
-        <Button variant="ghost" size="icon-sm" onClick={volver} aria-label="Volver">
-          <ChevronLeft />
-        </Button>
         <div className="min-w-0">
           <h1 className="text-lg font-semibold">Plantillas</h1>
           {mesociclo && (

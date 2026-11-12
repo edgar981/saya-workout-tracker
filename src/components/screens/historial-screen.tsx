@@ -2,10 +2,9 @@
 
 import Link from "next/link";
 import { useLiveQuery } from "dexie-react-hooks";
-import { ChevronLeft, MessageSquare } from "lucide-react";
+import { MessageSquare } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { listSessionSummaries } from "@/lib/db/queries";
 import { loadSessionVerdictNets, type SessionVerdictNet } from "@/lib/db/verdicts";
 import { HistorialSkeleton } from "@/components/skeletons";
@@ -51,11 +50,6 @@ export default function HistorialScreen() {
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-4 p-4">
       <header className="flex items-center gap-2 pt-2">
-        <Button asChild variant="ghost" size="icon-sm">
-          <Link href="/" aria-label="Volver">
-            <ChevronLeft />
-          </Link>
-        </Button>
         <div className="min-w-0">
           <h1 className="text-lg font-semibold">Historial</h1>
           {primera && (

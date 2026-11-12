@@ -2,16 +2,15 @@
 
 import { Fragment } from "react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
-import { ChevronLeft, ScissorsLineDashed } from "lucide-react";
+import { ScissorsLineDashed } from "lucide-react";
 
 import { unitTag } from "@/components/exercise-picker";
 import { SetLines } from "@/components/history/set-lines";
 import { EstadoLinea, fechaCorta } from "@/components/progress/estado";
 import { MarcaChart } from "@/components/progress/marca-chart";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { loadExerciseHistory, todayISO, type ExerciseHistory } from "@/lib/db/queries";
 import { aparicionesDe, evaluarProgreso } from "@/lib/progress";
 import { formatSetWeight, unitSuffix } from "@/lib/units";
@@ -38,17 +37,6 @@ function unidadSnapshot(snap: NonNullable<ExerciseHistory["recentSnapshot"]>, st
 export default function EjercicioScreen() {
   const params = useParams<{ exerciseId: string }>();
   const exerciseId = params.exerciseId;
-  const router = useRouter();
-
-  // §2: volver a DONDE se estaba, no al historial general. Desde la sesión
-  // activa, el back del navegador regresa a /sesion — que restaura el ejercicio
-  // exacto desde localStorage (saya:ejercicio:<id>), sin tocar el estado de la
-  // sesión. Desde /historial/[id], regresa a esa sesión. Fallback a /historial
-  // si se abrió esta pantalla directamente y no hay historial al que volver.
-  const volver = () => {
-    if (typeof window !== "undefined" && window.history.length > 1) router.back();
-    else router.push("/historial");
-  };
 
   // Capa 2 (§11) sale de la MISMA travesía: `todas` ya viene en el historial.
   const history = useLiveQuery(async () => {
@@ -95,9 +83,6 @@ export default function EjercicioScreen() {
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-4 p-4">
       <header className="flex items-center gap-2 pt-2">
-        <Button variant="ghost" size="icon-sm" onClick={volver} aria-label="Volver">
-          <ChevronLeft />
-        </Button>
         <div className="min-w-0">
           <h1 className="truncate text-lg font-semibold">
             {exercise?.nombre ?? "Ejercicio"}
