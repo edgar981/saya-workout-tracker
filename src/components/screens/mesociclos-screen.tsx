@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Check, ChevronDown, ChevronLeft, Copy, Plus } from "lucide-react";
+import { Check, ChevronDown, Copy, Plus } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,6 @@ import {
   type MesocicloView,
 } from "@/lib/db/queries";
 import { useAutosave } from "@/lib/use-autosave";
-import { useVolver } from "@/lib/use-volver";
 import { cn } from "@/lib/utils";
 import { MesociclosSkeleton } from "@/components/skeletons";
 
@@ -34,8 +33,6 @@ function rango(m: MesocicloView["mesociclo"]): string {
 }
 
 export default function MesociclosScreen() {
-  // Alcanzable desde /ajustes; el chevron sigue el historial real. Ver use-volver.
-  const volver = useVolver("/ajustes");
   const mesociclos = useLiveQuery(() => listMesociclos(), []);
 
   if (mesociclos === undefined) {
@@ -47,9 +44,6 @@ export default function MesociclosScreen() {
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-3 p-4">
       <header className="flex items-center gap-2 pt-2">
-        <Button variant="ghost" size="icon-sm" onClick={volver} aria-label="Volver">
-          <ChevronLeft />
-        </Button>
         <h1 className="text-lg font-semibold">Mesociclos</h1>
       </header>
 

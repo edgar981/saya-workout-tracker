@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useLiveQuery } from "dexie-react-hooks";
-import { ChevronLeft } from "lucide-react";
 
 import { BalanceChart } from "@/components/progress/balance-chart";
 import {
@@ -14,7 +13,6 @@ import {
 } from "@/components/progress/estado";
 import { Sparkline } from "@/components/progress/sparkline";
 import { VolumenCard } from "@/components/progress/volumen-card";
-import { Button } from "@/components/ui/button";
 import { loadProgreso, type ProgresoFila, type ProgresoView } from "@/lib/db/progress";
 import { SEMANAS_BALANCE, type EstadoProgreso } from "@/lib/progress";
 import { ProgresoSkeleton } from "@/components/skeletons";
@@ -61,11 +59,6 @@ export default function ProgresoScreen() {
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-5 p-4">
       <header className="flex items-center gap-2 pt-2">
-        <Button asChild variant="ghost" size="icon-sm">
-          <Link href="/" aria-label="Volver">
-            <ChevronLeft />
-          </Link>
-        </Button>
         <div className="min-w-0">
           <h1 className="text-lg font-semibold">Progreso</h1>
           {sub && <p className="text-muted-foreground text-xs tabular-nums">{sub}</p>}

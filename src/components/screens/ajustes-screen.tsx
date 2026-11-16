@@ -1,9 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { BookOpen, CalendarRange, ChevronLeft, ChevronRight, Database, ListChecks } from "lucide-react";
-
-import { Button } from "@/components/ui/button";
+import { BookOpen, CalendarRange, ChevronRight, Database, ListChecks } from "lucide-react";
 
 /**
  * Configuración (§2). Reemplaza el disclosure que vivía en el pie del home: los
@@ -12,7 +10,7 @@ import { Button } from "@/components/ui/button";
  *
  * Sin datos ni Dexie: es lista estática de enlaces, así que la ruta se
  * prerenderiza y abre al instante — no necesita `dynamic(ssr:false)` ni
- * esqueleto. El chevron de volver se conserva (la barra no lo sustituye).
+ * esqueleto. Sin chevron de volver: el «‹» vive en la píldora del shell.
  */
 const DESTINOS = [
   { href: "/mesociclos", label: "Mesociclos", Icon: CalendarRange },
@@ -25,11 +23,6 @@ export default function AjustesScreen() {
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-3 p-4">
       <header className="flex items-center gap-2 pt-2">
-        <Button asChild variant="ghost" size="icon-sm">
-          <Link href="/" aria-label="Volver">
-            <ChevronLeft />
-          </Link>
-        </Button>
         <h1 className="text-lg font-semibold">Ajustes</h1>
       </header>
 

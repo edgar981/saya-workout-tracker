@@ -1,9 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronLeft } from "lucide-react";
 
 import { GruposPicker } from "@/components/grupos-picker";
 import { Button } from "@/components/ui/button";
@@ -47,11 +45,6 @@ export default function CatalogoNuevoScreen() {
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-4 p-4">
       <header className="flex items-center gap-2 pt-2">
-        <Button asChild variant="ghost" size="icon-sm">
-          <Link href="/catalogo" aria-label="Volver">
-            <ChevronLeft />
-          </Link>
-        </Button>
         <h1 className="text-lg font-semibold">Ejercicio nuevo</h1>
       </header>
 

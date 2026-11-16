@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { ChevronLeft, Clock, Tag, Trash2 } from "lucide-react";
+import { Clock, Tag, Trash2 } from "lucide-react";
 
 import { SetLines } from "@/components/history/set-lines";
 import { VerdictBadge } from "@/components/history/verdict-badge";
@@ -73,25 +73,8 @@ export default function SessionDetailScreen() {
     return () => clearTimeout(t);
   }, [armed]);
 
-  // Volver respeta de dónde se vino (§3). Pantalla ssr:false, así que `window`
-  // existe; leo el query directo (sin useSearchParams, que exigiría Suspense).
-  const desdeCierre =
-    typeof window !== "undefined" &&
-    new URLSearchParams(window.location.search).get("desde") === "cierre";
-
-  const volver = () => {
-    // Si se llegó por cerrar una sesión, el detalle reemplazó a /sesion/cerrar
-    // en el historial, así que router.back() caería en /sesion (ya cerrada, que
-    // rebota) — por eso aquí se va explícito al home. Desde /historial o
-    // /ejercicio, back() sí devuelve al lugar correcto.
-    if (desdeCierre) {
-      router.replace("/");
-      return;
-    }
-    if (typeof window !== "undefined" && window.history.length > 1) router.back();
-    else router.push("/historial");
-  };
-
+  // El «‹» (incluido `?desde=cierre`) lo resuelve la píldora del shell, por
+  // `lib/navegacion.ts`; esta pantalla ya no lleva botón de volver.
   if (detail === undefined) {
     return <SessionDetailSkeleton />;
   }
@@ -137,9 +120,6 @@ export default function SessionDetailScreen() {
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-4 p-4">
       <header className="flex items-center gap-2 pt-2">
-        <Button variant="ghost" size="icon-sm" onClick={volver} aria-label="Volver">
-          <ChevronLeft />
-        </Button>
         <div className="min-w-0">
           <h1 className="truncate text-lg font-semibold capitalize">{formatFecha(session.fecha)}</h1>
           <p className="text-muted-foreground flex items-center gap-1.5 text-xs">
