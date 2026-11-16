@@ -211,11 +211,11 @@ export function BackupPanel({
       </div>
       )}
 
-      <div className="flex gap-2">
-        <Button variant="outline" size="sm" className="flex-1" disabled={pushing} onClick={() => void doBackup()}>
+      <div className="flex flex-wrap gap-2">
+        <Button variant="outline" size="sm" className="flex-auto" disabled={pushing} onClick={() => void doBackup()}>
           <CloudUpload /> {pushing ? "Respaldando…" : "Respaldar ahora"}
         </Button>
-        <Button variant="ghost" size="sm" onClick={() => void toggleRestore()}>
+        <Button variant="ghost" size="sm" className="flex-auto" onClick={() => void toggleRestore()}>
           <RotateCw /> Restaurar del servidor
         </Button>
       </div>
