@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useLiveQuery } from "dexie-react-hooks";
-import { ChevronDown, ChevronLeft, Lock, Plus, Trash2 } from "lucide-react";
+import { ChevronDown, Lock, Plus, Trash2 } from "lucide-react";
 
 import { unitTag } from "@/components/exercise-picker";
 import { GruposPicker } from "@/components/grupos-picker";
@@ -24,15 +24,10 @@ import { nombresDirectos } from "@/lib/musculos";
 import { useAutosave } from "@/lib/use-autosave";
 import { cn } from "@/lib/utils";
 import { CatalogoSkeleton } from "@/components/skeletons";
-import { useVolver } from "@/lib/use-volver";
 
 const ARMED_MS = 5000;
 
 export default function CatalogoScreen() {
-  // /catalogo es alcanzable desde /ajustes y desde /catalogo/nuevo (chevron y el
-  // push tras crear), así que el chevron sigue el historial real (= el edge-swipe),
-  // con respaldo a /ajustes en frío. Ver src/lib/use-volver.ts.
-  const volver = useVolver("/ajustes");
   const exercises = useLiveQuery(() => listActiveExercises(), []);
 
   if (exercises === undefined) {
@@ -42,9 +37,6 @@ export default function CatalogoScreen() {
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-3 p-4">
       <header className="flex items-center gap-2 pt-2">
-        <Button variant="ghost" size="icon-sm" onClick={volver} aria-label="Volver">
-          <ChevronLeft />
-        </Button>
         <h1 className="text-lg font-semibold">Catálogo</h1>
         <span className="text-muted-foreground ml-auto text-xs">{exercises.length} activos</span>
       </header>

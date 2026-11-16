@@ -1,65 +1,78 @@
 "use client";
 
+import { useState, type CSSProperties } from "react";
 import Link from "next/link";
-import { History, House, Settings, TrendingUp } from "lucide-react";
 
-import { cn } from "@/lib/utils";
+import { AREAS, indiceDeArea } from "@/lib/navegacion";
 
 /**
- * Barra de navegación persistente (§2). Cuatro destinos fijos. La sección activa
- * se marca con tinta plena; el resto queda atenuado — NO se usa el acento, que
- * está reservado a acción/sesión activa/completar y no debe competir aquí
- * (DECISIONES.md §10).
+ * Navegación de Cromo líquido (§2): las pestañas de vidrio `.tabs` y la píldora
+ * de atrás `.pback`. Ambas son `position: fixed` y están montadas a la vez; una
+ * se ve y la otra se esconde (`data-oculto` → `visibility: hidden`), así nunca se
+ * pintan juntas. Las pestañas se ven en las rutas `area`, la píldora en las
+ * `empujada`; en `sesion` el shell no monta nada.
  *
- * La visibilidad la decide `AppShell` por ruta: esta barra NO aparece en
- * `/sesion` ni en `/sesion/cerrar` (ahí el alto vale más y no hay a dónde ir
- * durante el registro). Los chevrones de vuelta de cada pantalla se conservan:
- * la barra no los sustituye.
+ * La activa se marca con la pastilla `.tind` (vidrio blanco) y NUNCA con el
+ * acento cromo (DECISIONES.md §10). Todo lo que decide a dónde va «‹» vive en
+ * `lib/navegacion.ts`; aquí sólo se pinta.
  */
-function section(pathname: string): "inicio" | "historial" | "progreso" | "ajustes" {
-  if (pathname === "/") return "inicio";
-  if (pathname === "/progreso") return "progreso";
-  // El historial de un ejercicio (/ejercicio/[id]) es historial, no ajustes.
-  if (pathname.startsWith("/historial") || pathname.startsWith("/ejercicio")) return "historial";
-  // /ajustes y los destinos de configuración que agrupa (mesociclos, plantillas,
-  // catálogo, datos y sus subrutas).
-  return "ajustes";
-}
+export function NavBar({
+  pathname,
+  nivel,
+  etiqueta,
+  alAtras,
+}: {
+  pathname: string;
+  nivel: "area" | "empujada";
+  /** La etiqueta del DESTINO de la píldora. */
+  etiqueta: string;
+  alAtras: () => void;
+}) {
+  const idx = indiceDeArea(pathname);
 
-const ITEMS = [
-  { key: "inicio", href: "/", label: "Inicio", Icon: House },
-  { key: "historial", href: "/historial", label: "Historial", Icon: History },
-  // Capa 2 (DECISIONES.md §11.7): la lectura es el valor de la app, no va escondida.
-  { key: "progreso", href: "/progreso", label: "Progreso", Icon: TrendingUp },
-  { key: "ajustes", href: "/ajustes", label: "Ajustes", Icon: Settings },
-] as const;
+  // La pastilla se queda en la última área vista mientras las pestañas están
+  // escondidas. `gen` cuenta los cambios de activa: el estiramiento corre una
+  // vez por cambio (no en la primera pintura).
+  const [estado, setEstado] = useState({ activo: idx ?? 0, gen: 0 });
+  if (idx !== null && idx !== estado.activo) {
+    setEstado({ activo: idx, gen: estado.gen + 1 });
+  }
 
-export function NavBar({ pathname }: { pathname: string }) {
-  const active = section(pathname);
+  const n = AREAS.length;
+  const estilo = { "--n": n, "--i": estado.activo } as CSSProperties;
+
   return (
-    <nav
-      aria-label="Navegación principal"
-      className="border-border bg-bg/90 fixed inset-x-0 bottom-0 z-40 border-t pb-[env(safe-area-inset-bottom)] backdrop-blur"
-    >
-      <div className="mx-auto flex h-14 w-full max-w-md items-stretch">
-        {ITEMS.map(({ key, href, label, Icon }) => {
-          const on = active === key;
-          return (
-            <Link
-              key={key}
-              href={href}
-              aria-current={on ? "page" : undefined}
-              className={cn(
-                "flex flex-1 flex-col items-center justify-center gap-1 text-[11px]",
-                on ? "text-foreground font-medium" : "text-muted-foreground",
-              )}
-            >
-              <Icon className="size-5" />
-              {label}
-            </Link>
-          );
-        })}
-      </div>
-    </nav>
+    <>
+      <nav
+        aria-label="Navegación principal"
+        className="tabs"
+        data-oculto={nivel === "area" ? undefined : ""}
+        style={estilo}
+      >
+        <span className="tind" aria-hidden="true">
+          <span key={estado.gen} className="tind-i" data-estira={estado.gen > 0 ? "" : undefined} />
+        </span>
+        {AREAS.map((area, i) => (
+          <Link
+            key={area.href}
+            href={area.href}
+            className="tab"
+            aria-current={idx === i ? "page" : undefined}
+          >
+            {area.etiqueta}
+          </Link>
+        ))}
+      </nav>
+      <button
+        type="button"
+        className="pback"
+        data-oculto={nivel === "empujada" ? undefined : ""}
+        aria-label={`Volver a ${etiqueta}`}
+        onClick={alAtras}
+      >
+        <b aria-hidden="true">‹</b>
+        {etiqueta}
+      </button>
+    </>
   );
 }

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { Cabeza, Hoja } from "@/components/ui/hoja";
 import { cn } from "@/lib/utils";
 
 /*
@@ -36,13 +37,22 @@ function Screen({ className, children }: { className?: string; children: ReactNo
   );
 }
 
-/** Cabecera con chevron de volver (hueco transparente, como el botón ghost real)
- *  y título. `title` fijo se pinta real (idéntico al final, sin salto); sin él,
- *  una barra para los títulos que dependen del dato. */
-function Head({ title, trailing }: { title?: string; trailing?: ReactNode }) {
+/** Cabecera con título. `title` fijo se pinta real (idéntico al final, sin salto);
+ *  sin él, una barra para los títulos que dependen del dato. `chevron` deja el
+ *  hueco del botón de volver: sólo lo conserva `/sesion/cerrar`, que sigue con el suyo
+ *  (las demás lo perdieron: el «‹» ahora vive en la píldora del shell). */
+function Head({
+  title,
+  trailing,
+  chevron,
+}: {
+  title?: string;
+  trailing?: ReactNode;
+  chevron?: boolean;
+}) {
   return (
     <header className="flex items-center gap-2 pt-2">
-      <div className="size-9 shrink-0" />
+      {chevron && <div className="size-9 shrink-0" />}
       {title ? (
         <h1 className="text-lg font-semibold">{title}</h1>
       ) : (
@@ -57,7 +67,6 @@ function Head({ title, trailing }: { title?: string; trailing?: ReactNode }) {
 function HeadStacked() {
   return (
     <header className="flex items-center gap-2 pt-2">
-      <div className="size-9 shrink-0" />
       <div className="min-w-0">
         <Sk className="h-6 w-44" />
         <Sk className="mt-1.5 h-3 w-28" />
@@ -130,12 +139,40 @@ export function SessionSkeleton() {
   );
 }
 
+// ── /cuerpo ─────────────────────────────────────────────────────────────────
+/** Cabeza real (sin salto al llegar el dato) y una hoja con la forma de la
+ *  pantalla: kicker, cifra, gráfica y cuatro líneas. */
+export function CuerpoSkeleton() {
+  return (
+    <>
+      <div className="px-4">
+        <Cabeza titulo="Cuerpo" subtitulo="Peso, sesiones y progreso" ajustes />
+      </div>
+      <Hoja>
+        <main className="mx-auto w-full max-w-md p-4">
+          <div role="status" aria-busy="true">
+            <span className="sr-only">Cargando…</span>
+            <div aria-hidden="true">
+              <Sk className="h-[11px] w-[34%]" />
+              <Sk className="mt-4 h-[38px] w-[58%] rounded-[14px]" />
+              <Sk className="mt-[22px] h-[132px] w-full rounded-3xl" />
+              <Sk className="mt-[22px] h-4 w-[86%]" />
+              <Sk className="mt-[22px] h-4 w-full" />
+              <Sk className="mt-[22px] h-4 w-[72%]" />
+              <Sk className="mt-[22px] h-4 w-[94%]" />
+            </div>
+          </div>
+        </main>
+      </Hoja>
+    </>
+  );
+}
+
 // ── /historial ──────────────────────────────────────────────────────────────
 export function HistorialSkeleton() {
   return (
     <Screen className="gap-4">
       <header className="flex items-center gap-2 pt-2">
-        <div className="size-9 shrink-0" />
         <div className="min-w-0">
           <h1 className="text-lg font-semibold">Historial</h1>
           <Sk className="mt-1.5 h-3 w-44" />
@@ -219,7 +256,6 @@ export function ProgresoSkeleton() {
   return (
     <Screen className="gap-5">
       <header className="flex items-center gap-2 pt-2">
-        <div className="size-9 shrink-0" />
         <div className="min-w-0">
           <h1 className="text-lg font-semibold">Progreso</h1>
           <Sk className="mt-1.5 h-3 w-52" />
@@ -349,7 +385,7 @@ export function CatalogoNuevoSkeleton() {
 export function CloseSkeleton() {
   return (
     <Screen className="gap-4">
-      <Head title="Cerrar sesión" />
+      <Head title="Cerrar sesión" chevron />
       <Sk className="h-4 w-40" />
       {Array.from({ length: 3 }).map((_, i) => (
         <div key={i} className="rounded-lg border px-3 py-3">

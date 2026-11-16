@@ -315,7 +315,10 @@
    completan los 20px (--pad) del diseño. */
 .hoja {
   --hoja-pt: 6px;
-  --hoja-pb: env(safe-area-inset-bottom);
+  /* El último contenido queda a 40px más el área segura del borde: 16 del `p-4`
+     de la pantalla y 24 de aquí. `/sesion` y `/sesion/cerrar` lo sobreescriben
+     desde el shell (sólo el área segura). */
+  --hoja-pb: calc(24px + env(safe-area-inset-bottom));
   position: relative;
   margin-top: var(--ventana);
   margin-bottom: calc(-1 * env(safe-area-inset-bottom));
@@ -323,9 +326,10 @@
   min-height: calc(100dvh - var(--ventana) - env(safe-area-inset-top));
   border-radius: 32px 32px 0 0;
 }
-[data-nav] .hoja {
-  /* La barra de hoy ya reserva el área segura abajo (`[data-nav] main`). */
-  --hoja-pb: 0px;
+/* Una pantalla que pinta su propia `Cabeza` (ui/hoja.tsx `Hoja`): la cabeza ya
+   ocupa la ventana en el flujo, así que la hoja no lleva margen de arriba. */
+.hoja[data-propia] {
+  margin-top: 0;
 }
 .hoja::before {
   content: "";
@@ -386,18 +390,174 @@
 }
 
 /*
- * Reserva para la barra de navegación fija (§2). En las rutas con barra
- * (`data-nav`, lo pone AppShell), el `<main>` de la pantalla reserva abajo el
- * alto de la barra + el área segura, para que el último contenido no quede
- * tapado al final del scroll (criterio 7). En `/sesion` y `/sesion/cerrar` no
- * hay `data-nav`, así que no se reserva nada. Fuera de `@layer` para ganarle en
- * la cascada al padding de la utilidad `p-4`.
+ * NAVEGACIÓN ARRIBA (§2): pestañas de vidrio `.tabs` y píldora de atrás `.pback`.
+ * Ambas fijas, montadas a la vez; una se ve y la otra se esconde (visibility:
+ * hidden), así nunca se pintan juntas y el desenfoque son dos capas por pantalla
+ * (la hoja y una de las dos). Fuera de `@layer` para ganarle a las utilidades.
  */
-[data-nav] main {
-  /* Alto de la barra (h-14 = 3.5rem) + un respiro (1rem, el mismo que daba el
-     `p-4` original) + el área segura, para que el último contenido no toque la
-     barra al final del scroll. */
-  padding-bottom: calc(3.5rem + 1rem + env(safe-area-inset-bottom));
+.tabs,
+.pback {
+  position: fixed;
+  top: calc(12px + env(safe-area-inset-top));
+  left: 12px;
+  z-index: 40;
+  background: var(--tabbg);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  backdrop-filter: blur(16px) saturate(150%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 10px 30px rgba(0, 0, 0, 0.35);
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .tabs,
+  .pback {
+    background: rgba(14, 14, 18, 0.92);
+  }
+}
+.tabs {
+  right: 12px;
+  height: 50px;
+  padding: 3px;
+  border-radius: 25px;
+  display: grid;
+  grid-template-columns: repeat(var(--n), 1fr);
+  transition:
+    transform 0.5s var(--ease),
+    opacity 0.3s,
+    visibility 0s;
+}
+.tabs[data-oculto] {
+  transform: translateY(-140%);
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+  transition:
+    transform 0.5s var(--ease),
+    opacity 0.3s,
+    visibility 0s 0.5s;
+}
+.tab {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  font-weight: 500;
+  font-size: 13.5px;
+  font-stretch: 104%;
+  color: var(--ink2);
+  text-decoration: none;
+}
+.tab[aria-current="page"] {
+  color: #fff;
+  font-weight: 600;
+}
+/* La pastilla que marca la activa: vidrio blanco, nunca cromo. */
+.tind {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: 3px;
+  width: calc((100% - 6px) / var(--n));
+  transform: translate3d(calc(var(--i) * 100%), 0, 0);
+  transition: transform 0.55s cubic-bezier(0.3, 1.25, 0.5, 1);
+  pointer-events: none;
+}
+.tind-i {
+  position: absolute;
+  inset: 0;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.16);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.34),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+.tind-i[data-estira] {
+  animation: estira 0.55s both;
+}
+@keyframes estira {
+  35% {
+    transform: scaleX(1.4) scaleY(0.86);
+  }
+}
+.pback {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 44px;
+  max-width: calc(100% - 24px);
+  padding: 0 18px 0 12px;
+  border-radius: 22px;
+  font-weight: 500;
+  font-size: 15px;
+  color: var(--ink);
+  white-space: nowrap;
+  transition:
+    transform 0.45s var(--ease),
+    opacity 0.3s,
+    visibility 0s;
+}
+.pback b {
+  font-size: 22px;
+  font-weight: 400;
+  margin-top: -2px;
+}
+.pback[data-oculto] {
+  transform: translateY(-140%);
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+  transition:
+    transform 0.45s var(--ease),
+    opacity 0.3s,
+    visibility 0s 0.45s;
+}
+@media (prefers-reduced-motion: reduce) {
+  .tind {
+    transition: none;
+  }
+  .tind-i[data-estira] {
+    animation: none;
+  }
+  .tabs,
+  .pback {
+    transition: opacity 0.3s;
+  }
+  .tabs[data-oculto],
+  .pback[data-oculto] {
+    transform: none;
+    transition:
+      opacity 0.3s,
+      visibility 0s 0.3s;
+  }
+}
+
+/* Botón de Ajustes `.ib`: sólido, SIN desenfoque (el presupuesto son dos capas). */
+.ib {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 9999px;
+  background: rgba(10, 10, 14, 0.6);
+  box-shadow: var(--glass);
+  color: var(--ink);
+}
+.ib svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.cabeza > .ib {
+  position: absolute;
+  top: 78px;
+  right: 4px;
 }
 
 /*
@@ -603,6 +763,82 @@
     .sk::after {
       animation: none;
       display: none;
+    }
+  }
+}
+
+/*
+ * CUERPO (`/cuerpo`): kicker de sección, teselas de estados y el punto vivo de la
+ * sesión abierta.
+ */
+@layer components {
+  .sec {
+    margin-top: 30px;
+  }
+  .sec:first-child {
+    margin-top: 0;
+  }
+  .sec-cab {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    padding-bottom: 10px;
+  }
+  .sec-cab > .kicker-d {
+    letter-spacing: 0.04em;
+    color: var(--ink2);
+    text-align: right;
+  }
+  .teselas {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .tesela {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    min-height: 76px;
+    padding: 12px;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.04);
+    box-shadow: inset 0 0 0 1px var(--hair);
+  }
+  .tesela-n {
+    font-weight: 500;
+    font-stretch: 125%;
+    font-size: 24px;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .tesela-l {
+    font-weight: 500;
+    font-size: 12px;
+    line-height: 15px;
+    color: var(--ink2);
+  }
+  .vivo {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 9999px;
+    background: var(--chrome);
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.4),
+      0 0 10px rgba(255, 255, 255, 0.6);
+    animation: vivo-pulso 2.4s ease-in-out infinite;
+  }
+  @keyframes vivo-pulso {
+    50% {
+      opacity: 0.45;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .vivo {
+      animation: none;
     }
   }
 }
