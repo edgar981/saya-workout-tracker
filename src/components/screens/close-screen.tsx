@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { db } from "@/lib/db/db";
 import { closeSession, discardSession, getActiveSession } from "@/lib/db/queries";
 import { backupNow } from "@/lib/backup/client";
+import { parsePeso } from "@/lib/peso";
 import { cn } from "@/lib/utils";
 import { useNavegando } from "@/lib/use-navegando";
 import { CloseSkeleton } from "@/components/skeletons";
@@ -61,12 +62,7 @@ export default function CloseScreen() {
     return <p className="text-muted-foreground p-6 text-sm">Sin sesión activa.</p>;
   }
 
-  const parsedWeight = (() => {
-    const cleaned = weight.replace(",", ".").replace(/[^\d.]/g, "");
-    if (cleaned === "") return null;
-    const n = Number.parseFloat(cleaned);
-    return Number.isFinite(n) ? n : null;
-  })();
+  const parsedWeight = parsePeso(weight);
 
   const close = async () => {
     setSaving(true);
