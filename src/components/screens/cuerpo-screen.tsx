@@ -6,7 +6,9 @@ import { useLiveQuery } from "dexie-react-hooks";
 
 import { CuerpoSkeleton } from "@/components/skeletons";
 import { ESTADO_LABEL, fechaCorta } from "@/components/progress/estado";
+import { PesoSheet } from "@/components/peso-sheet";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { BloqueError, Vacio } from "@/components/ui/estados";
 import { Fila } from "@/components/ui/fila";
 import { Cabeza, Hoja } from "@/components/ui/hoja";
@@ -90,6 +92,7 @@ function Seccion({
 
 function Contenido({ vista }: { vista: CuerpoView }) {
   const { pesos, sesiones, progreso, nets } = vista;
+  const [hojaPeso, setHojaPeso] = useState(false);
   const hoy = todayISO();
   const peso = resumirPeso(pesos);
   const lunes = lunesDe(hoy);
@@ -108,7 +111,15 @@ function Contenido({ vista }: { vista: CuerpoView }) {
   return (
     <>
       <Seccion titulo="Peso corporal" derecha={peso ? fechaCorta(peso.ultimaFecha) : undefined}>
-        {peso ? <PesoCorporal peso={peso} /> : <Vacio titulo="Todavía no anotaste tu peso." />}
+        {peso ? (
+          <PesoCorporal peso={peso} />
+        ) : (
+          <Vacio titulo="Todavía no anotaste tu peso." />
+        )}
+        <Button className="mt-3" onClick={() => setHojaPeso(true)}>
+          Anotar peso
+        </Button>
+        <PesoSheet abierto={hojaPeso} alCerrar={() => setHojaPeso(false)} peso={peso} />
       </Seccion>
 
       {sinNada ? (

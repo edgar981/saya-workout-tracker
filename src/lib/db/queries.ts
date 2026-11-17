@@ -186,6 +186,18 @@ export async function closeSession(
 }
 
 /**
+ * Anota un peso corporal fuera del cierre de sesión (hoja «Anotar peso» de
+ * Cuerpo). Es el mismo `add` que hace `closeSession`: nunca un `put`/`update`,
+ * así que no reemplaza un registro del mismo día. No empuja respaldo: llega al
+ * servidor con el siguiente cierre o con «Respaldar ahora».
+ */
+export async function anotarPeso(valor: number, unidad: "KG" | "LB"): Promise<void> {
+  await db.transaction("rw", db.bodyweightLogs, async () => {
+    await db.bodyweightLogs.add({ id: newId(), fecha: todayISO(), valor, unidad });
+  });
+}
+
+/**
  * Tags de una sesión YA cerrada (DECISIONES.md §3.3). Solo los tags: editar series
  * o notas de una sesión pasada sigue en BACKLOG. No es reescribir en silencio lo
  * que capa 2 ya leyó: el cambio es explícito, y su efecto —con `deload`, la sesión
