@@ -1,44 +1,40 @@
 "use client";
 
-import Link from "next/link";
-import { BookOpen, CalendarRange, ChevronRight, Database, ListChecks } from "lucide-react";
+import { Fila } from "@/components/ui/fila";
+import { Cabeza, Hoja } from "@/components/ui/hoja";
 
 /**
- * Configuración (§2). Reemplaza el disclosure que vivía en el pie del home: los
- * destinos de cada varias semanas (Mesociclos · Plantillas · Catálogo · Respaldo)
- * ahora son una pantalla propia, alcanzable desde la barra de navegación.
+ * Ajustes (§2). Los destinos de cada varias semanas (Mesociclos · Plantillas ·
+ * Catálogo · Datos) son una pantalla propia, alcanzable desde la barra de
+ * navegación.
  *
  * Sin datos ni Dexie: es lista estática de enlaces, así que la ruta se
  * prerenderiza y abre al instante — no necesita `dynamic(ssr:false)` ni
- * esqueleto. Sin chevron de volver: el «‹» vive en la píldora del shell.
+ * esqueleto. Sin cuentas en los subtítulos ni chip de respaldo: consultarían
+ * Dexie y cambiarían eso (pendiente del owner).
  */
-const DESTINOS = [
-  { href: "/mesociclos", label: "Mesociclos", Icon: CalendarRange },
-  { href: "/plantillas", label: "Plantillas", Icon: ListChecks },
-  { href: "/catalogo", label: "Catálogo", Icon: BookOpen },
-  { href: "/datos", label: "Respaldo", Icon: Database },
+const DESTINOS: { href: string; titulo: string; subtitulo?: string }[] = [
+  { href: "/mesociclos", titulo: "Mesociclos" },
+  { href: "/plantillas", titulo: "Plantillas" },
+  { href: "/catalogo", titulo: "Catálogo" },
+  { href: "/datos", titulo: "Datos", subtitulo: "Respaldo, archivo e integridad" },
 ];
 
 export default function AjustesScreen() {
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-3 p-4">
-      <header className="flex items-center gap-2 pt-2">
-        <h1 className="text-lg font-semibold">Ajustes</h1>
-      </header>
-
-      <div className="flex flex-col gap-2">
-        {DESTINOS.map(({ href, label, Icon }) => (
-          <Link
-            key={href}
-            href={href}
-            className="border-border bg-surface text-muted-foreground flex items-center gap-3 rounded-xl border px-4 py-3.5 text-sm font-medium"
-          >
-            <Icon className="size-4 shrink-0" />
-            <span className="text-foreground flex-1">{label}</span>
-            <ChevronRight className="size-4 shrink-0" />
-          </Link>
-        ))}
+    <>
+      <div className="px-4">
+        <Cabeza titulo="Ajustes" empujada />
       </div>
-    </main>
+      <Hoja empujada>
+        <main className="mx-auto w-full max-w-md p-4">
+          <div className="mt-2 rounded-[20px] bg-white/[.035] px-4 py-0.5 shadow-[inset_0_0_0_1px_var(--color-hair)]">
+            {DESTINOS.map(({ href, titulo, subtitulo }) => (
+              <Fila key={href} href={href} titulo={titulo} subtitulo={subtitulo} chevron />
+            ))}
+          </div>
+        </main>
+      </Hoja>
+    </>
   );
 }

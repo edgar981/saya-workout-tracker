@@ -1,13 +1,16 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Check, ChevronDown, Copy, Plus } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Fila } from "@/components/ui/fila";
+import { Cabeza, Hoja } from "@/components/ui/hoja";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { contar, rangoMesociclo } from "@/lib/ajustes-resumen";
 import {
   activateMesociclo,
   createEmptyMesociclo,
@@ -18,18 +21,11 @@ import {
   type MesocicloView,
 } from "@/lib/db/queries";
 import { useAutosave } from "@/lib/use-autosave";
-import { cn } from "@/lib/utils";
 import { MesociclosSkeleton } from "@/components/skeletons";
 
 function fechaCorta(iso: string): string {
   const [y, m, d] = iso.split("-").map(Number);
   return new Date(y, m - 1, d).toLocaleDateString("es", { day: "numeric", month: "short" });
-}
-
-function rango(m: MesocicloView["mesociclo"]): string {
-  if (!m.iniciado_en) return "sin fecha de inicio";
-  if (m.terminado_en) return `${fechaCorta(m.iniciado_en)} – ${fechaCorta(m.terminado_en)}`;
-  return `desde ${fechaCorta(m.iniciado_en)}`;
 }
 
 export default function MesociclosScreen() {
@@ -42,40 +38,40 @@ export default function MesociclosScreen() {
   const activo = mesociclos.find((v) => v.mesociclo.activo === 1)?.mesociclo ?? null;
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-3 p-4">
-      <header className="flex items-center gap-2 pt-2">
-        <h1 className="text-lg font-semibold">Mesociclos</h1>
-      </header>
-
-      <p className="text-muted-foreground text-sm">
-        El plan vigente es el mesociclo activo. Cambiar de plan es activar otro, no editar el actual
-        en sitio: la composición del viejo queda intacta para el histórico.
-      </p>
-
-      <div className="flex gap-2">
-        <Button
-          variant="outline"
-          className="flex-1"
-          disabled={!activo}
-          onClick={() => activo && void duplicateMesociclo(activo.id, `${activo.nombre} copia`)}
-        >
-          <Copy /> Duplicar el actual
-        </Button>
-        <Button
-          variant="outline"
-          className="flex-1"
-          onClick={() => void createEmptyMesociclo(`Mesociclo ${mesociclos.length + 1}`)}
-        >
-          <Plus /> Crear vacío
-        </Button>
+    <>
+      <div className="px-4">
+        <Cabeza titulo="Mesociclos" empujada />
       </div>
+      <Hoja empujada>
+        <main className="mx-auto w-full max-w-md p-4">
+          <div className="mt-2 rounded-[20px] bg-white/[.035] px-4 py-0.5 shadow-[inset_0_0_0_1px_var(--color-hair)]">
+            {mesociclos.map((view) => (
+              <FilaMesociclo key={view.mesociclo.id} view={view} />
+            ))}
+          </div>
 
-      <div className="flex flex-col gap-2">
-        {mesociclos.map((view) => (
-          <FilaMesociclo key={view.mesociclo.id} view={view} />
-        ))}
-      </div>
-    </main>
+          <div className="mt-[18px] flex flex-wrap items-center gap-2.5">
+            <Button
+              variant="secondary"
+              disabled={!activo}
+              onClick={() => activo && void duplicateMesociclo(activo.id, `${activo.nombre} copia`)}
+            >
+              Duplicar el actual
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => void createEmptyMesociclo(`Mesociclo ${mesociclos.length + 1}`)}
+            >
+              Crear vacío
+            </Button>
+          </div>
+
+          <p className="mt-3 text-[13px] leading-[18px] text-ink3">
+            Solo uno está activo. Las sesiones guardan el día del mesociclo en que se hicieron.
+          </p>
+        </main>
+      </Hoja>
+    </>
   );
 }
 
@@ -87,39 +83,35 @@ function FilaMesociclo({ view }: { view: MesocicloView }) {
   const activo = mesociclo.activo === 1;
 
   return (
-    <div className="rounded-lg border">
-      <button
-        type="button"
+    <div>
+      <Fila
         onClick={() => setAbierto((v) => !v)}
         aria-expanded={abierto}
-        className="flex w-full items-center gap-2 p-3 text-left"
-      >
-        <span className="min-w-0 flex-1">
+        titulo={
           <span className="flex items-center gap-2">
-            <span className="truncate text-sm font-medium">{mesociclo.nombre}</span>
-            {activo && (
-              <Badge variant="default" className="text-[10px]">
-                activo
-              </Badge>
-            )}
+            <span className="truncate">{mesociclo.nombre}</span>
+            {activo && <Badge className="text-ink">activo</Badge>}
           </span>
-          <span className="text-muted-foreground text-xs tabular-nums">
-            {rango(mesociclo)} · {dias} {dias === 1 ? "día" : "días"}
-          </span>
-        </span>
-        <ChevronDown className={cn("text-muted-foreground size-4", abierto && "rotate-180")} />
-      </button>
+        }
+        subtitulo={`${rangoMesociclo(mesociclo.iniciado_en, mesociclo.terminado_en, fechaCorta)} · ${contar(dias, "día", "días")}`}
+      />
 
       {abierto && (
-        <div className="flex flex-col gap-3 border-t p-3">
+        <div className="pb-4">
           {!activo && (
-            <Button size="sm" onClick={() => void activateMesociclo(mesociclo.id)}>
-              <Check /> Activar este mesociclo
+            <Button
+              variant="secondary"
+              className="w-full"
+              onClick={() => void activateMesociclo(mesociclo.id)}
+            >
+              Activar este mesociclo
             </Button>
           )}
 
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor={`nombre-${mesociclo.id}`}>Nombre</Label>
+          <div className="mt-5">
+            <Label htmlFor={`nombre-${mesociclo.id}`} className="kicker mb-[9px]">
+              Nombre
+            </Label>
             <Input
               id={`nombre-${mesociclo.id}`}
               value={nombre}
@@ -135,8 +127,10 @@ function FilaMesociclo({ view }: { view: MesocicloView }) {
             />
           </div>
 
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor={`inicio-${mesociclo.id}`}>Fecha de inicio</Label>
+          <div className="mt-5">
+            <Label htmlFor={`inicio-${mesociclo.id}`} className="kicker mb-[9px]">
+              Fecha de inicio
+            </Label>
             <Input
               id={`inicio-${mesociclo.id}`}
               type="date"
@@ -145,11 +139,17 @@ function FilaMesociclo({ view }: { view: MesocicloView }) {
                 void updateMesocicloIniciadoEn(mesociclo.id, e.target.value === "" ? null : e.target.value)
               }
             />
-            <span className="text-muted-foreground text-xs">
+            <p className="mt-2 text-[13px] leading-[18px] text-ink2">
               Desde esta fecha se cuenta la semana del mesociclo en el home. Sin fecha, no se muestra
               número de semana.
-            </span>
+            </p>
           </div>
+
+          {activo && (
+            <Link href="/plantillas" className="tl mt-5 inline-flex min-h-11 items-center">
+              Editar plantillas ›
+            </Link>
+          )}
         </div>
       )}
     </div>

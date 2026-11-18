@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { ErrorEnLinea } from "@/components/ui/estados";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { authClient } from "@/lib/auth/cliente";
@@ -71,9 +72,9 @@ export function CuentaPanel({ onEntro }: { onEntro: () => void }) {
   const sinRed = sesion.error ? esSinRed(sesion.error) : false;
 
   return (
-    <div className="flex flex-col gap-3 rounded-lg border p-3">
+    <div className="py-3">
       {sesion.isPending ? (
-        <p className="text-muted-foreground text-xs">Consultando la sesión…</p>
+        <p className="text-[15px] leading-[22px] text-ink2">Consultando la sesión…</p>
       ) : sesion.data ? (
         <ConSesion
           correo={sesion.data.user.email}
@@ -83,22 +84,29 @@ export function CuentaPanel({ onEntro }: { onEntro: () => void }) {
           onSalir={salir}
         />
       ) : sesion.error ? (
-        <p className="text-muted-foreground text-xs">
+        <ErrorEnLinea>
           {sinRed
             ? "Sin señal: la sesión se consulta al volver la red."
             : "No se pudo consultar la sesión."}
-        </p>
+        </ErrorEnLinea>
       ) : (
-        <div className="flex flex-col gap-3">
+        <div>
           {!crear && (
-            <Button variant="outline" size="sm" disabled={ocupado} onClick={entrarConPasskey}>
+            <Button
+              variant="secondary"
+              className="w-full"
+              disabled={ocupado}
+              onClick={entrarConPasskey}
+            >
               {accion === "passkey" ? "Entrando…" : "Entrar con passkey"}
             </Button>
           )}
 
-          <form className="flex flex-col gap-3" onSubmit={enviar}>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="cuenta-correo">Correo</Label>
+          <form onSubmit={enviar}>
+            <div className="mt-5">
+              <Label htmlFor="cuenta-correo" className="kicker mb-[9px]">
+                Correo
+              </Label>
               <Input
                 id="cuenta-correo"
                 type="email"
@@ -109,8 +117,10 @@ export function CuentaPanel({ onEntro }: { onEntro: () => void }) {
                 onChange={(e) => setCorreo(e.target.value)}
               />
             </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="cuenta-contrasena">Contraseña</Label>
+            <div className="mt-5">
+              <Label htmlFor="cuenta-contrasena" className="kicker mb-[9px]">
+                Contraseña
+              </Label>
               <Input
                 id="cuenta-contrasena"
                 type="password"
@@ -122,7 +132,7 @@ export function CuentaPanel({ onEntro }: { onEntro: () => void }) {
               />
             </div>
 
-            <Button type="submit" size="sm" disabled={ocupado}>
+            <Button type="submit" variant="secondary" className="mt-5 w-full" disabled={ocupado}>
               {crear
                 ? accion === "crear"
                   ? "Creando la cuenta…"
@@ -135,8 +145,8 @@ export function CuentaPanel({ onEntro }: { onEntro: () => void }) {
 
           <Button
             type="button"
-            variant="ghost"
-            size="sm"
+            variant="link"
+            className="mt-3"
             disabled={ocupado}
             onClick={() => {
               setCrear(!crear);
@@ -148,8 +158,8 @@ export function CuentaPanel({ onEntro }: { onEntro: () => void }) {
         </div>
       )}
 
-      {aviso && <p className="text-muted-foreground text-xs">{aviso}</p>}
-      {error && <p className="text-destructive text-xs">{error}</p>}
+      {aviso && <p className="mt-3 text-[13px] leading-[18px] text-ink2">{aviso}</p>}
+      {error && <ErrorEnLinea className="mt-3">{error}</ErrorEnLinea>}
     </div>
   );
 }
@@ -170,16 +180,16 @@ function ConSesion({
   const passkeys = authClient.useListPasskeys();
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="bg-muted/40 flex flex-col gap-0.5 rounded-md px-3 py-2 text-xs">
+    <div>
+      <div className="flex flex-col gap-0.5 text-sm leading-5">
         <span>Sesión iniciada: {correo}</span>
-        <span className="text-muted-foreground">Passkeys en esta cuenta: {passkeys.data ? passkeys.data.length : "…"}</span>
+        <span className="text-ink2">Passkeys en esta cuenta: {passkeys.data ? passkeys.data.length : "…"}</span>
       </div>
-      <div className="flex gap-2">
-        <Button variant="outline" size="sm" className="flex-1" disabled={ocupado} onClick={onAgregar}>
+      <div className="mt-[18px] flex flex-wrap items-center gap-2.5">
+        <Button variant="secondary" disabled={ocupado} onClick={onAgregar}>
           {accion === "agregar" ? "Agregando…" : "Agregar un passkey"}
         </Button>
-        <Button variant="ghost" size="sm" disabled={ocupado} onClick={onSalir}>
+        <Button variant="link" disabled={ocupado} onClick={onSalir}>
           {accion === "salir" ? "Saliendo…" : "Salir"}
         </Button>
       </div>

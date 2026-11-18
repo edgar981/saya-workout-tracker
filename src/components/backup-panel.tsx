@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useSyncExternalStore } from "react";
-import { CloudUpload, RotateCw, Server } from "lucide-react";
+import { CloudUpload, RotateCw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -160,49 +160,51 @@ export function BackupPanel({
 
   const chip = state.pending
     ? state.lastError
-      ? { label: "Falló", cls: "text-destructive border-destructive/50" }
-      : { label: "Pendiente", cls: "text-foreground border-foreground/30" }
-    : { label: "Al día", cls: "text-muted-foreground border-border" };
+      ? { label: "Falló", cls: "ko" }
+      : { label: "Pendiente", cls: "text-ink" }
+    : { label: "Al día", cls: "" };
 
   return (
-    <div className="flex flex-col gap-3 rounded-lg border p-3">
-      <div className="flex items-center gap-2">
-        <Server className="size-4" />
-        <span className="text-sm font-medium">Respaldo automático</span>
-        <span className={cn("ml-auto rounded-full border px-2 py-0.5 text-xs", chip.cls)}>
-          {chip.label}
-        </span>
+    <section className="sec">
+      <div className="sec-cab">
+        <h2 className="kicker">Respaldo automático</h2>
+        <span className={cn("bd ml-auto", chip.cls)}>{chip.label}</span>
       </div>
 
-      <p className="text-muted-foreground text-xs">
+      <p className="dek">
         Al cerrar una sesión se empuja un volcado completo al servidor. Si no hay señal, queda
         pendiente y se reintenta al abrir la app. Dexie sigue siendo la fuente de verdad.
       </p>
 
       {state.pending && state.lastError && (
-        <p className="text-destructive text-xs">Último intento: {state.lastError}</p>
+        <div role="alert" className="errbox err-t mt-3">
+          <p>Último intento: {state.lastError}</p>
+          <span className="mt-0.5 block text-ink2">
+            Tus datos no se tocaron: siguen en este teléfono.
+          </span>
+        </div>
       )}
 
       {/* Última copia: el dato que hace del respaldo un hecho verificable. */}
       {latestSinSesion && !state.last ? null : (
-      <div className="bg-muted/40 rounded-md px-3 py-2 text-xs">
+      <div className="mt-2 rounded-[20px] bg-white/[.035] px-4 py-3 text-sm shadow-[inset_0_0_0_1px_var(--color-hair)]">
         {latest === undefined ? (
-          <span className="text-muted-foreground">Consultando el servidor…</span>
+          <span className="text-ink2">Consultando el servidor…</span>
         ) : latestSinSesion ? (
           state.last && (
-            <span className="text-muted-foreground">Última conocida (local): {fmtDate(state.last.at)}</span>
+            <span className="text-ink2">Última conocida (local): {fmtDate(state.last.at)}</span>
           )
         ) : latestFalla ? (
           <div className="flex flex-col gap-0.5">
-            <span className="text-muted-foreground">No se pudo consultar el servidor.</span>
+            <span className="text-ink2">No se pudo consultar el servidor.</span>
             {state.last && (
-              <span className="text-muted-foreground">
+              <span className="text-ink2">
                 Última conocida (local): {fmtDate(state.last.at)}
               </span>
             )}
           </div>
         ) : latest === null ? (
-          <span className="text-muted-foreground">Aún no hay ningún respaldo en el servidor.</span>
+          <span className="text-ink2">Aún no hay ningún respaldo en el servidor.</span>
         ) : (
           <div className="flex flex-col gap-0.5">
             <span className="font-medium">Última copia: {fmtDate(latest.creado_en)}</span>
@@ -211,7 +213,7 @@ export function BackupPanel({
       </div>
       )}
 
-      <div className="flex flex-wrap gap-2">
+      <div className="mt-[18px] flex flex-wrap gap-2">
         <Button variant="outline" size="sm" className="flex-auto" disabled={pushing} onClick={() => void doBackup()}>
           <CloudUpload /> {pushing ? "Respaldando…" : "Respaldar ahora"}
         </Button>
@@ -221,28 +223,30 @@ export function BackupPanel({
       </div>
 
       {showRestore && (
-        <div className="flex flex-col gap-2 border-t pt-2">
-          <p className="text-muted-foreground text-xs">
+        <div className="mt-2 rounded-[20px] bg-white/[.035] px-4 py-3 shadow-[inset_0_0_0_1px_var(--color-hair)]">
+          <p className="text-[13px] leading-[18px] text-ink2">
             Restaurar reemplaza todo, igual que desde archivo: antes descarga un respaldo del estado
             actual (esa es la guarda) y valida el schema_version. Toca dos veces para confirmar.
           </p>
-          {loadingList && <p className="text-muted-foreground text-xs">Cargando snapshots…</p>}
-          {listErr && <p className="text-destructive text-xs">{listErr}</p>}
+          {loadingList && <p className="mt-2 text-[13px] text-ink2">Cargando snapshots…</p>}
+          {listErr && <p className="err-t mt-2 text-[13px]">{listErr}</p>}
           {snapshots && snapshots.length === 0 && (
-            <p className="text-muted-foreground text-xs">No hay snapshots en el servidor.</p>
+            <p className="mt-2 text-[13px] text-ink2">No hay snapshots en el servidor.</p>
           )}
           {snapshots?.map((snap) => (
-            <div key={snap.id} className="flex items-center gap-2 rounded-md border px-2 py-1.5">
+            <div
+              key={snap.id}
+              className="flex items-center gap-2 border-t border-hair py-2 first:border-t-0"
+            >
               <div className="flex min-w-0 flex-col">
-                <span className="text-xs font-medium">{fmtDate(snap.creado_en)}</span>
-                <span className="text-muted-foreground truncate text-[11px]">
+                <span className="text-sm font-medium">{fmtDate(snap.creado_en)}</span>
+                <span className="truncate text-xs text-ink2">
                   s{snap.schema_version} · {countsLine(snap.counts)}
                 </span>
               </div>
               <Button
-                variant={armedId === snap.id ? "destructive" : "outline"}
-                size="sm"
-                className="ml-auto shrink-0"
+                variant="link"
+                className={cn("ml-auto shrink-0", armedId === snap.id && "danger")}
                 disabled={restoringId !== null}
                 onClick={() => (armedId === snap.id ? void doRestore(snap.id) : setArmedId(snap.id))}
               >
@@ -256,6 +260,6 @@ export function BackupPanel({
           ))}
         </div>
       )}
-    </div>
+    </section>
   );
 }
