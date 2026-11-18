@@ -424,6 +424,10 @@ function TarjetaEjercicio({
           {item.exercise.nombre}
         </Link>
         {veredicto && <VeredictoLinea item={veredicto} verFecha={verFecha} />}
+        {!veredicto && estado === "iniciado_sin_registro" && (
+          <span className="l-s l-dn">Se empezó, sin series registradas.</span>
+        )}
+        {!veredicto && estado === "no_realizado" && <span className="l-s l-dn">No realizado.</span>}
       </div>
 
       {hayChips && (
@@ -444,10 +448,6 @@ function TarjetaEjercicio({
       {estado === "realizado" && (
         <SetLines sets={item.sets} stackLabel={item.exercise.stack_label} gaps={gapMs} />
       )}
-      {estado === "iniciado_sin_registro" && (
-        <p className="l-s mt-2.5">Se empezó, sin series registradas.</p>
-      )}
-      {estado === "no_realizado" && <p className="l-s mt-2.5">No realizado.</p>}
 
       {item.sessionExercise.nota && <p className="l-s mt-2">{item.sessionExercise.nota}</p>}
     </div>

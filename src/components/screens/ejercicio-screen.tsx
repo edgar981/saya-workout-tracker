@@ -115,9 +115,7 @@ export default function EjercicioScreen() {
   const pocosDatos = progreso.estado === "pocos_datos";
   const hayLinea = progreso.mejor !== null && progreso.puntos.length >= 2;
   const leyenda = [
-    hayLinea
-      ? "Cada punto: el promedio de tus dos mejores series de esa sesión. El anillo marca tu mejor sesión."
-      : "",
+    "Cada punto: el promedio de tus dos mejores series de esa sesión. El anillo marca tu mejor sesión.",
     notaCuerpo.trim(),
     fuera.length > 0 ? `Fuera de la línea: ${fuera.join(" y ")}.` : "",
   ]

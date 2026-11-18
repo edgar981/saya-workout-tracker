@@ -43,7 +43,7 @@ export function VeredictoLinea({
   const { verdict, referenceFecha } = item;
   const vs =
     verFecha && referenceFecha && verdict.category !== "sin_comparacion"
-      ? ` · vs ${fechaCorta(referenceFecha)}`
+      ? ` vs ${fechaCorta(referenceFecha)}`
       : "";
 
   if (verdict.category === "sin_comparacion") {
