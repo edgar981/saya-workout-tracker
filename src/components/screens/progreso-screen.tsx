@@ -1,37 +1,26 @@
 "use client";
 
+import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useLiveQuery } from "dexie-react-hooks";
 
 import { BalanceChart } from "@/components/progress/balance-chart";
-import {
-  detalleEstado,
-  ESTADO_ICON,
-  ESTADO_LABEL,
-  estadoClass,
-  fechaCorta,
-} from "@/components/progress/estado";
-import { Sparkline } from "@/components/progress/sparkline";
+import { detalleEstado, ESTADO_LABEL, fechaCorta } from "@/components/progress/estado";
 import { VolumenCard } from "@/components/progress/volumen-card";
-import { loadProgreso, type ProgresoFila, type ProgresoView } from "@/lib/db/progress";
-import { SEMANAS_BALANCE, type EstadoProgreso } from "@/lib/progress";
 import { ProgresoSkeleton } from "@/components/skeletons";
-import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { BloqueError, Vacio } from "@/components/ui/estados";
+import { Cabeza, Hoja } from "@/components/ui/hoja";
+import { contarEstados, teselasDeEstados } from "@/lib/cuerpo";
+import { loadProgreso, type ProgresoView } from "@/lib/db/progress";
+import { cuentaEstados } from "@/lib/leer";
+import type { EstadoProgreso } from "@/lib/progress";
 
 /**
  * Capa 2 (DECISIONES.md §11.7): ¿estoy progresando, en qué, y desde cuándo no?
  * Hechos, no consejos — la app no sugiere descargar (§11.5), igual que no sugiere
  * qué día toca (§7.5).
  */
-
-/** Grupos en pantalla. "Sin datos suficientes" junta los dos estados sin lectura. */
-const GRUPOS: { titulo: string; estados: EstadoProgreso[] }[] = [
-  { titulo: ESTADO_LABEL.subiendo, estados: ["subiendo"] },
-  { titulo: ESTADO_LABEL.estancado, estados: ["estancado"] },
-  { titulo: ESTADO_LABEL.por_debajo, estados: ["por_debajo"] },
-  { titulo: ESTADO_LABEL.sin_registrar, estados: ["sin_registrar"] },
-  { titulo: "Sin datos suficientes", estados: ["pocos_datos", "sin_registros"] },
-];
 
 function subtitulo({ mesociclo, bloque }: ProgresoView): string | null {
   const partes: string[] = [];
@@ -46,89 +35,126 @@ function subtitulo({ mesociclo, bloque }: ProgresoView): string | null {
   return partes.length > 0 ? partes.join(" · ") : null;
 }
 
+type Lectura = { ok: true; vista: ProgresoView } | { ok: false };
+
 export default function ProgresoScreen() {
-  const data = useLiveQuery(() => loadProgreso(), []);
+  // «Reintentar» vuelve a correr la lectura: cambia la dependencia de la query.
+  const [intento, setIntento] = useState(0);
+  const lectura = useLiveQuery<Lectura>(async () => {
+    try {
+      return { ok: true, vista: await loadProgreso() };
+    } catch {
+      return { ok: false };
+    }
+  }, [intento]);
 
-  if (data === undefined) {
-    return <ProgresoSkeleton />;
-  }
+  if (lectura === undefined) return <ProgresoSkeleton />;
 
-  const sub = subtitulo(data);
-  const sinDatos = data.semanas.length === 0;
+  const vacio = lectura.ok && lectura.vista.semanas.length === 0;
+  const sub = !lectura.ok
+    ? undefined
+    : vacio
+      ? "Sin sesiones cerradas"
+      : (subtitulo(lectura.vista) ?? undefined);
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-5 p-4">
-      <header className="flex items-center gap-2 pt-2">
-        <div className="min-w-0">
-          <h1 className="text-lg font-semibold">Progreso</h1>
-          {sub && <p className="text-muted-foreground text-xs tabular-nums">{sub}</p>}
-        </div>
-      </header>
-
-      {sinDatos ? (
-        <p className="text-muted-foreground text-sm">
-          Todavía no hay sesiones cerradas para leer progreso.
-        </p>
-      ) : (
-        <>
-          <section className="bg-surface flex flex-col gap-3 rounded-xl border p-3.5">
-            <div>
-              <h2 className="text-sm font-medium">Balance semanal</h2>
-              <p className="text-muted-foreground text-xs">
-                Mejor − peor de cada sesión, sumado por semana · últimas {SEMANAS_BALANCE}
-              </p>
-            </div>
-            <BalanceChart semanas={data.semanas} />
-          </section>
-
-          <VolumenCard volumen={data.volumen} />
-
-          {GRUPOS.map(({ titulo, estados }) => {
-            const filas = data.filas.filter((f) => estados.includes(f.progreso.estado));
-            if (filas.length === 0) return null;
-            const Icon = ESTADO_ICON[estados[0]];
-            return (
-              <section key={titulo} className="flex flex-col gap-2">
-                <h2
-                  className={cn(
-                    "flex items-center gap-1 text-xs font-medium",
-                    estadoClass(estados[0]),
-                  )}
-                >
-                  {Icon && <Icon className="size-3.5" />}
-                  {titulo}
-                  <span className="text-muted-foreground font-normal tabular-nums">
-                    · {filas.length}
-                  </span>
-                </h2>
-                <div className="flex flex-col gap-2">
-                  {filas.map((fila) => (
-                    <Fila key={fila.exercise.id} fila={fila} />
-                  ))}
-                </div>
-              </section>
-            );
-          })}
-        </>
-      )}
-    </main>
+    <>
+      <div className="px-4">
+        <Cabeza titulo="Progreso" subtitulo={sub} empujada />
+      </div>
+      <Hoja empujada>
+        <main className="mx-auto w-full max-w-md p-4">
+          {!lectura.ok ? (
+            <BloqueError
+              titulo="No se pudo calcular tu progreso."
+              alReintentar={() => setIntento((n) => n + 1)}
+            />
+          ) : vacio ? (
+            <Vacio
+              titulo="Todavía no hay sesiones cerradas."
+              texto="El balance, los estados y el volumen salen de las sesiones que cierres."
+              salida={
+                <Button asChild variant="secondary">
+                  <Link href="/">Ir a Hoy</Link>
+                </Button>
+              }
+            />
+          ) : (
+            <Contenido vista={lectura.vista} />
+          )}
+        </main>
+      </Hoja>
+    </>
   );
 }
 
-function Fila({ fila }: { fila: ProgresoFila }) {
-  const { exercise, progreso } = fila;
+function Seccion({
+  titulo,
+  derecha,
+  children,
+}: {
+  titulo: string;
+  derecha?: ReactNode;
+  children: ReactNode;
+}) {
   return (
-    <Link
-      href={`/ejercicio/${exercise.id}`}
-      className="hover:bg-accent flex items-center gap-3 rounded-lg border p-3"
-    >
-      <div className="min-w-0 flex-1">
-        <div className="truncate text-sm font-medium">{exercise.nombre}</div>
-        <div className="text-muted-foreground mt-0.5 text-xs tabular-nums">
-          {detalleEstado(progreso)}
-        </div>
+    <section className="sec">
+      <div className="sec-cab">
+        <h2 className="kicker">{titulo}</h2>
+        {derecha != null && <span className="kicker kicker-d">{derecha}</span>}
       </div>
-      {progreso.mejor && <Sparkline puntos={progreso.puntos} mejor={progreso.mejor.marca} />}
-    </Link>
+      {children}
+    </section>
+  );
+}
+
+function Contenido({ vista }: { vista: ProgresoView }) {
+  // Una sola tesela abierta a la vez; tocar la abierta la cierra.
+  const [abierto, setAbierto] = useState<EstadoProgreso | null>(null);
+
+  const estados = vista.filas.map((f) => f.progreso.estado);
+  const cuenta = cuentaEstados(vista.filas.map((f) => ({ estado: f.progreso.estado })));
+  const teselas = teselasDeEstados(contarEstados(estados));
+  const filasAbiertas = abierto ? vista.filas.filter((f) => f.progreso.estado === abierto) : [];
+
+  return (
+    <>
+      <Seccion titulo="Balance por semana" derecha="mejor − peor">
+        <BalanceChart semanas={vista.semanas} />
+      </Seccion>
+
+      <Seccion titulo="Estados" derecha={cuenta.texto}>
+        <div className="teselas">
+          {teselas.map((t) => (
+            <button
+              key={t.estado}
+              type="button"
+              className="tesela"
+              aria-expanded={abierto === t.estado}
+              disabled={t.cuenta === 0}
+              onClick={() => setAbierto((a) => (a === t.estado ? null : t.estado))}
+            >
+              <span className="tesela-n">{t.cuenta}</span>
+              <span className="tesela-l">{ESTADO_LABEL[t.estado]}</span>
+            </button>
+          ))}
+        </div>
+        {abierto === null ? (
+          <p className="l-s3">Toca un estado para ver qué ejercicios están en él.</p>
+        ) : (
+          <div className="l-sub" style={{ marginTop: 14 }}>
+            {filasAbiertas.map((f) => (
+              <Link key={f.exercise.id} href={`/ejercicio/${f.exercise.id}`} className="l-s">
+                <span className="l-tinta">{f.exercise.nombre}</span> · {detalleEstado(f.progreso)}
+              </Link>
+            ))}
+          </div>
+        )}
+      </Seccion>
+
+      <Seccion titulo="Volumen por grupo" derecha="series / semana">
+        <VolumenCard volumen={vista.volumen} />
+      </Seccion>
+    </>
   );
 }

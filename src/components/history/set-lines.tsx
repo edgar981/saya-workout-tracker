@@ -1,7 +1,5 @@
 "use client";
 
-import { Clock } from "lucide-react";
-
 import { Badge } from "@/components/ui/badge";
 import { groupSetLines } from "@/lib/history-format";
 import { formatGap } from "@/lib/rest-gap";
@@ -12,7 +10,9 @@ import type { SetLog } from "@/lib/db/types";
  * peso salen del snapshot del SetLog (ver groupSetLines). No escribe nada.
  *
  * `gaps` (setId → ms) es opcional: solo el detalle de sesión lo pasa, para
- * mostrar el hueco contra la serie anterior (§4). El historial de ejercicio no.
+ * mostrar el hueco contra la serie anterior (§4). El hueco es sólo el tiempo
+ * («2:40»): sin la palabra «descanso», sin ícono y sin color por tiempo — el
+ * comentario de `creado_en` en `types.ts` lo prohíbe.
  */
 export function SetLines({
   sets,
@@ -26,38 +26,24 @@ export function SetLines({
   const lines = groupSetLines(sets, stackLabel, gaps);
 
   return (
-    <div className="flex flex-col gap-1">
+    <div className="mt-2.5">
       {lines.map((line) => (
-        <div key={line.setIndex} className="flex items-baseline gap-2 text-sm">
-          <span className="text-muted-foreground w-12 shrink-0 text-xs">Serie {line.setIndex}</span>
-          <span className="font-medium tabular-nums">
+        <div key={line.setIndex} className="l-ln">
+          <span className="l-ix">S{line.setIndex}</span>
+          <span className="font-medium">
             {line.repsText}
-            {line.total !== null && (
-              <span className="text-muted-foreground font-normal"> ({line.total})</span>
-            )}
+            {line.total !== null && <span className="text-ink2 font-normal"> ({line.total})</span>}
           </span>
           {line.isBodyweight ? (
-            <span className="text-muted-foreground text-xs">peso corporal</span>
+            <span className="l-s">peso corporal</span>
           ) : (
             <>
-              <span className="text-muted-foreground">×</span>
-              <span className="tabular-nums">{line.weightText}</span>
+              <span className="text-ink3">×</span>
+              <span>{line.weightText}</span>
             </>
           )}
-          {line.esExtra && (
-            <Badge variant="secondary" className="text-[10px]">
-              extra
-            </Badge>
-          )}
-          {/* Hueco contra la serie anterior (§4). Discreto y neutro: sin rótulo
-              "descanso", sin color por tiempo. Ausente en la primera serie y en
-              las filas anteriores a creado_en. */}
-          {line.gap !== null && (
-            <span className="text-muted-foreground ml-auto flex items-center gap-1 self-center text-xs tabular-nums">
-              <Clock className="size-3 shrink-0" />
-              {formatGap(line.gap)}
-            </span>
-          )}
+          {line.esExtra && <Badge variant="secondary">extra</Badge>}
+          {line.gap !== null && <span className="l-hueco">{formatGap(line.gap)}</span>}
         </div>
       ))}
     </div>

@@ -1,157 +1,203 @@
 "use client";
 
+import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useLiveQuery } from "dexie-react-hooks";
-import { MessageSquare } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
-import { listSessionSummaries } from "@/lib/db/queries";
-import { loadSessionVerdictNets, type SessionVerdictNet } from "@/lib/db/verdicts";
 import { HistorialSkeleton } from "@/components/skeletons";
+import { fechaCorta } from "@/components/progress/estado";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { BloqueError, Vacio } from "@/components/ui/estados";
+import { Fila } from "@/components/ui/fila";
+import { Cabeza, Hoja } from "@/components/ui/hoja";
+import { formatoNeto } from "@/lib/cuerpo";
+import { listSessionSummaries, type SessionSummary } from "@/lib/db/queries";
+import { loadSessionVerdictNets, type SessionVerdictNet } from "@/lib/db/verdicts";
+import {
+  barrasHistorial,
+  cabezaHistorial,
+  semanasHistorial,
+  subtituloFila,
+} from "@/lib/leer";
+import { TAG_DELOAD } from "@/lib/progress";
 import { cn } from "@/lib/utils";
 
-/** Día y mes para la columna izquierda (DM Mono). Partido a mano: `new Date('…')`
- *  se parsea como UTC y muestra el día anterior en América. */
-function diaMes(iso: string): { dia: string; mes: string } {
-  const [y, m, d] = iso.split("-").map(Number);
-  const dt = new Date(y, m - 1, d);
-  return { dia: String(d), mes: dt.toLocaleDateString("es", { month: "short" }).replace(".", "") };
-}
-
-function fechaLarga(iso: string): string {
-  const [y, m, d] = iso.split("-").map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString("es", { day: "numeric", month: "short", year: "numeric" });
-}
-
-/** Cuántas sesiones entran en la gráfica de constancia. */
-const CHART_N = 14;
+type Lectura =
+  | { ok: true; summaries: SessionSummary[]; nets: Record<string, SessionVerdictNet> }
+  | { ok: false };
 
 export default function HistorialScreen() {
+  // «Reintentar» vuelve a correr la lectura: cambia la dependencia de la query.
+  const [intento, setIntento] = useState(0);
   // Una sola query: los resúmenes y, para esos ids, el veredicto neto por sesión.
   // useLiveQuery rastrea todas las lecturas Dexie de dentro, así que reacciona a
   // cualquier cambio sin encadenar dos suscripciones.
-  const data = useLiveQuery(async () => {
-    const summaries = await listSessionSummaries();
-    const nets = await loadSessionVerdictNets(summaries.map((s) => s.session.id));
-    return { summaries, nets };
-  }, []);
+  const lectura = useLiveQuery<Lectura>(async () => {
+    try {
+      const summaries = await listSessionSummaries();
+      const nets = await loadSessionVerdictNets(summaries.map((s) => s.session.id));
+      return { ok: true, summaries, nets };
+    } catch {
+      return { ok: false };
+    }
+  }, [intento]);
 
-  if (data === undefined) {
-    return <HistorialSkeleton />;
-  }
+  if (lectura === undefined) return <HistorialSkeleton />;
 
-  const { summaries, nets } = data;
-  // summaries viene descendente por fecha: la primera sesión es la última del array.
-  const primera = summaries[summaries.length - 1]?.session.fecha ?? null;
-  // Gráfica: las últimas CHART_N, en orden cronológico (izq → der).
-  const chart = summaries.slice(0, CHART_N).reverse();
-  const maxSeries = Math.max(1, ...chart.map((s) => s.totalSeries));
+  const sinSesiones = lectura.ok && lectura.summaries.length === 0;
+  const subtitulo = !lectura.ok
+    ? undefined
+    : sinSesiones
+      ? "Sin sesiones"
+      : (cabezaHistorial(
+          lectura.summaries.map((s) => ({ fecha: s.session.fecha, abierta: s.session.activa === 1 })),
+          fechaCorta,
+        ) ?? undefined);
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-4 p-4">
-      <header className="flex items-center gap-2 pt-2">
-        <div className="min-w-0">
-          <h1 className="text-lg font-semibold">Historial</h1>
-          {primera && (
-            <p className="text-muted-foreground text-xs tabular-nums">
-              {summaries.length} {summaries.length === 1 ? "sesión" : "sesiones"} · desde el{" "}
-              {fechaLarga(primera)}
-            </p>
+    <>
+      <div className="px-4">
+        <Cabeza titulo="Historial" subtitulo={subtitulo} empujada />
+      </div>
+      <Hoja empujada>
+        <main className="mx-auto w-full max-w-md p-4">
+          {!lectura.ok ? (
+            <BloqueError
+              titulo="No se pudo leer el historial."
+              alReintentar={() => setIntento((n) => n + 1)}
+            />
+          ) : sinSesiones ? (
+            <Vacio
+              titulo="Todavía no hay sesiones."
+              texto="Cuando cierres tu primera sesión aparece aquí, con sus series."
+              salida={
+                <Button asChild variant="secondary">
+                  <Link href="/">Ir a Hoy</Link>
+                </Button>
+              }
+            />
+          ) : (
+            <Contenido summaries={lectura.summaries} nets={lectura.nets} />
           )}
-        </div>
-      </header>
-
-      {summaries.length === 0 ? (
-        <p className="text-muted-foreground text-sm">Todavía no hay sesiones registradas.</p>
-      ) : (
-        <>
-          {/* Gráfica de constancia: cuenta SERIES por sesión, no rendimiento. Sin
-              ejes, sin números, sin interacción — solo el pulso de asistencia. */}
-          <section className="flex flex-col gap-1.5">
-            <span className="text-muted-foreground text-xs">Series por sesión · últimas {CHART_N}</span>
-            <div className="flex h-12 items-end gap-1">
-              {chart.map(({ session, totalSeries }) => (
-                <div key={session.id} className="flex flex-1 items-end justify-center self-stretch">
-                  <div
-                    className={cn(
-                      "w-full rounded-sm",
-                      // La sesión activa en acento (su único significado permitido);
-                      // el resto en un neutro que no insinúa rendimiento.
-                      session.activa === 1 ? "bg-primary" : "bg-faint",
-                    )}
-                    style={{ height: `${Math.max(6, (totalSeries / maxSeries) * 100)}%` }}
-                  />
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <div className="flex flex-col gap-2">
-            {summaries.map(({ session, routineDay, ejerciciosConSeries, totalSeries, tieneNota }) => {
-              const { dia, mes } = diaMes(session.fecha);
-              const net = nets[session.id];
-              return (
-                <Link
-                  key={session.id}
-                  href={`/historial/${session.id}`}
-                  className="hover:bg-accent flex items-center gap-3 rounded-lg border p-3"
-                >
-                  <div className="flex w-9 shrink-0 flex-col items-center">
-                    <span className="font-mono text-lg leading-none tabular-nums">{dia}</span>
-                    <span className="text-faint mt-0.5 font-mono text-[10px] uppercase leading-none">
-                      {mes}
-                    </span>
-                  </div>
-
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="truncate text-sm font-medium">
-                        {routineDay?.nombre ?? "Sesión libre"}
-                      </span>
-                      {session.activa === 1 && (
-                        <Badge variant="default" className="text-[10px]">
-                          abierta
-                        </Badge>
-                      )}
-                      {tieneNota && (
-                        <MessageSquare className="text-muted-foreground size-3.5 shrink-0" />
-                      )}
-                    </div>
-                    <div className="text-muted-foreground mt-0.5 text-xs tabular-nums">
-                      {ejerciciosConSeries} ejercicios · {totalSeries} series
-                    </div>
-                  </div>
-
-                  {net && net.comparados > 0 && <VeredictoNeto net={net} />}
-                </Link>
-              );
-            })}
-          </div>
-        </>
-      )}
-    </main>
+        </main>
+      </Hoja>
+    </>
   );
 }
 
-/**
- * Veredicto compacto de la fila: `mejor − peor`. Tinta plena si es positivo;
- * atenuado en cero y negativo. Nunca acento ni rojo (DECISIONES.md §10). El
- * punto tras el número avisa que hubo ejercicios sin comparación, para que el
- * neto no se lea como cobertura completa.
- */
-function VeredictoNeto({ net }: { net: SessionVerdictNet }) {
-  const { net: n, sinComparacion } = net;
-  const texto = n > 0 ? `+${n}` : n < 0 ? `−${Math.abs(n)}` : "0";
+function Seccion({
+  titulo,
+  derecha,
+  children,
+}: {
+  titulo: string;
+  derecha?: ReactNode;
+  children: ReactNode;
+}) {
   return (
-    <span
-      className={cn(
-        "shrink-0 self-center font-mono text-sm tabular-nums",
-        n > 0 ? "text-foreground" : "text-muted-foreground",
-      )}
-      title={sinComparacion > 0 ? `${sinComparacion} sin comparación` : undefined}
-    >
-      {texto}
-      {sinComparacion > 0 && <span className="text-faint align-super text-[9px]"> •</span>}
-    </span>
+    <section className="sec">
+      <div className="sec-cab">
+        <h2 className="kicker">{titulo}</h2>
+        {derecha != null && <span className="kicker kicker-d">{derecha}</span>}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function Contenido({
+  summaries,
+  nets,
+}: {
+  summaries: SessionSummary[];
+  nets: Record<string, SessionVerdictNet>;
+}) {
+  const filas = summaries.map((s) => ({
+    resumen: s,
+    fecha: s.session.fecha,
+    abierta: s.session.activa === 1,
+    deload: s.session.tag_ids.includes(TAG_DELOAD),
+    totalSeries: s.totalSeries,
+  }));
+  const barras = barrasHistorial(filas);
+  const semanas = semanasHistorial(filas);
+
+  return (
+    <>
+      <Seccion titulo="Series por sesión" derecha={`últimas ${barras.n}`}>
+        <div className="l-barras" role="img" aria-label={barras.etiqueta}>
+          {barras.barras.map((b, i) => (
+            <i key={i} className={b.clase || undefined} style={{ height: `${b.alto}%` }} />
+          ))}
+        </div>
+        {barras.primera && barras.ultima && (
+          <div className="l-eje">
+            <span>{fechaCorta(barras.primera)}</span>
+            <span>{fechaCorta(barras.ultima)}</span>
+          </div>
+        )}
+        <p className="dek mt-3">
+          El número de cada sesión es mejor − peor: ejercicios que subieron menos los que bajaron,
+          contra su sesión comparable anterior.
+        </p>
+      </Seccion>
+
+      {semanas.map((semana) => (
+        <Seccion
+          key={semana.lunes}
+          titulo={`Semana del ${fechaCorta(semana.lunes)}${semana.deload ? " · descarga" : ""}`}
+        >
+          {semana.items.map(({ resumen: s, abierta }) => {
+            const net = nets[s.session.id];
+            const mostrarNeto = !abierta && net !== undefined && net.comparados > 0;
+            return (
+              <Fila
+                key={s.session.id}
+                href={`/historial/${s.session.id}`}
+                titulo={
+                  <>
+                    {s.routineDay?.nombre ?? "Sesión libre"}
+                    {abierta && (
+                      <Badge className="text-ink ml-2 align-middle">
+                        <span className="vivo" aria-hidden="true" />
+                        abierta
+                      </Badge>
+                    )}
+                  </>
+                }
+                subtitulo={subtituloFila(
+                  {
+                    fecha: s.session.fecha,
+                    abierta,
+                    ejerciciosConSeries: s.ejerciciosConSeries,
+                    totalSeries: s.totalSeries,
+                    tags: s.tags.map((t) => t.nombre),
+                    tieneNota: s.tieneNota,
+                  },
+                  fechaCorta,
+                )}
+                valor={
+                  mostrarNeto ? (
+                    <span
+                      className={cn(net.net > 0 ? "l-up" : "l-dn")}
+                      title={net.sinComparacion > 0 ? `${net.sinComparacion} sin comparación` : undefined}
+                    >
+                      {formatoNeto(net.net)}
+                      {net.sinComparacion > 0 && (
+                        <span className="align-super text-[9px]" style={{ color: "var(--ink3)" }}>
+                          {" "}
+                          •
+                        </span>
+                      )}
+                    </span>
+                  ) : undefined
+                }
+              />
+            );
+          })}
+        </Seccion>
+      ))}
+    </>
   );
 }

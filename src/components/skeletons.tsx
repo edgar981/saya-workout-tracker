@@ -210,128 +210,108 @@ export function CuerpoSkeleton() {
 // ── /historial ──────────────────────────────────────────────────────────────
 export function HistorialSkeleton() {
   return (
-    <Screen className="gap-4">
-      <header className="flex items-center gap-2 pt-2">
-        <div className="min-w-0">
-          <h1 className="text-lg font-semibold">Historial</h1>
-          <Sk className="mt-1.5 h-3 w-44" />
-        </div>
-      </header>
-      {/* Gráfica de constancia (misma altura que la real: h-12). */}
-      <div className="flex flex-col gap-1.5">
-        <Sk className="h-3 w-40" />
-        <Sk className="h-12 w-full rounded-sm" />
+    <>
+      <div className="px-4">
+        <Cabeza titulo="Historial" empujada />
       </div>
-      <div className="flex flex-col gap-2">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="flex items-center gap-3 rounded-lg border p-3">
-            <div className="flex w-9 shrink-0 flex-col items-center gap-1">
-              <Sk className="h-5 w-6" />
-              <Sk className="h-2.5 w-6" />
+      <Hoja empujada>
+        <main className="mx-auto w-full max-w-md p-4">
+          <div role="status" aria-busy="true">
+            <span className="sr-only">Cargando…</span>
+            <div aria-hidden="true">
+              <Sk className="h-[11px] w-[34%]" />
+              <Sk className="mt-4 h-[38px] w-[58%] rounded-[14px]" />
+              <Sk className="mt-[22px] h-[132px] w-full rounded-3xl" />
+              <Sk className="mt-[22px] h-4 w-[86%]" />
+              <Sk className="mt-[22px] h-4 w-full" />
+              <Sk className="mt-[22px] h-4 w-[72%]" />
+              <Sk className="mt-[22px] h-4 w-[94%]" />
             </div>
-            <div className="min-w-0 flex-1">
-              <Sk className="h-4 w-32" />
-              <Sk className="mt-1.5 h-3 w-40" />
-            </div>
-            <Sk className="h-4 w-6" />
           </div>
-        ))}
-      </div>
-    </Screen>
+        </main>
+      </Hoja>
+    </>
   );
 }
 
 // ── /historial/[id] ─────────────────────────────────────────────────────────
 export function SessionDetailSkeleton() {
   return (
-    <Screen className="gap-4">
-      <HeadStacked />
-      <Card className="flex flex-col gap-2">
-        <Sk className="h-4 w-48" />
-      </Card>
-      {Array.from({ length: 3 }).map((_, i) => (
-        <Card key={i} className="flex flex-col gap-2">
-          <Sk className="h-4 w-32" />
-          <Sk className="h-3 w-full" />
-          <Sk className="h-3 w-2/3" />
-        </Card>
-      ))}
-    </Screen>
+    <>
+      <div className="px-4">
+        <Cabeza titulo="Sesión" empujada />
+      </div>
+      <Hoja empujada>
+        <main className="mx-auto w-full max-w-md p-4">
+          <div role="status" aria-busy="true">
+            <span className="sr-only">Cargando…</span>
+            <div aria-hidden="true">
+              <Sk className="h-[11px] w-[34%]" />
+              <Sk className="mt-4 h-[38px] w-[58%] rounded-[14px]" />
+              <Sk className="mt-[22px] h-[132px] w-full rounded-3xl" />
+              <Sk className="mt-[22px] h-4 w-[86%]" />
+              <Sk className="mt-[22px] h-4 w-full" />
+              <Sk className="mt-[22px] h-4 w-[72%]" />
+              <Sk className="mt-[22px] h-4 w-[94%]" />
+            </div>
+          </div>
+        </main>
+      </Hoja>
+    </>
   );
 }
 
 // ── /ejercicio/[id] ─────────────────────────────────────────────────────────
 export function EjercicioSkeleton() {
   return (
-    <Screen className="gap-4">
-      <HeadStacked />
-      {/* Tarjeta "Mejor serie registrada" (reserva su altura). */}
-      <Card className="flex flex-col gap-1.5">
-        <Sk className="h-3 w-32" />
-        <Sk className="h-6 w-28" />
-        <Sk className="h-3 w-24" />
-      </Card>
-      {/* Tarjeta de progreso: estado + lectura + línea (104 + eje 18). */}
-      <Card className="flex flex-col gap-2">
-        <Sk className="h-3 w-48" />
-        <Sk className="h-4 w-40" />
-        <Sk className="h-[122px] w-full" />
-      </Card>
-      <Sk className="h-3 w-40" />
-      <div className="flex flex-col gap-3">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <Card key={i} className="flex flex-col gap-2">
-            <Sk className="h-4 w-32" />
-            <Sk className="h-3 w-full" />
-          </Card>
-        ))}
+    <>
+      <div className="px-4">
+        <Cabeza titulo="Ejercicio" empujada />
       </div>
-    </Screen>
+      <Hoja empujada>
+        <main className="mx-auto w-full max-w-md p-4">
+          <div role="status" aria-busy="true">
+            <span className="sr-only">Cargando…</span>
+            <div aria-hidden="true">
+              <Sk className="h-[11px] w-[34%]" />
+              <Sk className="mt-4 h-[38px] w-[58%] rounded-[14px]" />
+              <Sk className="mt-[22px] h-[132px] w-full rounded-3xl" />
+              <Sk className="mt-[22px] h-4 w-[86%]" />
+              <Sk className="mt-[22px] h-4 w-full" />
+              <Sk className="mt-[22px] h-4 w-[72%]" />
+              <Sk className="mt-[22px] h-4 w-[94%]" />
+            </div>
+          </div>
+        </main>
+      </Hoja>
+    </>
   );
 }
 
 // ── /progreso ───────────────────────────────────────────────────────────────
 export function ProgresoSkeleton() {
   return (
-    <Screen className="gap-5">
-      <header className="flex items-center gap-2 pt-2">
-        <div className="min-w-0">
-          <h1 className="text-lg font-semibold">Progreso</h1>
-          <Sk className="mt-1.5 h-3 w-52" />
-        </div>
-      </header>
-      {/* Balance semanal (misma altura que el real: dos mitades de 32px + rótulos). */}
-      <Card className="flex flex-col gap-3">
-        <Sk className="h-4 w-32" />
-        <Sk className="h-16 w-full rounded-sm" />
-        <Sk className="h-3 w-full" />
-      </Card>
-      {/* Volumen por grupo: título, leyenda y once filas de 40px. */}
-      <Card className="flex flex-col gap-3">
-        <Sk className="h-4 w-44" />
-        <Sk className="h-3 w-40" />
-        <div className="flex flex-col">
-          {Array.from({ length: 11 }).map((_, i) => (
-            <div key={i} className="flex h-10 items-center gap-3">
-              <Sk className="h-3.5 w-20" />
-              <Sk className="h-2 flex-1" />
-            </div>
-          ))}
-        </div>
-      </Card>
-      <div className="flex flex-col gap-2">
-        <Sk className="h-3 w-24" />
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="flex items-center gap-3 rounded-lg border p-3">
-            <div className="min-w-0 flex-1">
-              <Sk className="h-4 w-36" />
-              <Sk className="mt-1.5 h-3 w-44" />
-            </div>
-            <Sk className="h-5 w-14" />
-          </div>
-        ))}
+    <>
+      <div className="px-4">
+        <Cabeza titulo="Progreso" empujada />
       </div>
-    </Screen>
+      <Hoja empujada>
+        <main className="mx-auto w-full max-w-md p-4">
+          <div role="status" aria-busy="true">
+            <span className="sr-only">Cargando…</span>
+            <div aria-hidden="true">
+              <Sk className="h-[11px] w-[34%]" />
+              <Sk className="mt-4 h-[38px] w-[58%] rounded-[14px]" />
+              <Sk className="mt-[22px] h-[132px] w-full rounded-3xl" />
+              <Sk className="mt-[22px] h-4 w-[86%]" />
+              <Sk className="mt-[22px] h-4 w-full" />
+              <Sk className="mt-[22px] h-4 w-[72%]" />
+              <Sk className="mt-[22px] h-4 w-[94%]" />
+            </div>
+          </div>
+        </main>
+      </Hoja>
+    </>
   );
 }
 
