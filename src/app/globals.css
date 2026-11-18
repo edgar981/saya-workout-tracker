@@ -780,6 +780,281 @@
 }
 
 /*
+ * LEER (slice 4): Historial, el detalle de sesión, Ejercicio y Progreso.
+ */
+@layer components {
+  .l-s {
+    display: block;
+    font-size: 13px;
+    line-height: 18px;
+    color: var(--ink2);
+  }
+  .l-s3 {
+    margin-top: 10px;
+    font-size: 13px;
+    line-height: 18px;
+    color: var(--ink3);
+  }
+  .l-vacio {
+    margin-top: 6px;
+    font-size: 15px;
+    line-height: 22px;
+    color: var(--ink2);
+  }
+  .l-tinta {
+    color: var(--ink);
+  }
+  .l-acts {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-top: 18px;
+  }
+  .l-up {
+    color: var(--ink);
+    white-space: nowrap;
+  }
+  .l-dn {
+    color: var(--ink2);
+    white-space: nowrap;
+  }
+  .l-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 10px;
+  }
+  .l-chips > span {
+    display: inline-flex;
+    align-items: center;
+    height: 26px;
+    padding: 0 10px;
+    border-radius: 13px;
+    border: 1px solid var(--hair);
+    background: rgba(255, 255, 255, 0.05);
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1;
+    color: var(--ink2);
+  }
+  .l-barras {
+    display: flex;
+    align-items: flex-end;
+    gap: 4px;
+    height: 78px;
+    margin-top: 14px;
+  }
+  .l-barras > i {
+    flex: 1;
+    min-height: 2px;
+    border-radius: 3px 3px 0 0;
+    background: rgba(244, 245, 248, 0.55);
+  }
+  .l-barras > i.op {
+    background: var(--chrome);
+  }
+  .l-barras > i.dl {
+    background: rgba(244, 245, 248, 0.2);
+  }
+  .l-eje {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 6px;
+    font-size: 12px;
+    line-height: 16px;
+    color: var(--ink3);
+  }
+  .l-bal {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 96px;
+    margin-top: 14px;
+  }
+  .l-bal::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    height: 1px;
+    background: var(--hair);
+  }
+  .l-bal .c {
+    position: relative;
+    flex: 1;
+    height: 100%;
+  }
+  .l-bal .c i {
+    position: absolute;
+    left: 18%;
+    right: 18%;
+    border-radius: 3px;
+    background: rgba(244, 245, 248, 0.75);
+  }
+  .l-bal .c i.n {
+    background: rgba(244, 245, 248, 0.32);
+  }
+  .l-bal .c i.dl {
+    background: none;
+    box-shadow: inset 0 0 0 1px rgba(244, 245, 248, 0.4);
+  }
+  .l-bal .c b {
+    position: absolute;
+    left: 0;
+    right: 0;
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 14px;
+    text-align: center;
+    color: var(--ink2);
+    font-variant-numeric: tabular-nums;
+  }
+  button.tesela {
+    text-align: left;
+  }
+  .tesela[aria-expanded="true"] {
+    background: rgba(255, 255, 255, 0.1);
+    box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.6);
+  }
+  .l-sub {
+    margin: 8px 0 2px;
+    padding-left: 12px;
+    border-left: 1px solid var(--hair);
+  }
+  .l-sub .l-s {
+    padding: 3px 0;
+  }
+  .l-vfila {
+    display: block;
+    width: 100%;
+    padding: 12px 0;
+    border-top: 1px solid var(--hair);
+    text-align: left;
+  }
+  .l-vfila:first-of-type {
+    border-top: 0;
+  }
+  .l-vfila-rl {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+  }
+  .l-vfila-t {
+    flex: 1;
+  }
+  .l-vbarra {
+    position: relative;
+    display: block;
+    height: 6px;
+    margin-top: 9px;
+    border-radius: 3px;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.12);
+  }
+  .l-vbarra i {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    border-radius: 3px;
+    background: rgba(244, 245, 248, 0.85);
+  }
+  .l-vbarra u {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    background: rgba(244, 245, 248, 0.38);
+  }
+  .l-ej {
+    margin-top: 10px;
+    padding: 14px 16px 12px;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.035);
+    box-shadow: inset 0 0 0 1px var(--hair);
+  }
+  .l-ej-cab {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .l-ej-cab > .tl {
+    flex: 1;
+    justify-content: flex-start;
+    padding: 0;
+    font-size: 16px;
+    font-weight: 500;
+    line-height: 21px;
+    text-align: left;
+    text-decoration: none;
+  }
+  .l-ej-cab > .l-s {
+    padding-top: 1px;
+    text-align: right;
+  }
+  .l-ln {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    min-height: 30px;
+    border-top: 1px solid var(--hair);
+    font-size: 15px;
+    line-height: 21px;
+    font-variant-numeric: tabular-nums;
+  }
+  .l-ln:first-of-type {
+    border-top: 0;
+  }
+  .l-ix {
+    flex: none;
+    width: 20px;
+    font-size: 12px;
+    line-height: 16px;
+    color: var(--ink3);
+    font-variant-numeric: tabular-nums;
+  }
+  .l-hueco {
+    margin-left: auto;
+    font-size: 13px;
+    color: var(--ink3);
+  }
+  .l-tally {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+    margin-top: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 20px;
+    color: var(--ink2);
+    font-variant-numeric: tabular-nums;
+  }
+  .l-tally b {
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .l-pildoras {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .l-linea {
+    display: block;
+    width: 100%;
+    height: auto;
+    margin-top: 12px;
+    overflow: visible;
+  }
+  .l-linea text {
+    fill: var(--ink3);
+    font-size: 11px;
+    font-weight: 400;
+  }
+}
+
+/*
  * CUERPO (`/cuerpo`): kicker de sección, teselas de estados y el punto vivo de la
  * sesión abierta.
  */

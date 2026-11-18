@@ -2,37 +2,42 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Clock, Tag, Trash2 } from "lucide-react";
 
 import { SetLines } from "@/components/history/set-lines";
-import { VerdictBadge } from "@/components/history/verdict-badge";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
+import { VeredictoLinea } from "@/components/history/verdict-badge";
+import { fechaCorta } from "@/components/progress/estado";
+import { SessionDetailSkeleton } from "@/components/skeletons";
+import { TarjetaAnillo, Segmentos } from "@/components/ui/anillo";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { BloqueError, Vacio } from "@/components/ui/estados";
+import { Fila } from "@/components/ui/fila";
+import { Cabeza, Hoja } from "@/components/ui/hoja";
+import { Pildora } from "@/components/ui/pildora";
+import { formatoPeso, textoSeries } from "@/lib/cuerpo";
 import { db } from "@/lib/db/db";
 import {
   discardSession,
   loadSessionDetail,
   updateSessionTags,
+  type SessionDetail,
   type SessionExerciseView,
 } from "@/lib/db/queries";
-import { loadSessionVerdicts } from "@/lib/db/verdicts";
-import { formatGap, gapsBySetId, sessionDurationMs } from "@/lib/rest-gap";
-import type { VerdictCategory } from "@/lib/verdict";
-import { cn } from "@/lib/utils";
+import type { SessionTag } from "@/lib/db/types";
+import { loadSessionVerdicts, type InstanceVerdict } from "@/lib/db/verdicts";
+import { antiguedad } from "@/lib/hoy";
+import {
+  conteoSesion,
+  conteoVeredictos,
+  duracion,
+  fechaComun,
+  fechaLarga,
+} from "@/lib/leer";
+import { TAG_DELOAD } from "@/lib/progress";
+import { gapsBySetId, sessionDurationMs } from "@/lib/rest-gap";
 import { useNavegando } from "@/lib/use-navegando";
-import { SessionDetailSkeleton } from "@/components/skeletons";
-
-function formatFecha(iso: string): string {
-  const [y, m, d] = iso.split("-").map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString("es", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-  });
-}
+import { cn } from "@/lib/utils";
 
 /** Ventana en la que el borrado queda armado tras el primer toque. */
 const ARMED_MS = 5000;
@@ -44,28 +49,142 @@ function estadoDe(item: SessionExerciseView): Estado {
   return item.sessionExercise.orden_ejecucion !== null ? "iniciado_sin_registro" : "no_realizado";
 }
 
-const TALLY_ORDER: { key: VerdictCategory; label: string }[] = [
-  { key: "mejor", label: "mejor" },
-  { key: "igual", label: "igual" },
-  { key: "peor", label: "peor" },
-  { key: "sin_comparacion", label: "sin comparación" },
-];
+type Lectura =
+  | {
+      ok: true;
+      detail: SessionDetail | null;
+      verdicts: Record<string, InstanceVerdict>;
+      todos: SessionTag[];
+    }
+  | { ok: false };
 
 export default function SessionDetailScreen() {
   const params = useParams<{ sessionId: string }>();
   const sessionId = params.sessionId;
 
-  const detail = useLiveQuery(() => loadSessionDetail(sessionId), [sessionId]);
-  // Solo el detalle de historial importa este loader; la sesión activa nunca lo
-  // toca. Devuelve {} para sesiones activas (veredicto solo en cerradas).
-  const verdicts = useLiveQuery(() => loadSessionVerdicts(sessionId), [sessionId]) ?? {};
+  // «Reintentar» vuelve a correr la lectura: cambia la dependencia de la query.
+  const [intento, setIntento] = useState(0);
+  // El detalle, los veredictos (`{}` para la sesión abierta: sólo cerradas) y los
+  // tags para las píldoras, en una sola lectura.
+  const lectura = useLiveQuery<Lectura>(async () => {
+    try {
+      const detail = await loadSessionDetail(sessionId);
+      const verdicts = detail ? await loadSessionVerdicts(sessionId) : {};
+      const todos = await db.sessionTags.toArray();
+      return { ok: true, detail, verdicts, todos };
+    } catch {
+      return { ok: false };
+    }
+  }, [sessionId, intento]);
 
-  const router = useRouter();
-  const [armed, setArmed] = useState(false);
   // Eliminar la sesión borra el detalle y navega: sin esto, loadSessionDetail
-  // devolvería null y pintaría "esta sesión no existe" antes de que aterrice el
+  // devolvería null y pintaría «esta sesión no existe» antes de que aterrice el
   // replace a /historial. Ver useNavegando.
   const { navegando, marcar } = useNavegando();
+
+  if (lectura === undefined) return <SessionDetailSkeleton />;
+
+  if (!lectura.ok) {
+    return (
+      <Pantalla titulo="Sesión">
+        <BloqueError
+          titulo="No se pudo leer esta sesión."
+          alReintentar={() => setIntento((n) => n + 1)}
+        />
+      </Pantalla>
+    );
+  }
+
+  if (lectura.detail === null) {
+    // Si el null es por NUESTRO propio eliminar, ya vamos en camino a /historial:
+    // el esqueleto cubre el hueco hasta el replace, en vez de parpadear «esta
+    // sesión no existe». Un null legítimo (URL de una sesión que no existe) sí
+    // muestra el mensaje.
+    if (navegando) return <SessionDetailSkeleton />;
+    return (
+      <Pantalla titulo="Sesión">
+        <Vacio
+          titulo="Esta sesión no existe."
+          texto="Puede que la hayas descartado."
+          salida={
+            <Button asChild variant="secondary">
+              <Link href="/historial">Ir al historial</Link>
+            </Button>
+          }
+        />
+      </Pantalla>
+    );
+  }
+
+  return (
+    <Detalle
+      detail={lectura.detail}
+      verdicts={lectura.verdicts}
+      todos={lectura.todos}
+      sessionId={sessionId}
+      marcar={marcar}
+    />
+  );
+}
+
+/** La cabeza y la hoja de las pantallas de este grupo, sin la cabeza de datos. */
+function Pantalla({
+  titulo,
+  subtitulo,
+  children,
+}: {
+  titulo: ReactNode;
+  subtitulo?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <>
+      <div className="px-4">
+        <Cabeza titulo={titulo} subtitulo={subtitulo} empujada />
+      </div>
+      <Hoja empujada>
+        <main className="mx-auto w-full max-w-md p-4">{children}</main>
+      </Hoja>
+    </>
+  );
+}
+
+function Seccion({
+  titulo,
+  derecha,
+  children,
+}: {
+  titulo: string;
+  derecha?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <section className="sec">
+      <div className="sec-cab">
+        <h2 className="kicker">{titulo}</h2>
+        {derecha != null && <span className="kicker kicker-d">{derecha}</span>}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function Detalle({
+  detail,
+  verdicts,
+  todos,
+  sessionId,
+  marcar,
+}: {
+  detail: SessionDetail;
+  verdicts: Record<string, InstanceVerdict>;
+  todos: SessionTag[];
+  sessionId: string;
+  /** La bandera de navegación vive en la pantalla: el null del detalle la lee ahí. */
+  marcar: () => void;
+}) {
+  const router = useRouter();
+  const [armed, setArmed] = useState(false);
 
   useEffect(() => {
     if (!armed) return;
@@ -73,43 +192,22 @@ export default function SessionDetailScreen() {
     return () => clearTimeout(t);
   }, [armed]);
 
-  // El «‹» (incluido `?desde=cierre`) lo resuelve la píldora del shell, por
-  // `lib/navegacion.ts`; esta pantalla ya no lleva botón de volver.
-  if (detail === undefined) {
-    return <SessionDetailSkeleton />;
-  }
-  if (detail === null) {
-    // Si el null es por NUESTRO propio eliminar, ya vamos en camino a /historial:
-    // el esqueleto cubre el hueco hasta el replace, en vez de parpadear "esta
-    // sesión no existe". Un null legítimo (URL de una sesión que no existe) sí
-    // muestra el mensaje.
-    if (navegando) return <SessionDetailSkeleton />;
-    return (
-      <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-4 p-4">
-        <p className="text-muted-foreground text-sm">Esta sesión no existe.</p>
-        <Button asChild variant="outline">
-          <Link href="/historial">Volver al historial</Link>
-        </Button>
-      </main>
-    );
-  }
-
-  const { session, routineDay, tags, bodyweight, items } = detail;
+  const { session, routineDay, bodyweight, items } = detail;
+  const abierta = session.activa === 1;
+  const nombre = routineDay?.nombre ?? "Sesión libre";
 
   // Tiempo entre registros (§4), derivado en lectura de creado_en. Los items ya
   // vienen sin series en cero (loadSessionDetail filtra), así que los huecos y la
   // duración son entre series reales. Nada de esto se almacena.
   const allSets = items.flatMap((i) => i.sets);
   const gapMs = gapsBySetId(allSets);
-  const duracionMs = sessionDurationMs(allSets);
+  const dur = duracion(sessionDurationMs(allSets));
 
-  // Resumen del veredicto (§3): tally por categoría, solo en sesiones cerradas
-  // con al menos un ejercicio comparado.
-  const tally: Record<VerdictCategory, number> = { mejor: 0, igual: 0, peor: 0, sin_comparacion: 0 };
-  for (const id in verdicts) tally[verdicts[id].verdict.category]++;
-  const totalVeredictos = Object.keys(verdicts).length;
-  const showSummary = totalVeredictos > 0;
-  const tallyEntries = TALLY_ORDER.filter((t) => tally[t.key] > 0);
+  const subtitulo = abierta
+    ? `${fechaLarga(session.fecha)} · ${antiguedad(session.iniciada_en, new Date())}`
+    : dur !== null
+      ? `${fechaLarga(session.fecha)} · ${dur}`
+      : fechaLarga(session.fecha);
 
   const eliminar = async () => {
     marcar();
@@ -118,238 +216,240 @@ export default function SessionDetailScreen() {
   };
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-4 p-4">
-      <header className="flex items-center gap-2 pt-2">
-        <div className="min-w-0">
-          <h1 className="truncate text-lg font-semibold capitalize">{formatFecha(session.fecha)}</h1>
-          <p className="text-muted-foreground flex items-center gap-1.5 text-xs">
-            <span className="truncate">
-              {routineDay?.nombre ?? "Sesión libre"}
-              {session.activa === 1 ? " · en curso" : ""}
-            </span>
-            {/* Duración: del primer al último creado_en (§4). Solo con ≥2 series. */}
-            {duracionMs !== null && (
-              <span className="flex shrink-0 items-center gap-1 tabular-nums">
-                <Clock className="size-3 shrink-0" />
-                {formatGap(duracionMs)}
-              </span>
-            )}
-          </p>
-        </div>
-      </header>
-
-      {/* Resumen + tags juntos: "peor en 4 + dormí mal" se lee distinto que
-          "peor en 4" a secas. Los tags empiezan a servir aquí (§3). */}
-      {showSummary && (
-        <div className="flex flex-col gap-2 rounded-lg border p-3">
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm tabular-nums">
-            {tallyEntries.map((t) => (
-              <span
-                key={t.key}
-                className={cn(
-                  "font-medium",
-                  // "mejor" en tinta plena (no el verde de acento); el resto atenuado.
-                  t.key === "mejor" ? "text-foreground" : "text-muted-foreground",
-                )}
-              >
-                {tally[t.key]} {t.label}
-              </span>
-            ))}
-          </div>
-          {tags.length > 0 && (
-            <div className="flex flex-wrap gap-1">
-              {tags.map((tag) => (
-                <Badge key={tag.id} variant="secondary" className="text-[10px]">
-                  {tag.nombre}
-                </Badge>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Contexto: peso corporal, nota, y los tags cuando NO hay resumen (sesión
-          activa, o cerrada sin ejercicios comparados) — para no perderlos. */}
-      {(bodyweight ||
-        (session.nota && session.nota.trim() !== "") ||
-        (!showSummary && tags.length > 0)) && (
-        <div className="flex flex-col gap-2 rounded-lg border p-3">
-          {!showSummary && tags.length > 0 && (
-            <div className="flex flex-wrap gap-1">
-              {tags.map((tag) => (
-                <Badge key={tag.id} variant="secondary" className="text-[10px]">
-                  {tag.nombre}
-                </Badge>
-              ))}
-            </div>
-          )}
-          {bodyweight && (
-            <p className="text-sm">
-              Peso corporal:{" "}
-              <span className="tabular-nums">
-                {bodyweight.valor} {bodyweight.unidad.toLowerCase()}
-              </span>
-            </p>
-          )}
-          {session.nota && session.nota.trim() !== "" && (
-            <p className="text-muted-foreground text-sm">{session.nota}</p>
-          )}
-        </div>
-      )}
-
-      {session.activa === 0 && <EditarTags sessionId={session.id} seleccion={session.tag_ids} />}
-
-      <Separator />
-
-      <div className="flex flex-col gap-3">
-        {items.map((item) => {
-          const estado = estadoDe(item);
-          const atenuado = estado !== "realizado";
-          const slot = item.slot;
-          const veredicto = verdicts[item.sessionExercise.id];
-
-          return (
-            <div
-              key={item.sessionExercise.id}
-              className={cn("flex flex-col gap-2 rounded-lg border p-3", atenuado && "opacity-60")}
-            >
-              <div className="flex items-start gap-2">
-                <Link
-                  href={`/ejercicio/${item.exercise.id}`}
-                  className="min-w-0 flex-1 text-base font-medium hover:underline"
-                >
-                  {item.exercise.nombre}
-                </Link>
-                {item.sessionExercise.orden_ejecucion !== null && (
-                  <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
-                    {item.sessionExercise.orden_ejecucion}º
-                  </span>
-                )}
-              </div>
-
-              <div className="flex flex-wrap items-center gap-1.5">
-                {item.isSubstitution && item.slotExercise && (
-                  <Badge variant="secondary" className="text-[10px]">
-                    sustituye a {item.slotExercise.nombre}
-                  </Badge>
-                )}
-                {item.isAdHoc && (
-                  <Badge variant="outline" className="text-[10px]">
-                    fuera de plantilla
-                  </Badge>
-                )}
-                {slot && slot.target_sets !== null && slot.target_reps !== null && (
-                  <Badge variant="outline" className="text-[10px]">
-                    objetivo {slot.target_sets} × {slot.target_reps}
-                  </Badge>
-                )}
-              </div>
-
-              {/* Veredicto por ejercicio: solo instancias con series de sesiones
-                  cerradas (el loader ya filtra ambas). Discreto. */}
-              {veredicto && <VerdictBadge item={veredicto} />}
-
-              {estado === "realizado" && (
-                <SetLines sets={item.sets} stackLabel={item.exercise.stack_label} gaps={gapMs} />
-              )}
-              {estado === "iniciado_sin_registro" && (
-                <p className="text-muted-foreground text-xs italic">
-                  Se empezó, sin series registradas.
-                </p>
-              )}
-              {estado === "no_realizado" && (
-                <p className="text-muted-foreground text-xs italic">No realizado.</p>
-              )}
-
-              {item.sessionExercise.nota && (
-                <p className="text-muted-foreground border-t pt-2 text-xs">
-                  {item.sessionExercise.nota}
-                </p>
-              )}
-            </div>
-          );
-        })}
-      </div>
-
-      <Separator />
-
-      {/* Acción destructiva, discreta y al final: poco frecuente. */}
-      {session.activa === 1 ? (
-        <Button asChild variant="outline" size="sm" className="self-start">
-          <Link href="/sesion">Sesión en curso · abrir para cerrarla o descartarla</Link>
-        </Button>
+    <Pantalla titulo={nombre} subtitulo={subtitulo}>
+      {abierta ? (
+        <Abierta nombre={nombre} items={items} session={session} gapMs={gapMs} />
       ) : (
-        <Button
-          variant={armed ? "destructive" : "ghost"}
-          size="sm"
-          className={armed ? "self-start" : "text-muted-foreground self-start"}
-          onClick={() => (armed ? void eliminar() : setArmed(true))}
-        >
-          <Trash2 />
-          {armed ? "Tocar de nuevo para eliminar" : "Eliminar sesión"}
-        </Button>
+        <Cerrada
+          detail={detail}
+          verdicts={verdicts}
+          todos={todos}
+          gapMs={gapMs}
+          bodyweight={bodyweight}
+          armed={armed}
+          alEliminar={() => (armed ? void eliminar() : setArmed(true))}
+        />
       )}
-    </main>
+    </Pantalla>
   );
 }
 
-/**
- * Tags de una sesión cerrada (DECISIONES.md §3.3): mismo chip que el cierre, y
- * cada toque guarda. Existe por la descarga del 5 nov, que se cerró sin `deload`
- * y Progreso la leía como una sesión normal.
- */
-function EditarTags({ sessionId, seleccion }: { sessionId: string; seleccion: string[] }) {
-  const [abierto, setAbierto] = useState(false);
-  const todos = useLiveQuery(() => db.sessionTags.toArray(), []);
+function cuentaEjercicios(n: number): string {
+  return `${n} ${n === 1 ? "ejercicio" : "ejercicios"}`;
+}
 
-  if (!abierto) {
-    return (
-      <Button
-        variant="ghost"
-        size="sm"
-        className="text-muted-foreground self-start"
-        onClick={() => setAbierto(true)}
-      >
-        <Tag />
-        {seleccion.length > 0 ? "Editar tags" : "Agregar tags"}
-      </Button>
-    );
-  }
+function Abierta({
+  nombre,
+  items,
+  session,
+  gapMs,
+}: {
+  nombre: string;
+  items: SessionExerciseView[];
+  session: SessionDetail["session"];
+  gapMs: Map<string, number>;
+}) {
+  const { hechos, total, series } = conteoSesion(items);
+  return (
+    <>
+      <section className="sec">
+        <TarjetaAnillo chica href="/sesion">
+          <p className="text-ink2 flex items-center gap-2 text-[13px] leading-[18px] font-medium">
+            <span className="vivo" aria-hidden="true" />
+            Sesión abierta · {antiguedad(session.iniciada_en, new Date())}
+          </p>
+          <h2 className="mt-1.5 text-[22px] leading-[1.15] font-semibold tracking-[-.01em] [font-stretch:125%]">
+            {nombre}
+          </h2>
+          <Segmentos total={total} hechos={hechos} />
+          <p className="text-ink2 mt-2.5 text-[13px] leading-[18px] font-normal">
+            {hechos} / {total} hechos · {textoSeries(series)}
+          </p>
+          <span className={cn(buttonVariants({ variant: "default" }), "mt-3.5 w-full")}>
+            Continuar donde ibas →
+          </span>
+        </TarjetaAnillo>
+      </section>
+
+      <Seccion titulo="Ejercicios" derecha={cuentaEjercicios(items.length)}>
+        {items.map((item) => (
+          <TarjetaEjercicio key={item.sessionExercise.id} item={item} gapMs={gapMs} />
+        ))}
+      </Seccion>
+
+      <p className="dek" style={{ marginTop: 20 }}>
+        La nota, el contexto y el peso se anotan al cerrar.
+      </p>
+    </>
+  );
+}
+
+function Cerrada({
+  detail,
+  verdicts,
+  todos,
+  gapMs,
+  bodyweight,
+  armed,
+  alEliminar,
+}: {
+  detail: SessionDetail;
+  verdicts: Record<string, InstanceVerdict>;
+  todos: SessionTag[];
+  gapMs: Map<string, number>;
+  bodyweight: SessionDetail["bodyweight"];
+  armed: boolean;
+  alEliminar: () => void;
+}) {
+  const { session, items } = detail;
+  const conteo = conteoVeredictos(verdicts);
+  const hayVeredictos = Object.keys(verdicts).length > 0;
+  const comun = fechaComun(verdicts);
+  const deload = session.tag_ids.includes(TAG_DELOAD);
+  const nota = session.nota && session.nota.trim() !== "" ? session.nota : null;
 
   const tocar = (id: string) =>
     void updateSessionTags(
-      sessionId,
-      seleccion.includes(id) ? seleccion.filter((t) => t !== id) : [...seleccion, id],
+      session.id,
+      session.tag_ids.includes(id)
+        ? session.tag_ids.filter((t) => t !== id)
+        : [...session.tag_ids, id],
     );
 
   return (
-    <div className="flex flex-col gap-2 rounded-lg border p-3">
-      <div className="flex flex-wrap gap-1.5">
-        {(todos ?? []).map((tag) => {
-          const on = seleccion.includes(tag.id);
-          return (
-            <button
+    <>
+      {hayVeredictos && (
+        <Seccion
+          titulo={`Contra la anterior${comun ? ` · ${fechaCorta(comun)}` : ""}`}
+          derecha={deload ? "semana de descarga" : undefined}
+        >
+          <p className="l-tally">
+            <span>
+              <b>{conteo.mejor}</b> mejor
+            </span>
+            <span>
+              <b>{conteo.igual}</b> igual
+            </span>
+            <span>
+              <b>{conteo.peor}</b> peor
+            </span>
+            <span>
+              <b>{conteo.sin_comparacion}</b> sin comparación
+            </span>
+          </p>
+        </Seccion>
+      )}
+
+      <Seccion titulo="Ejercicios" derecha={cuentaEjercicios(items.length)}>
+        {items.map((item) => (
+          <TarjetaEjercicio
+            key={item.sessionExercise.id}
+            item={item}
+            veredicto={verdicts[item.sessionExercise.id]}
+            verFecha={comun === null}
+            gapMs={gapMs}
+          />
+        ))}
+      </Seccion>
+
+      <Seccion titulo="Nota">
+        {nota ? <p className="dek l-tinta">{nota}</p> : <p className="l-vacio">Sin nota.</p>}
+      </Seccion>
+
+      <Seccion titulo="Contexto" derecha="toca para cambiar">
+        <div className="l-pildoras">
+          {todos.map((tag) => (
+            <Pildora
               key={tag.id}
-              type="button"
-              aria-pressed={on}
+              presionada={session.tag_ids.includes(tag.id)}
               onClick={() => tocar(tag.id)}
-              className={cn(
-                "rounded-full border px-3 py-1.5 text-sm",
-                on ? "bg-primary text-primary-foreground border-transparent" : "text-foreground",
-              )}
             >
               {tag.nombre}
-            </button>
-          );
-        })}
+            </Pildora>
+          ))}
+        </div>
+        <p className="l-s3">
+          Cada toque se guarda. Con deload, Progreso saca esta sesión de la línea de cada ejercicio
+          y del promedio de volumen.
+        </p>
+      </Seccion>
+
+      <Seccion titulo="Peso corporal">
+        <Fila
+          titulo="Peso corporal"
+          valor={
+            bodyweight ? (
+              `${formatoPeso(bodyweight.valor)} ${bodyweight.unidad.toLowerCase()}`
+            ) : (
+              <span className="text-ink2">Sin anotar</span>
+            )
+          }
+        />
+      </Seccion>
+
+      {/* Acción destructiva, discreta y al final: poco frecuente. */}
+      <div className="l-acts">
+        <button type="button" className="tl danger" onClick={alEliminar}>
+          {armed ? "Tocar de nuevo para eliminar" : "Eliminar sesión"}
+        </button>
       </div>
-      <p className="text-muted-foreground text-xs">
-        Cada toque se guarda. Con deload, Progreso saca esta sesión de la línea de cada ejercicio
-        y del promedio de volumen.
-      </p>
-      <Button variant="outline" size="sm" className="self-start" onClick={() => setAbierto(false)}>
-        Listo
-      </Button>
+    </>
+  );
+}
+
+function TarjetaEjercicio({
+  item,
+  veredicto,
+  verFecha = false,
+  gapMs,
+}: {
+  item: SessionExerciseView;
+  veredicto?: InstanceVerdict;
+  verFecha?: boolean;
+  gapMs: Map<string, number>;
+}) {
+  const estado = estadoDe(item);
+  const slot = item.slot;
+  const orden = item.sessionExercise.orden_ejecucion;
+  const hayChips =
+    orden !== null ||
+    (item.isSubstitution && item.slotExercise) ||
+    item.isAdHoc ||
+    (slot && slot.target_sets !== null && slot.target_reps !== null);
+
+  return (
+    <div className="l-ej">
+      <div className="l-ej-cab">
+        <Link href={`/ejercicio/${item.exercise.id}`} className="tl">
+          {item.exercise.nombre}
+        </Link>
+        {veredicto && <VeredictoLinea item={veredicto} verFecha={verFecha} />}
+        {!veredicto && estado === "iniciado_sin_registro" && (
+          <span className="l-s l-dn">Se empezó, sin series registradas.</span>
+        )}
+        {!veredicto && estado === "no_realizado" && <span className="l-s l-dn">No realizado.</span>}
+      </div>
+
+      {hayChips && (
+        <div className="l-chips">
+          {orden !== null && <span>{orden}º</span>}
+          {item.isSubstitution && item.slotExercise && (
+            <span>sustituye a {item.slotExercise.nombre}</span>
+          )}
+          {item.isAdHoc && <span>fuera de plantilla</span>}
+          {slot && slot.target_sets !== null && slot.target_reps !== null && (
+            <span>
+              objetivo {slot.target_sets} × {slot.target_reps}
+            </span>
+          )}
+        </div>
+      )}
+
+      {estado === "realizado" && (
+        <SetLines sets={item.sets} stackLabel={item.exercise.stack_label} gaps={gapMs} />
+      )}
+
+      {item.sessionExercise.nota && <p className="l-s mt-2">{item.sessionExercise.nota}</p>}
     </div>
   );
 }

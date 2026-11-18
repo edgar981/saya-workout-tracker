@@ -1,29 +1,22 @@
 "use client";
 
-import { Fragment } from "react";
-import Link from "next/link";
+import { Fragment, type ReactNode } from "react";
 import { useParams } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { ScissorsLineDashed } from "lucide-react";
 
 import { unitTag } from "@/components/exercise-picker";
-import { SetLines } from "@/components/history/set-lines";
 import { EstadoLinea, fechaCorta } from "@/components/progress/estado";
-import { MarcaChart } from "@/components/progress/marca-chart";
-import { Badge } from "@/components/ui/badge";
-import { loadExerciseHistory, todayISO, type ExerciseHistory } from "@/lib/db/queries";
-import { aparicionesDe, evaluarProgreso } from "@/lib/progress";
-import { formatSetWeight, unitSuffix } from "@/lib/units";
+import { MarcaChart, resumenSeries } from "@/components/progress/marca-chart";
 import { EjercicioSkeleton } from "@/components/skeletons";
-
-function formatFecha(iso: string): string {
-  const [y, m, d] = iso.split("-").map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString("es", {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-  });
-}
+import { Badge } from "@/components/ui/badge";
+import { Vacio } from "@/components/ui/estados";
+import { Fila } from "@/components/ui/fila";
+import { Cabeza, Hoja } from "@/components/ui/hoja";
+import { loadExerciseHistory, todayISO, type ExerciseHistory } from "@/lib/db/queries";
+import { descargasEnLinea, fechaFila, partirUnidad } from "@/lib/leer";
+import { aparicionesDe, evaluarProgreso, MIN_COMPARABLES, TAG_DELOAD } from "@/lib/progress";
+import { formatSetWeight, unitSuffix } from "@/lib/units";
 
 /** Etiqueta de unidad del snapshot vigente (no del catálogo): la línea de
  *  metadatos describe lo que se registró, no lo que dice el catálogo hoy. */
@@ -34,6 +27,29 @@ function unidadSnapshot(snap: NonNullable<ExerciseHistory["recentSnapshot"]>, st
   return unitSuffix(snap.unit_type, snap.weight_basis, snap.added_unit, stackLabel);
 }
 
+/** Las filas de «Sesiones» que muestra la lista (las últimas 5, las de `entries`). */
+const ULTIMAS = 5;
+
+function Seccion({
+  titulo,
+  derecha,
+  children,
+}: {
+  titulo: string;
+  derecha?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <section className="sec">
+      <div className="sec-cab">
+        <h2 className="kicker">{titulo}</h2>
+        {derecha != null && <span className="kicker kicker-d">{derecha}</span>}
+      </div>
+      {children}
+    </section>
+  );
+}
+
 export default function EjercicioScreen() {
   const params = useParams<{ exerciseId: string }>();
   const exerciseId = params.exerciseId;
@@ -41,15 +57,31 @@ export default function EjercicioScreen() {
   // Capa 2 (§11) sale de la MISMA travesía: `todas` ya viene en el historial.
   const history = useLiveQuery(async () => {
     const h = await loadExerciseHistory(exerciseId);
-    return { ...h, progreso: evaluarProgreso(aparicionesDe(h.todas, h.pesos), todayISO()) };
+    const apariciones = aparicionesDe(h.todas, h.pesos);
+    return {
+      ...h,
+      progreso: evaluarProgreso(apariciones, todayISO()),
+      descargas: descargasEnLinea(apariciones),
+    };
   }, [exerciseId]);
 
   if (history === undefined) {
     return <EjercicioSkeleton />;
   }
 
-  const { exercise, entries, recentSnapshot, esUnilateral, totalSeries, bestSet, progreso, pesos } =
-    history;
+  const {
+    exercise,
+    entries,
+    recentSnapshot,
+    esUnilateral,
+    totalSeries,
+    bestSet,
+    progreso,
+    descargas,
+    todas,
+    pesos,
+  } = history;
+  const stackLabel = exercise?.stack_label ?? null;
   const fuera = [
     progreso.otraCarga > 0 &&
       `${progreso.otraCarga} ${progreso.otraCarga === 1 ? "sesión no comparable" : "sesiones no comparables"} (otra carga, unidad o lateralidad)`,
@@ -72,7 +104,7 @@ export default function EjercicioScreen() {
   // series. Sin apariciones, cae a la unidad del catálogo.
   const metaLine = recentSnapshot
     ? [
-        unidadSnapshot(recentSnapshot, exercise?.stack_label ?? null),
+        unidadSnapshot(recentSnapshot, stackLabel),
         esUnilateral ? "unilateral" : "bilateral",
         `${totalSeries} ${totalSeries === 1 ? "serie" : "series"}`,
       ].join(" · ")
@@ -80,102 +112,139 @@ export default function EjercicioScreen() {
       ? unitTag(exercise)
       : "";
 
+  const pocosDatos = progreso.estado === "pocos_datos";
+  const hayLinea = progreso.mejor !== null && progreso.puntos.length >= 2;
+  const leyenda = [
+    "Cada punto: el promedio de tus dos mejores series de esa sesión. El anillo marca tu mejor sesión.",
+    notaCuerpo.trim(),
+    fuera.length > 0 ? `Fuera de la línea: ${fuera.join(" y ")}.` : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  const reciente = entries[0];
+  const mejor = bestSet
+    ? partirUnidad(
+        bestSet.isBodyweight
+          ? `${bestSet.set.reps} reps`
+          : `${bestSet.set.reps} × ${formatSetWeight(bestSet.set, stackLabel)}`,
+      )
+    : null;
+
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-4 p-4">
-      <header className="flex items-center gap-2 pt-2">
-        <div className="min-w-0">
-          <h1 className="truncate text-lg font-semibold">
-            {exercise?.nombre ?? "Ejercicio"}
-          </h1>
-          {metaLine && <p className="text-muted-foreground text-xs">{metaLine}</p>}
-        </div>
-      </header>
+    <>
+      <div className="px-4">
+        <Cabeza titulo={exercise?.nombre ?? "Ejercicio"} subtitulo={metaLine || undefined} empujada />
+      </div>
+      <Hoja empujada>
+        <main className="mx-auto w-full max-w-md p-4">
+          {entries.length === 0 ? (
+            <Vacio titulo="Todavía no hay series de este ejercicio." />
+          ) : (
+            <>
+              {reciente?.isSubstitution && reciente.slotExerciseNombre && (
+                <div className="l-chips" style={{ marginTop: 22 }}>
+                  <span>sustituye a {reciente.slotExerciseNombre}</span>
+                </div>
+              )}
 
-      {/* Mejor serie registrada: mayor peso dentro del snapshot vigente (§4). En
-          unilateral, con su lado. Sin e1RM. */}
-      {bestSet && (
-        <div className="bg-surface rounded-xl border p-3.5">
-          <span className="text-muted-foreground text-xs">Mejor serie registrada</span>
-          <p className="mt-1 font-mono text-xl tabular-nums">
-            {bestSet.isBodyweight
-              ? `${bestSet.set.reps} reps`
-              : `${bestSet.set.reps} × ${formatSetWeight(bestSet.set, exercise?.stack_label ?? null)}`}
-          </p>
-          <p className="text-muted-foreground mt-1 text-xs">
-            {formatFecha(bestSet.fecha)}
-            {bestSet.set.side && ` · lado ${bestSet.set.side}`}
-          </p>
-        </div>
-      )}
-
-      {/* Progreso (§11.7): estado y línea de marcas de las comparables. La marca
-          no se muestra como número; al tocar un punto se leen sus series. */}
-      {progreso.estado !== "sin_registros" && (
-        <section className="bg-surface flex flex-col gap-3 rounded-xl border p-3.5">
-          <div className="flex flex-col gap-1">
-            <span className="text-muted-foreground text-xs">Progreso</span>
-            <EstadoLinea progreso={progreso} />
-          </div>
-          {progreso.mejor && progreso.puntos.length >= 2 && (
-            <MarcaChart
-              puntos={progreso.puntos}
-              mejor={progreso.mejor}
-              stackLabel={exercise?.stack_label ?? null}
-            />
-          )}
-          <p className="text-muted-foreground text-xs">
-            Cada punto: el promedio de tus dos mejores series de esa sesión. El anillo marca tu
-            mejor sesión.
-            {notaCuerpo}
-            {fuera.length > 0 && ` Fuera de la línea: ${fuera.join(" y ")}.`}
-          </p>
-        </section>
-      )}
-
-      <p className="text-muted-foreground text-xs">Últimas 5 sesiones con series.</p>
-
-      {entries.length === 0 ? (
-        <p className="text-muted-foreground text-sm">
-          Todavía no hay series registradas de este ejercicio.
-        </p>
-      ) : (
-        <div className="flex flex-col gap-3">
-          {entries.map((entry, i) => {
-            // §3.5: si el snapshot de unidad cambia entre sesiones, se corta la
-            // serie en vez de fingir continuidad. Se compara contra la entrada
-            // anterior (más reciente) de la lista.
-            const cambioUnidad = i > 0 && entries[i - 1].unitKey !== entry.unitKey;
-
-            return (
-              <Fragment key={entry.sessionExercise.id}>
-                {cambioUnidad && (
-                  <div className="text-muted-foreground flex items-center gap-2 py-1 text-xs">
-                    <ScissorsLineDashed className="size-3.5" />
-                    <span>
-                      La unidad cambió aquí. Arriba y abajo de esta línea no son comparables.
-                    </span>
-                  </div>
-                )}
-
-                <Link
-                  href={`/historial/${entry.session.id}`}
-                  className="hover:bg-accent flex flex-col gap-2 rounded-lg border p-3"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">{formatFecha(entry.session.fecha)}</span>
-                    {entry.isSubstitution && entry.slotExerciseNombre && (
-                      <Badge variant="secondary" className="text-[10px]">
-                        sustituye a {entry.slotExerciseNombre}
-                      </Badge>
+              {bestSet && mejor && (
+                <Seccion titulo="Mejor serie" derecha={fechaCorta(bestSet.fecha)}>
+                  <p className="cifra">
+                    {mejor.cifra}
+                    {mejor.unidad && (
+                      <>
+                        {" "}
+                        <span className="cifra-u">{mejor.unidad}</span>
+                      </>
                     )}
-                  </div>
-                  <SetLines sets={entry.sets} stackLabel={exercise?.stack_label ?? null} />
-                </Link>
-              </Fragment>
-            );
-          })}
-        </div>
-      )}
-    </main>
+                  </p>
+                  {bestSet.set.side && <p className="dek">lado {bestSet.set.side}</p>}
+                </Seccion>
+              )}
+
+              {/* Progreso (§11.7): estado y línea de marcas de las comparables. La
+                  marca no se muestra como número; al tocar un punto se leen sus series. */}
+              {progreso.estado !== "sin_registros" && (
+                <Seccion
+                  titulo="Progreso"
+                  derecha={pocosDatos ? `${progreso.puntos.length} de ${MIN_COMPARABLES}` : undefined}
+                >
+                  <EstadoLinea progreso={progreso} />
+                  {pocosDatos ? (
+                    <p className="l-vacio">
+                      La línea aparece con {MIN_COMPARABLES} sesiones comparables. Llevas{" "}
+                      {progreso.puntos.length}.
+                    </p>
+                  ) : (
+                    hayLinea &&
+                    progreso.mejor && (
+                      <MarcaChart
+                        puntos={progreso.puntos}
+                        mejor={progreso.mejor}
+                        stackLabel={stackLabel}
+                        descargas={descargas}
+                      />
+                    )
+                  )}
+                  {leyenda && <p className="l-s3">{leyenda}</p>}
+                </Seccion>
+              )}
+
+              <Seccion
+                titulo="Sesiones"
+                derecha={
+                  todas.length > ULTIMAS
+                    ? `últimas ${ULTIMAS}`
+                    : `${entries.length} ${entries.length === 1 ? "sesión" : "sesiones"}`
+                }
+              >
+                {entries.map((entry, i) => {
+                  // §3.5: si el snapshot de unidad cambia entre sesiones, se corta la
+                  // serie en vez de fingir continuidad. Se compara contra la entrada
+                  // anterior (más reciente) de la lista.
+                  const cambioUnidad = i > 0 && entries[i - 1].unitKey !== entry.unitKey;
+                  const descarga = entry.session.tag_ids.includes(TAG_DELOAD);
+
+                  return (
+                    <Fragment key={entry.sessionExercise.id}>
+                      {cambioUnidad && (
+                        <p className="l-s3 flex items-center gap-2">
+                          <ScissorsLineDashed className="size-3.5 shrink-0" aria-hidden="true" />
+                          <span>
+                            La unidad cambió aquí. Arriba y abajo de esta línea no son comparables.
+                          </span>
+                        </p>
+                      )}
+                      <Fila
+                        href={`/historial/${entry.session.id}`}
+                        titulo={
+                          <>
+                            {fechaFila(entry.session.fecha, fechaCorta)}
+                            {entry.session.activa === 1 && (
+                              <Badge className="text-ink ml-2 align-middle">
+                                <span className="vivo" aria-hidden="true" />
+                                en curso
+                              </Badge>
+                            )}
+                            {descarga && <Badge className="ml-2 align-middle">descarga</Badge>}
+                            {entry.isSubstitution && entry.slotExerciseNombre && (
+                              <Badge className="ml-2 align-middle">
+                                sustituye a {entry.slotExerciseNombre}
+                              </Badge>
+                            )}
+                          </>
+                        }
+                        subtitulo={resumenSeries(entry.sets, stackLabel)}
+                      />
+                    </Fragment>
+                  );
+                })}
+              </Seccion>
+            </>
+          )}
+        </main>
+      </Hoja>
+    </>
   );
 }
