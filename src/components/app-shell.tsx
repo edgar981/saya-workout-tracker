@@ -12,7 +12,6 @@ import { usePathname, useRouter } from "next/navigation";
 
 import { Liquido } from "@/components/liquido";
 import { NavBar } from "@/components/nav-bar";
-import { BotonAjustes } from "@/components/ui/hoja";
 import { esRutaSesion } from "@/lib/liquido";
 import {
   accionAtras,
@@ -24,7 +23,8 @@ import {
 
 /**
  * Apilado (de atrás hacia delante): el lienzo y el póster · la hoja (que
- * envuelve a las pantallas) · el velo superior · pestañas de vidrio o píldora.
+ * envuelve a las pantallas; si la pantalla pinta la suya, la envoltura no es
+ * caja) · el velo superior · pestañas de vidrio o píldora.
  *
  * La navegación vive ARRIBA (nav-bar.tsx) y no reserva espacio abajo: la hoja
  * llega al borde de abajo. En `/sesion` y `/sesion/cerrar` no se monta ninguna
@@ -33,30 +33,16 @@ import {
  */
 
 /**
- * Ventana de cromo PROVISIONAL: lo que queda libre arriba de la hoja. Hoy cada
- * pantalla sigue con su encabezado propio dentro de la hoja; los slices 3 a 5 la
- * reemplazan por `Cabeza` (ui/hoja.tsx) pantalla por pantalla.
+ * Ventana de cromo PROVISIONAL: lo que queda libre arriba de la hoja del shell,
+ * para las pantallas que todavía no pintan su `Cabeza` (ui/hoja.tsx). Las que sí
+ * pintan la suya y su `Hoja` no la usan: la regla U de
+ * globals.css hace que la envoltura del shell deje de ser caja para ellas.
  */
 const VENTANA_CROMO_PX = 120;
 /** En `/sesion` y `/sesion/cerrar` la hoja empieza a 12px del borde. */
 const VENTANA_SESION_PX = 12;
 /** El velo superior aparece cuando el scroll de la página pasa de esto. */
 const UMBRAL_VELO_PX = 140;
-
-/**
- * Rutas que pintan su PROPIA `Cabeza` y su `Hoja`: el shell no las envuelve. Los
- * slices 3 a 5 agregan las suyas.
- */
-const RUTAS_CON_CABEZA_PROPIA = new Set(["/cuerpo"]);
-
-/**
- * PROVISIONAL: Hoy conserva su encabezado propio hasta el slice 3, así que el
- * shell pinta el botón de Ajustes en `/` dentro de la ventana de cromo (absoluto
- * en la página: se va con el scroll). El slice 3 lo pasa a la `Cabeza` de Hoy y
- * borra esta constante.
- */
-const AJUSTES_HOY_TOP_PX = 70;
-const AJUSTES_HOY_RIGHT_PX = 20;
 
 /** `?desde=cierre` se lee de `window.location` (no `useSearchParams`, que exige
  *  un `Suspense` en `next build`); en servidor es vacío. */
@@ -113,7 +99,6 @@ export function AppShell({ children }: { children: ReactNode }) {
     else router.push(a.destino);
   }
 
-  const propia = RUTAS_CON_CABEZA_PROPIA.has(pathname);
   const estiloHoja = {
     "--ventana": `${sesion ? VENTANA_SESION_PX : VENTANA_CROMO_PX}px`,
     ...(sesion ? { "--hoja-pb": "env(safe-area-inset-bottom)" } : null),
@@ -122,22 +107,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <>
       <Liquido />
-      {propia ? (
-        children
-      ) : (
-        <div className="hoja" style={estiloHoja}>
-          {children}
-        </div>
-      )}
-      {pathname === "/" && (
-        <BotonAjustes
-          className="absolute z-[35]"
-          style={{
-            top: `calc(${AJUSTES_HOY_TOP_PX}px + env(safe-area-inset-top))`,
-            right: AJUSTES_HOY_RIGHT_PX,
-          }}
-        />
-      )}
+      <div className="hoja" style={estiloHoja}>
+        {children}
+      </div>
       {!sesion && <div ref={veloRef} className="tscrim" aria-hidden="true" />}
       {nivel !== "sesion" && (
         <NavBar pathname={pathname} nivel={nivel} etiqueta={atras.etiqueta} alAtras={alAtras} />

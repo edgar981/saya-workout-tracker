@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
 
 import type { LastPerformance as LastPerformanceData } from "@/lib/db/queries";
 import type { SetLog } from "@/lib/db/types";
@@ -65,60 +64,52 @@ export function LastPerformance({
   // línea coincida al pixel.
   if (last === undefined) {
     return (
-      <div
-        className="bg-surface-2 flex flex-col gap-2.5 rounded-xl px-3.5 py-3"
-        aria-hidden="true"
-      >
-        <div className="flex items-center gap-2">
-          <span className="font-mono text-[10px] font-medium tracking-wide uppercase">
-            <span className="bg-border inline-block h-2.5 w-24 rounded align-middle" />
+      <div className="pas" aria-hidden="true">
+        <div className="pas-cab min-h-11">
+          <span className="kicker">
+            <span className="sk inline-block h-[11px] w-28 align-middle" />
           </span>
-          <span className="bg-border ml-auto size-3.5 shrink-0 rounded" />
+          <span className="sk inline-block h-[18px] w-16" />
         </div>
-        <div className="flex gap-5">
-          {[0, 1, 2].map((i) => (
-            <div key={i}>
-              <p className="font-mono text-[9px] tabular-nums">
-                <span className="bg-border inline-block h-2 w-4 rounded align-middle" />
-              </p>
-              <p className="mt-0.5 font-mono text-sm tabular-nums">
-                <span className="bg-border inline-block h-3.5 w-11 rounded align-middle" />
-              </p>
-            </div>
-          ))}
-        </div>
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="prow">
+            <span className="fila-s fila-ix">
+              <span className="sk inline-block h-3 w-5 align-middle" />
+            </span>
+            <span className="fila-v">
+              <span className="sk inline-block h-4 w-28 align-middle" />
+            </span>
+          </div>
+        ))}
       </div>
     );
   }
 
   if (last === null) {
     return (
-      <p className="text-muted-foreground text-xs">Sin registro previo de este ejercicio.</p>
+      <div className="pas">
+        <p className="dek">Sin registro previo de este ejercicio.</p>
+      </div>
     );
   }
 
-  // v2: las series de la vez pasada por posición (S1 · S2 · S3), en DM Mono. El
-  // enlace al historial completo del ejercicio se conserva — es el punto donde
-  // vas a querer más contexto que la última sesión.
+  // Las series de la vez pasada por posición (S1 · S2 · S3). El enlace al
+  // historial completo del ejercicio se conserva — es el punto donde vas a querer
+  // más contexto que la última sesión.
   return (
-    <Link
-      href={`/ejercicio/${exerciseId}`}
-      className="bg-surface-2 hover:bg-surface flex flex-col gap-2.5 rounded-xl px-3.5 py-3"
-    >
-      <div className="flex items-center gap-2">
-        <span className="text-muted-foreground font-mono text-[10px] font-medium tracking-wide uppercase">
-          La pasada · {formatFecha(last.session.fecha)}
-        </span>
-        <ChevronRight className="text-muted-foreground ml-auto size-3.5 shrink-0" />
+    <div className="pas">
+      <div className="pas-cab">
+        <h3 className="kicker">La pasada · {formatFecha(last.session.fecha)}</h3>
+        <Link href={`/ejercicio/${exerciseId}`} className="tl">
+          Historial ›
+        </Link>
       </div>
-      <div className="flex flex-wrap gap-x-5 gap-y-2">
-        {summarize(last.sets, stackLabel).map((valor, i) => (
-          <div key={i}>
-            <p className="text-muted-foreground font-mono text-[9px] tabular-nums">S{i + 1}</p>
-            <p className="mt-0.5 font-mono text-sm tabular-nums">{valor}</p>
-          </div>
-        ))}
-      </div>
-    </Link>
+      {summarize(last.sets, stackLabel).map((valor, i) => (
+        <div key={i} className="prow">
+          <span className="fila-s fila-ix">S{i + 1}</span>
+          <span className="fila-v">{valor}</span>
+        </div>
+      ))}
+    </div>
   );
 }

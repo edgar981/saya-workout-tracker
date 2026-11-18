@@ -83,59 +83,98 @@ function Card({ className, children }: { className?: string; children?: ReactNod
 // ── / (home) ────────────────────────────────────────────────────────────────
 export function HomeSkeleton() {
   return (
-    <Screen className="gap-5">
-      <header className="pt-5">
-        <Sk className="h-3 w-48" />
-      </header>
-      <div className="flex flex-col">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <div
-            key={i}
-            className={cn("flex items-center gap-3 px-2 py-4", i > 0 && "border-border border-t")}
-          >
-            <Sk className="h-3 w-4" />
-            <div className="flex-1">
-              <Sk className="h-4 w-24" />
-              <Sk className="mt-1.5 h-3 w-16" />
-            </div>
-            <Sk className="h-4 w-12" />
-          </div>
-        ))}
+    <>
+      <div className="px-4">
+        <Cabeza
+          titulo={<span className="sk inline-block h-[30px] w-[70%] align-middle" />}
+          subtitulo={<span className="sk inline-block h-4 w-[45%]" />}
+          ajustes
+        />
       </div>
-    </Screen>
+      <Hoja>
+        <main className="mx-auto w-full max-w-md p-4">
+          <div role="status" aria-busy="true">
+            <span className="sr-only">Cargando…</span>
+            <div aria-hidden="true">
+              {/* La tarjeta del anillo. */}
+              <Sk className="h-[218px] w-full rounded-[24px]" />
+              <Sk className="mt-[30px] h-[11px] w-[34%]" />
+              <div className="mt-2.5">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="fila">
+                    <Sk className="h-3 w-5" />
+                    <div className="flex-1">
+                      <Sk className="h-4 w-24" />
+                    </div>
+                    <Sk className="h-4 w-14" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </main>
+      </Hoja>
+    </>
   );
 }
 
 // ── /sesion ───────────────────────────────────────────────────────────────
 export function SessionSkeleton() {
   return (
-    <Screen>
-      <header className="flex items-center gap-2.5 pt-2 pb-3">
-        <Sk className="h-9 w-20 rounded-full" />
-        <div className="flex-1" />
-        <Sk className="h-4 w-16" />
+    <>
+      <header className="stop">
+        <Sk className="h-5 w-20" />
+        <Sk className="h-5 w-24" />
+        <Sk className="h-5 w-14 justify-self-end" />
       </header>
-      <div className="-mx-4 mb-3 flex gap-1.5 overflow-x-hidden px-4 pb-1">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <Sk key={i} className="h-[46px] w-24 shrink-0" />
-        ))}
+      <div
+        className="hoja"
+        data-propia=""
+        style={{ "--ventana": "70px", "--hoja-pb": "0px", marginTop: 12 } as React.CSSProperties}
+      >
+        <main className="mx-auto flex w-full max-w-md flex-col px-4 pt-4">
+          <div role="status" aria-busy="true" className="flex-1 pb-4">
+            <span className="sr-only">Cargando…</span>
+            <div aria-hidden="true">
+              <div className="chips">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Sk key={i} className="size-11 shrink-0" />
+                ))}
+              </div>
+              <Sk className="mt-[18px] h-[11px] w-[40%]" />
+              <Sk className="mt-3 h-7 w-[60%]" />
+              {/* La pasada. */}
+              <div className="pas">
+                <Sk className="h-[11px] w-[45%]" />
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="prow">
+                    <Sk className="h-3 w-5" />
+                    <Sk className="h-4 w-28" />
+                  </div>
+                ))}
+              </div>
+              <div className="sets">
+                <Sk className="h-[11px] w-10" />
+                {Array.from({ length: 2 }).map((_, i) => (
+                  <div key={i} className="set">
+                    <Sk className="h-3 w-16" />
+                    <div className="campos">
+                      <Sk className="h-14 flex-1 rounded-2xl" />
+                      <Sk className="h-14 flex-1 rounded-2xl" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+          <div className="sbot" aria-hidden="true">
+            <Sk className="size-[50px] shrink-0" />
+            <Sk className="size-[50px] shrink-0" />
+            <Sk className="ml-auto h-12 w-36" />
+          </div>
+        </main>
       </div>
-      <div className="bg-border mb-4 h-px w-full" />
-      <div className="flex flex-col gap-3">
-        <Sk className="h-7 w-44" />
-        <Sk className="h-16 rounded-xl" />
-        <Sk className="h-28 rounded-xl" />
-        <div className="flex gap-2">
-          <Sk className="h-11 flex-1" />
-          <Sk className="h-11 w-24" />
-        </div>
-      </div>
-      <div className="mt-6 flex items-center gap-2 pb-2">
-        <Sk className="size-10" />
-        <Sk className="size-10" />
-        <Sk className="ml-auto h-10 w-32" />
-      </div>
-    </Screen>
+    </>
   );
 }
 
@@ -384,17 +423,51 @@ export function CatalogoNuevoSkeleton() {
 // ── /sesion/cerrar ──────────────────────────────────────────────────────────
 export function CloseSkeleton() {
   return (
-    <Screen className="gap-4">
-      <Head title="Cerrar sesión" chevron />
-      <Sk className="h-4 w-40" />
-      {Array.from({ length: 3 }).map((_, i) => (
-        <div key={i} className="rounded-lg border px-3 py-3">
-          <Sk className="h-4 w-24" />
-        </div>
-      ))}
-      <Sk className="mt-2 h-12" />
-      <Sk className="h-8 w-40" />
-    </Screen>
+    <>
+      <header className="stop two">
+        <span className="stop-back">
+          <b aria-hidden="true">‹</b> Volver a la sesión
+        </span>
+      </header>
+      <div
+        className="hoja"
+        data-propia=""
+        style={{ "--ventana": "70px", "--hoja-pb": "0px", marginTop: 12 } as React.CSSProperties}
+      >
+        <main className="mx-auto w-full max-w-md px-4 pt-4 pb-10">
+          <h1 className="tit-2">Cerrar sesión</h1>
+          <div role="status" aria-busy="true">
+            <span className="sr-only">Cargando…</span>
+            <div aria-hidden="true">
+              <div className="dek mt-1.5">
+                <Sk className="h-4 w-[80%]" />
+              </div>
+              <div className="dek">
+                <Sk className="h-4 w-[40%]" />
+              </div>
+              <div className="fg">
+                <Sk className="h-[11px] w-[20%]" />
+                <Sk className="mt-2.5 h-[52px] w-full rounded-2xl" />
+              </div>
+              <div className="fg">
+                <Sk className="h-[11px] w-[26%]" />
+                <div className="pills mt-2.5">
+                  <Sk className="h-11 w-24" />
+                  <Sk className="h-11 w-20" />
+                  <Sk className="h-11 w-28" />
+                </div>
+              </div>
+              <div className="fg">
+                <Sk className="h-[11px] w-[34%]" />
+                <Sk className="mt-2.5 h-[68px] w-full rounded-[20px]" />
+              </div>
+              <Sk className="mt-6 h-14 w-full" />
+              <Sk className="mt-3 h-4 w-32" />
+            </div>
+          </div>
+        </main>
+      </div>
+    </>
   );
 }
 

@@ -1,7 +1,5 @@
 "use client";
 
-import { Plus, X } from "lucide-react";
-
 import { SetRow } from "@/components/session/set-row";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -42,70 +40,59 @@ export function SetGroup({
   const missingSide = !isGiant && sidesPresent.size === 1 ? (sidesPresent.has("L") ? "R" : "L") : null;
 
   return (
-    <div className="bg-surface overflow-hidden rounded-xl border">
-      {/* Franja de encabezado (v2): rótulo de la serie, badges de estado y el
-          borrado sin guarda (D8) de la serie completa. */}
-      <div className="bg-surface-2 flex items-center gap-2 px-3 py-2">
-        <span className="text-muted-foreground font-mono text-[11px] font-semibold tracking-wide">
-          SERIE {setIndex}
-        </span>
-        {esExtra && (
-          <Badge variant="secondary" className="text-[10px]">
-            extra
-          </Badge>
-        )}
-        {isGiant && (
-          <Badge variant="outline" className="text-[10px]">
-            giant · {segments.size}
-          </Badge>
-        )}
-        <div className="flex-1" />
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={() => void deleteSetGroup(sessionExerciseId, setIndex)}
-          aria-label={`Borrar serie ${setIndex} completa`}
-          className="text-muted-foreground hover:text-destructive -mr-1"
-        >
-          <X />
-        </Button>
-      </div>
-
-      <div className="flex flex-col gap-2 p-3">
-        {sets.map((set) => (
-          <div key={set.id} className="flex items-center gap-2">
-            {isGiant && (
-              <span className="text-muted-foreground w-5 shrink-0 text-center font-mono text-xs tabular-nums">
-                {set.segment_index + 1}
-              </span>
-            )}
-            <div className="min-w-0 flex-1">
-              <SetRow set={set} stackLabel={stackLabel} refSets={refSets} />
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Serie unilateral con un solo lado: la fila para agregar el opuesto va en
-          acento (es un prompt de completar, hereda el peso). Reemplaza al botón
-          genérico anterior (§2). */}
-      {missingSide && (
+    <div className="set">
+      {/* Cabecera: «Serie N» (y « · extra»), el badge de giant y el borrado sin
+          guarda (D8) de la serie completa. */}
+      <div className="set-cab">
+        <div className="flex items-center gap-2">
+          <h3 className="kicker">
+            Serie {setIndex}
+            {esExtra && " · extra"}
+          </h3>
+          {isGiant && <Badge>giant · {segments.size}</Badge>}
+        </div>
         <button
           type="button"
-          onClick={() => void addOppositeSide(sessionExerciseId, setIndex)}
-          className="text-primary flex w-full items-center justify-center gap-1.5 border-t border-dashed py-2.5 text-xs font-semibold"
+          className="set-x"
+          onClick={() => void deleteSetGroup(sessionExerciseId, setIndex)}
+          aria-label={`Borrar serie ${setIndex}`}
         >
-          <Plus className="size-3.5" /> Falta el lado {missingSide === "L" ? "izquierdo" : "derecho"}
+          <span aria-hidden="true">×</span>
         </button>
+      </div>
+
+      {sets.map((set) => (
+        <div key={set.id} className="flex items-center gap-2">
+          {isGiant && (
+            <span className="fila-s w-5 shrink-0 text-center tabular-nums">
+              {set.segment_index + 1}
+            </span>
+          )}
+          <div className="min-w-0 flex-1">
+            <SetRow
+              set={set}
+              stackLabel={stackLabel}
+              refSets={refSets}
+              puedeBorrar={sets.length > 1}
+            />
+          </div>
+        </div>
+      ))}
+
+      {/* Serie unilateral con un solo lado: el enlace para agregar el opuesto
+          (hereda el peso). */}
+      {missingSide && (
+        <Button
+          variant="link"
+          onClick={() => void addOppositeSide(sessionExerciseId, setIndex)}
+        >
+          Falta el lado {missingSide === "L" ? "izquierdo" : "derecho"}
+        </Button>
       )}
 
-      <button
-        type="button"
-        onClick={() => void addSegment(sessionExerciseId, setIndex)}
-        className="text-muted-foreground flex w-full items-center justify-center gap-1.5 border-t py-2 text-xs font-medium"
-      >
-        <Plus className="size-3.5" /> Agregar segmento
-      </button>
+      <Button variant="link" onClick={() => void addSegment(sessionExerciseId, setIndex)}>
+        Agregar segmento
+      </Button>
     </div>
   );
 }
