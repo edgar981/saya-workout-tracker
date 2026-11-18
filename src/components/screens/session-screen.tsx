@@ -152,7 +152,7 @@ function ActiveSession({ view }: { view: SessionView }) {
             )}
           </div>
 
-          <nav className="sbot" aria-label="Navegación de la sesión">
+          <nav className="sbot">
             <button
               type="button"
               className="arw"
@@ -187,7 +187,7 @@ function ActiveSession({ view }: { view: SessionView }) {
         titulo="Agregar ejercicio del catálogo"
       >
         <label htmlFor="filtro-adhoc" className="sr-only">
-          Buscar ejercicio
+          Agregar ejercicio del catálogo
         </label>
         <ExercisePicker
           inputId="filtro-adhoc"

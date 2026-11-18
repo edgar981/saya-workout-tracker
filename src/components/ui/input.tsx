@@ -96,7 +96,7 @@ function Input({ className, type, variante = "texto", unidad, prefijo, ...props 
         data-slot="input"
         className={cn(
           "text-ink min-w-0 flex-1 [font-variant-numeric:tabular-nums] bg-transparent outline-none",
-          "h-full self-stretch",
+          "self-stretch",
           CAMPO[variante].input,
         )}
         {...props}
