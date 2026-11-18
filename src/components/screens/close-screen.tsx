@@ -12,6 +12,7 @@ import { ErrorEnLinea, Vacio } from "@/components/ui/estados";
 import { Input } from "@/components/ui/input";
 import { Pildora } from "@/components/ui/pildora";
 import { Textarea } from "@/components/ui/textarea";
+import { unidadPorDefecto } from "@/lib/cerrar";
 import { formatoPeso, resumirPeso } from "@/lib/cuerpo";
 import { db } from "@/lib/db/db";
 import {
@@ -92,7 +93,7 @@ export default function CloseScreen() {
   const [note, setNote] = useState("");
   const [selected, setSelected] = useState<string[]>([]);
   const [weight, setWeight] = useState("");
-  const [weightUnit, setWeightUnit] = useState<"KG" | "LB">("KG");
+  const [unidadTocada, setUnidadTocada] = useState<"KG" | "LB" | null>(null);
   const [armed, setArmed] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(false);
@@ -147,6 +148,8 @@ export default function CloseScreen() {
   const { session } = datos;
   const parsedWeight = parsePeso(weight);
   const ultimoPeso = resumirPeso(datos.pesos);
+  // La que el usuario tocó; mientras no toque ninguna, la del último peso anotado.
+  const weightUnit = unidadTocada ?? unidadPorDefecto(datos.pesos);
   const unidadElegida = weightUnit === "KG" ? "kg" : "lb";
   const marcador =
     ultimoPeso && ultimoPeso.unidad === unidadElegida ? formatoPeso(ultimoPeso.ultimo) : "—";
@@ -261,7 +264,7 @@ export default function CloseScreen() {
                 <Pildora
                   key={unit}
                   presionada={weightUnit === unit}
-                  onClick={() => setWeightUnit(unit)}
+                  onClick={() => setUnidadTocada(unit)}
                 >
                   {unit.toLowerCase()}
                 </Pildora>
