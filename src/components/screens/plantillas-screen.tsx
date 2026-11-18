@@ -1,10 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { useLiveQuery } from "dexie-react-hooks";
-import { ChevronRight } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
+import { Fila } from "@/components/ui/fila";
+import { Cabeza, Hoja } from "@/components/ui/hoja";
+import { contar, resumenDia } from "@/lib/ajustes-resumen";
 import { getActiveMesociclo, listRoutineDays, loadDaySlots } from "@/lib/db/queries";
 import { PlantillasSkeleton } from "@/components/skeletons";
 
@@ -15,10 +15,14 @@ export default function PlantillasScreen() {
     const mesociclo = await getActiveMesociclo();
     const list = await listRoutineDays();
     const days = await Promise.all(
-      list.map(async (day) => ({
-        day,
-        activos: (await loadDaySlots(day.id)).length,
-      })),
+      list.map(async (day) => {
+        const views = await loadDaySlots(day.id);
+        return {
+          day,
+          activos: views.length,
+          nombres: views.map((v) => v.exercise?.nombre).filter((n): n is string => Boolean(n)),
+        };
+      }),
     );
     return { mesociclo, days };
   }, []);
@@ -30,44 +34,38 @@ export default function PlantillasScreen() {
   const { mesociclo, days } = data;
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-4 p-4">
-      <header className="flex items-center gap-2 pt-2">
-        <div className="min-w-0">
-          <h1 className="text-lg font-semibold">Plantillas</h1>
-          {mesociclo && (
-            <p className="text-muted-foreground truncate text-xs">
-              Editando <span className="text-foreground">{mesociclo.nombre}</span>
-            </p>
-          )}
-        </div>
-      </header>
-
-      <p className="text-muted-foreground text-sm">
-        Los días del mesociclo activo. Cambiar de mesociclo se hace en Ajustes → Mesociclos.
-        Reordenar o dar de baja aquí no toca el histórico: las sesiones ya registradas guardan su
-        propio orden y su propio slot.
-      </p>
-
-      {/* Cada día es su propia ruta (/plantillas/[dayId]): el gesto atrás desde el
-          detalle vuelve a esta lista, no sale de plantillas. */}
-      <div className="flex flex-col gap-2">
-        {days.map(({ day, activos }) => (
-          <Button
-            key={day.id}
-            asChild
-            variant="outline"
-            className="h-auto justify-between px-4 py-4"
-          >
-            <Link href={`/plantillas/${day.id}`}>
-              <span className="text-base font-medium">{day.nombre}</span>
-              <span className="text-muted-foreground flex items-center gap-2 text-sm">
-                {activos} ejercicios
-                <ChevronRight />
-              </span>
-            </Link>
-          </Button>
-        ))}
+    <>
+      <div className="px-4">
+        <Cabeza
+          titulo="Plantillas"
+          subtitulo={mesociclo ? `${mesociclo.nombre} · ${contar(days.length, "día", "días")}` : undefined}
+          empujada
+        />
       </div>
-    </main>
+      <Hoja empujada>
+        <main className="mx-auto w-full max-w-md p-4">
+          <p className="dek">
+            Los días del mesociclo activo. Cambiar de mesociclo se hace en Ajustes → Mesociclos.
+            Reordenar o dar de baja aquí no toca el histórico: las sesiones ya registradas guardan su
+            propio orden y su propio slot.
+          </p>
+
+          {/* Cada día es su propia ruta (/plantillas/[dayId]): el gesto atrás desde el
+              detalle vuelve a esta lista, no sale de plantillas. */}
+          <div className="mt-2 rounded-[20px] bg-white/[.035] px-4 py-0.5 shadow-[inset_0_0_0_1px_var(--color-hair)]">
+            {days.map(({ day, nombres }, i) => (
+              <Fila
+                key={day.id}
+                href={`/plantillas/${day.id}`}
+                chevron
+                indice={String(i + 1).padStart(2, "0")}
+                titulo={day.nombre}
+                subtitulo={resumenDia(nombres)}
+              />
+            ))}
+          </div>
+        </main>
+      </Hoja>
+    </>
   );
 }

@@ -1,8 +1,8 @@
 "use client";
 
+import { Pildora } from "@/components/ui/pildora";
 import type { Exercise, RolMuscular } from "@/lib/db/types";
 import { GRUPOS } from "@/lib/musculos";
-import { cn } from "@/lib/utils";
 
 type Grupos = Exercise["grupos"];
 
@@ -14,9 +14,9 @@ const SIGUIENTE: Record<RolMuscular | "nada", RolMuscular | undefined> = {
 };
 
 /**
- * Grupos musculares de un ejercicio (DECISIONES.md §12.2). Un chip por grupo, de
- * tres estados — un grupo no puede ser directo e indirecto a la vez, así que no
- * hacen falta dos filas de chips. Mismo chip que los tags del cierre.
+ * Grupos musculares de un ejercicio (DECISIONES.md §12.2). Una píldora por grupo,
+ * de tres estados — un grupo no puede ser directo e indirecto a la vez, así que no
+ * hacen falta dos filas. La `Pildora` pone el `aria-pressed` y el «½».
  */
 export function GruposPicker({
   value,
@@ -39,26 +39,19 @@ export function GruposPicker({
         {GRUPOS.map(({ id, nombre }) => {
           const rol = value[id];
           return (
-            <button
+            <Pildora
               key={id}
-              type="button"
-              aria-pressed={rol === "directo" ? true : rol === "indirecto" ? "mixed" : false}
+              presionada={rol === "directo"}
+              mixta={rol === "indirecto"}
               aria-label={`${nombre}: ${rol ?? "no trabaja"}`}
               onClick={() => tocar(id)}
-              className={cn(
-                "rounded-full border px-3 py-1.5 text-sm",
-                rol === "directo" && "bg-primary text-primary-foreground border-transparent",
-                rol === "indirecto" && "bg-secondary text-foreground border-border-strong",
-                !rol && "text-muted-foreground",
-              )}
             >
               {nombre}
-              {rol === "indirecto" && <span className="ml-1 font-mono text-xs">½</span>}
-            </button>
+            </Pildora>
           );
         })}
       </div>
-      <p className="text-muted-foreground text-xs">
+      <p className="mt-2 text-[13px] leading-[18px] text-ink2">
         Toca para marcar: directo → indirecto (cuenta ½ serie) → nada.
       </p>
     </div>

@@ -1,15 +1,19 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useParams } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
-import { ChevronDown, Plus, Trash2, X } from "lucide-react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 
 import { ExercisePicker, unitTag } from "@/components/exercise-picker";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Vacio } from "@/components/ui/estados";
+import { Fila } from "@/components/ui/fila";
+import { Cabeza, Hoja } from "@/components/ui/hoja";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Panel } from "@/components/ui/panel";
+import { contar } from "@/lib/ajustes-resumen";
 import { db } from "@/lib/db/db";
 import {
   addSlot,
@@ -22,10 +26,29 @@ import {
   type SlotView,
 } from "@/lib/db/queries";
 import { useAutosave } from "@/lib/use-autosave";
-import { cn } from "@/lib/utils";
 import { PlantillaDiaSkeleton } from "@/components/skeletons";
 
 const ARMED_MS = 5000;
+
+function Seccion({
+  titulo,
+  derecha,
+  children,
+}: {
+  titulo: string;
+  derecha?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <section className="sec">
+      <div className="sec-cab">
+        <h2 className="kicker">{titulo}</h2>
+        {derecha != null && <span className="kicker kicker-d">{derecha}</span>}
+      </div>
+      {children}
+    </section>
+  );
+}
 
 /**
  * Detalle de un día. Antes vivía en `useState` dentro de PlantillasScreen; ahora
@@ -45,63 +68,77 @@ export default function PlantillaDiaScreen() {
   }
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-3 p-4">
-      <header className="flex items-center gap-2 pt-2">
-        <h1 className="text-lg font-semibold">{day?.nombre ?? "Día"}</h1>
-        <span className="text-muted-foreground ml-auto text-xs">{slots.length} ejercicios</span>
-      </header>
-
-      <div className="flex flex-col gap-2">
-        {slots.map((view, i) => (
-          <SlotFila
-            key={view.slot.id}
-            view={view}
-            dayId={dayId}
-            esPrimero={i === 0}
-            esUltimo={i === slots.length - 1}
-          />
-        ))}
+    <>
+      <div className="px-4">
+        <Cabeza
+          titulo={day?.nombre ?? "Día"}
+          subtitulo={contar(slots.length, "ejercicio", "ejercicios")}
+          empujada
+        />
       </div>
+      <Hoja empujada>
+        <main className="mx-auto w-full max-w-md p-4">
+          {slots.length === 0 ? (
+            <Vacio
+              titulo="Este día no tiene ejercicios."
+              texto="Agrega del catálogo los que haces este día, en el orden en que los haces."
+              salida={<Button onClick={() => setShowPicker(true)}>Agregar ejercicio</Button>}
+            />
+          ) : (
+            <>
+              <Seccion titulo="Ejercicios" derecha="en orden">
+                {slots.map((view, i) => (
+                  <SlotFila
+                    key={view.slot.id}
+                    view={view}
+                    dayId={dayId}
+                    posicion={i}
+                    esPrimero={i === 0}
+                    esUltimo={i === slots.length - 1}
+                  />
+                ))}
+              </Seccion>
 
-      {showPicker ? (
-        <div className="flex flex-col gap-2 rounded-lg border p-3">
-          <div className="flex items-center gap-2">
-            <Label htmlFor="filtro-nuevo-slot">Agregar ejercicio al día</Label>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              className="ml-auto"
-              onClick={() => setShowPicker(false)}
-              aria-label="Cerrar"
-            >
-              <X />
-            </Button>
-          </div>
-          <ExercisePicker
-            inputId="filtro-nuevo-slot"
-            onPick={async (exercise) => {
-              await addSlot(dayId, exercise.id);
-              setShowPicker(false);
-            }}
-          />
-        </div>
-      ) : (
-        <Button variant="outline" onClick={() => setShowPicker(true)}>
-          <Plus /> Agregar ejercicio
-        </Button>
-      )}
-    </main>
+              <Button variant="secondary" className="mt-3 w-full" onClick={() => setShowPicker(true)}>
+                Agregar ejercicio
+              </Button>
+            </>
+          )}
+
+          <p className="mt-3 text-[13px] leading-[18px] text-ink3">
+            Los cambios valen para las próximas sesiones de {day?.nombre}. Las que ya cerraste no
+            cambian.
+          </p>
+        </main>
+      </Hoja>
+
+      <Panel
+        abierto={showPicker}
+        alCerrar={() => setShowPicker(false)}
+        titulo="Agregar ejercicio del catálogo"
+      >
+        <ExercisePicker
+          inputId="filtro-nuevo-slot"
+          onPick={async (exercise) => {
+            await addSlot(dayId, exercise.id);
+            setShowPicker(false);
+          }}
+        />
+      </Panel>
+    </>
   );
 }
 
 function SlotFila({
   view,
   dayId,
+  posicion,
   esPrimero,
   esUltimo,
 }: {
   view: SlotView;
   dayId: string;
+  posicion: number;
   esPrimero: boolean;
   esUltimo: boolean;
 }) {
@@ -145,56 +182,34 @@ function SlotFila({
   };
 
   return (
-    <div className="rounded-lg border">
-      <div className="flex items-center gap-1 p-2">
-        <div className="flex flex-col">
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            disabled={esPrimero}
-            onClick={() => void moveSlot(dayId, slot.id, -1)}
-            aria-label="Subir"
-            className="h-6"
-          >
-            <ChevronDown className="rotate-180" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            disabled={esUltimo}
-            onClick={() => void moveSlot(dayId, slot.id, 1)}
-            aria-label="Bajar"
-            className="h-6"
-          >
-            <ChevronDown />
-          </Button>
-        </div>
-
-        <button
-          type="button"
-          onClick={() => setAbierto((v) => !v)}
-          className="min-w-0 flex-1 text-left"
-        >
-          <span className="block truncate text-sm font-medium">
-            {exercise?.nombre ?? "— ejercicio no encontrado —"}
-          </span>
-          <span className="text-muted-foreground text-xs">
+    <div>
+      <Fila
+        onClick={() => setAbierto((v) => !v)}
+        aria-expanded={abierto}
+        chevron={false}
+        indice={String(posicion + 1).padStart(2, "0")}
+        titulo={exercise?.nombre ?? "— ejercicio no encontrado —"}
+        subtitulo={
+          <>
             {exercise ? unitTag(exercise) : ""}
             {slot.target_sets !== null && slot.target_reps !== null
               ? ` · objetivo ${slot.target_sets} × ${slot.target_reps}`
               : " · sin objetivo"}
-            {alternatives.length > 0 ? ` · ${alternatives.length} alt` : ""}
-          </span>
-        </button>
-
-        <ChevronDown className={cn("text-muted-foreground size-4", abierto && "rotate-180")} />
-      </div>
+            {alternatives.length > 0
+              ? ` · ${contar(alternatives.length, "alternativa", "alternativas")}`
+              : ""}
+          </>
+        }
+        valor={abierto ? <ChevronUp className="size-[18px]" /> : <ChevronDown className="size-[18px]" />}
+      />
 
       {abierto && (
-        <div className="flex flex-col gap-3 border-t p-3">
-          <div className="flex items-end gap-2">
+        <div className="mt-2 mb-3 rounded-[20px] bg-white/[.035] px-4 py-0.5 pb-4 shadow-[inset_0_0_0_1px_var(--color-hair)]">
+          <div className="mt-5 flex w-full gap-2.5">
             <div className="flex-1">
-              <Label htmlFor={`sets-${slot.id}`}>Series objetivo</Label>
+              <Label htmlFor={`sets-${slot.id}`} className="kicker mb-[9px]">
+                Series objetivo
+              </Label>
               <Input
                 id={`sets-${slot.id}`}
                 value={sets}
@@ -202,12 +217,13 @@ function SlotFila({
                 onBlur={flush}
                 inputMode="numeric"
                 placeholder="—"
-                className="mt-1 text-center"
+                className="text-center"
               />
             </div>
-            <span className="text-muted-foreground pb-3">×</span>
             <div className="flex-1">
-              <Label htmlFor={`reps-${slot.id}`}>Reps objetivo</Label>
+              <Label htmlFor={`reps-${slot.id}`} className="kicker mb-[9px]">
+                Reps objetivo
+              </Label>
               <Input
                 id={`reps-${slot.id}`}
                 value={reps}
@@ -215,63 +231,83 @@ function SlotFila({
                 onBlur={flush}
                 inputMode="numeric"
                 placeholder="—"
-                className="mt-1 text-center"
+                className="text-center"
               />
             </div>
           </div>
+          <p className="mt-2 text-[13px] leading-[18px] text-ink2">
+            Opcional. Se muestra en la sesión como «objetivo 3 × 8».
+          </p>
 
-          <div className="flex flex-col gap-1.5">
-            <Label>Alternativas</Label>
-            <div className="flex flex-wrap gap-1.5">
-              {alternatives.length === 0 && (
-                <span className="text-muted-foreground text-xs">Ninguna declarada.</span>
-              )}
-              {alternatives.map((alt) => (
-                <Badge key={alt.id} variant="secondary" className="gap-1 py-1">
-                  {alt.nombre}
-                  <button
-                    type="button"
-                    onClick={() => void removeSlotAlternative(slot.id, alt.id)}
-                    aria-label={`Quitar ${alt.nombre}`}
-                  >
-                    <X className="size-3" />
-                  </button>
-                </Badge>
-              ))}
-            </div>
-            {showAlt ? (
-              <ExercisePicker
-                inputId={`alt-${slot.id}`}
-                excludeIds={[slot.exercise_id, ...alternatives.map((a) => a.id)]}
-                onPick={async (exercise) => {
-                  await addSlotAlternative(slot.id, exercise.id);
-                  setShowAlt(false);
-                }}
-              />
-            ) : (
-              <Button variant="ghost" size="sm" onClick={() => setShowAlt(true)} className="self-start">
-                <Plus /> Alternativa
-              </Button>
+          <div className="mt-5">
+            <Label className="kicker mb-[9px]">Alternativas</Label>
+            {alternatives.length === 0 && (
+              <p className="mt-1.5 text-[15px] leading-[22px] text-ink2">Sin alternativas.</p>
             )}
+            {alternatives.map((alt) => (
+              <div key={alt.id} className="flex min-h-11 items-center justify-between gap-3">
+                <span className="min-w-0 truncate text-[15px] leading-[22px]">{alt.nombre}</span>
+                <Button
+                  variant="link"
+                  onClick={() => void removeSlotAlternative(slot.id, alt.id)}
+                  aria-label={`Quitar ${alt.nombre}`}
+                >
+                  Quitar
+                </Button>
+              </div>
+            ))}
+            <Button variant="link" className="mt-1" onClick={() => setShowAlt(true)}>
+              Agregar alternativa
+            </Button>
+          </div>
+
+          <div className="mt-5 flex w-full gap-2.5">
+            <Button
+              variant="secondary"
+              className="flex-1"
+              disabled={esPrimero}
+              onClick={() => void moveSlot(dayId, slot.id, -1)}
+            >
+              Subir
+            </Button>
+            <Button
+              variant="secondary"
+              className="flex-1"
+              disabled={esUltimo}
+              onClick={() => void moveSlot(dayId, slot.id, 1)}
+            >
+              Bajar
+            </Button>
           </div>
 
           {/* Borrado SUAVE. Duro dejaría colgando SessionExercise.routine_slot_id
               y las sesiones viejas perderían el badge de sustitución. */}
-          <Button
-            variant={armed ? "destructive" : "ghost"}
-            size="sm"
-            className={armed ? "" : "text-muted-foreground"}
-            onClick={() => (armed ? void softDeleteSlot(slot.id) : setArmed(true))}
-          >
-            <Trash2 />
-            {armed ? "Tocar de nuevo para dar de baja" : "Quitar del día"}
-          </Button>
-          <p className="text-muted-foreground text-xs">
+          <div className="mt-3">
+            <Button
+              variant="link"
+              className={armed ? "danger" : undefined}
+              onClick={() => (armed ? void softDeleteSlot(slot.id) : setArmed(true))}
+            >
+              {armed ? "Tocar de nuevo: quitar del día" : "Quitar del día"}
+            </Button>
+          </div>
+          <p className="mt-3 text-[13px] leading-[18px] text-ink3">
             Se da de baja, no se borra: el histórico sigue apuntando a este slot para explicar las
             sustituciones que registraste.
           </p>
         </div>
       )}
+
+      <Panel abierto={showAlt} alCerrar={() => setShowAlt(false)} titulo="Agregar alternativa">
+        <ExercisePicker
+          inputId={`alt-${slot.id}`}
+          excludeIds={[slot.exercise_id, ...alternatives.map((a) => a.id)]}
+          onPick={async (exercise) => {
+            await addSlotAlternative(slot.id, exercise.id);
+            setShowAlt(false);
+          }}
+        />
+      </Panel>
     </div>
   );
 }

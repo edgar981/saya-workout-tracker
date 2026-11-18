@@ -318,85 +318,115 @@ export function ProgresoSkeleton() {
 // ── /plantillas ─────────────────────────────────────────────────────────────
 export function PlantillasSkeleton() {
   return (
-    <Screen className="gap-4">
-      <Head title="Plantillas" />
-      <div className="flex flex-col gap-1.5">
-        <Sk className="h-3 w-full" />
-        <Sk className="h-3 w-2/3" />
+    <>
+      <div className="px-4">
+        <Cabeza titulo="Plantillas" empujada />
       </div>
-      <div className="flex flex-col gap-2">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="flex items-center justify-between rounded-md border px-4 py-4">
-            <Sk className="h-5 w-16" />
-            <Sk className="h-4 w-24" />
+      <Hoja empujada>
+        <main className="mx-auto w-full max-w-md p-4">
+          <div role="status" aria-busy="true">
+            <span className="sr-only">Cargando…</span>
+            <div aria-hidden="true">
+              <Sk className="h-4 w-full" />
+              <Sk className="mt-2 h-4 w-2/3" />
+              <div className="mt-2 rounded-[20px] px-4 py-0.5 shadow-[inset_0_0_0_1px_var(--color-hair)]">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Sk key={i} className="my-0 h-[60px] w-full rounded-none" />
+                ))}
+              </div>
+            </div>
           </div>
-        ))}
-      </div>
-    </Screen>
+        </main>
+      </Hoja>
+    </>
   );
 }
 
 // ── /plantillas/[dayId] ─────────────────────────────────────────────────────
 export function PlantillaDiaSkeleton() {
   return (
-    <Screen className="gap-3">
-      <Head trailing={<Sk className="ml-auto h-4 w-16" />} />
-      <div className="flex flex-col gap-2">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="flex items-center gap-2 rounded-lg border p-3">
-            <div className="min-w-0 flex-1">
-              <Sk className="h-4 w-40" />
-              <Sk className="mt-1.5 h-3 w-20" />
-            </div>
-            <Sk className="size-4" />
-          </div>
-        ))}
+    <>
+      <div className="px-4">
+        <Cabeza titulo={<Sk className="h-[34px] w-40" />} empujada />
       </div>
-    </Screen>
+      <Hoja empujada>
+        <main className="mx-auto w-full max-w-md p-4">
+          <div role="status" aria-busy="true">
+            <span className="sr-only">Cargando…</span>
+            <div aria-hidden="true">
+              <Sk className="h-[11px] w-[34%]" />
+              <div className="mt-2">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <Sk key={i} className="mt-2 h-[60px] w-full rounded-2xl" />
+                ))}
+              </div>
+              <Sk className="mt-3 h-12 w-full" />
+            </div>
+          </div>
+        </main>
+      </Hoja>
+    </>
   );
 }
 
 // ── /catalogo ───────────────────────────────────────────────────────────────
 export function CatalogoSkeleton() {
   return (
-    <Screen className="gap-3">
-      <Head title="Catálogo" trailing={<Sk className="ml-auto h-4 w-16" />} />
-      <Sk className="h-10" />
-      <div className="flex flex-col gap-2">
-        {Array.from({ length: 7 }).map((_, i) => (
-          <div key={i} className="rounded-lg border p-3">
-            <Sk className="h-4 w-44" />
-            <Sk className="mt-1.5 h-3 w-24" />
-          </div>
-        ))}
+    <>
+      <div className="px-4">
+        <Cabeza titulo="Catálogo" empujada />
       </div>
-    </Screen>
+      <Hoja empujada>
+        <main className="mx-auto w-full max-w-md p-4">
+          <div role="status" aria-busy="true">
+            <span className="sr-only">Cargando…</span>
+            <div aria-hidden="true">
+              <Sk className="h-[52px] w-full rounded-2xl" />
+              <Sk className="mt-3 h-12 w-full" />
+              <div className="mt-2">
+                {Array.from({ length: 7 }).map((_, i) => (
+                  <Sk key={i} className="mt-2 h-[60px] w-full rounded-2xl" />
+                ))}
+              </div>
+            </div>
+          </div>
+        </main>
+      </Hoja>
+    </>
   );
 }
 
 // ── /catalogo/nuevo ─────────────────────────────────────────────────────────
 export function CatalogoNuevoSkeleton() {
   return (
-    <Screen className="gap-4">
-      <Head title="Ejercicio nuevo" />
-      <Sk className="h-11" />
-      <div className="flex flex-col gap-1.5">
-        <Sk className="h-4 w-16" />
-        <div className="flex flex-wrap gap-1.5">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Sk key={i} className="h-9 w-16" />
-          ))}
-        </div>
+    <>
+      <div className="px-4">
+        <Cabeza titulo="Ejercicio nuevo" empujada />
       </div>
-      <div className="flex flex-col gap-1.5">
-        <Sk className="h-4 w-20" />
-        <div className="flex gap-1.5">
-          <Sk className="h-9 w-24" />
-          <Sk className="h-9 w-24" />
-        </div>
-      </div>
-      <Sk className="mt-2 h-12" />
-    </Screen>
+      <Hoja empujada>
+        <main className="mx-auto w-full max-w-md p-4">
+          <div role="status" aria-busy="true">
+            <span className="sr-only">Cargando…</span>
+            <div aria-hidden="true">
+              <Sk className="h-[11px] w-[24%]" />
+              <Sk className="mt-[9px] h-[52px] w-full rounded-2xl" />
+              <Sk className="mt-5 h-[11px] w-[20%]" />
+              <div className="mt-[9px] flex flex-wrap gap-1.5">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Sk key={i} className="h-11 w-16 rounded-[22px]" />
+                ))}
+              </div>
+              <Sk className="mt-5 h-[11px] w-[28%]" />
+              <div className="mt-[9px] flex gap-1.5">
+                <Sk className="h-11 flex-1 rounded-[22px]" />
+                <Sk className="h-11 flex-1 rounded-[22px]" />
+              </div>
+              <Sk className="mt-6 h-12 w-full" />
+            </div>
+          </div>
+        </main>
+      </Hoja>
+    </>
   );
 }
 
@@ -454,69 +484,91 @@ export function CloseSkeleton() {
 // ── /datos ──────────────────────────────────────────────────────────────────
 export function DataSkeleton() {
   return (
-    <Screen className="gap-4">
-      <Head title="Respaldo" trailing={<Sk className="ml-auto h-4 w-28" />} />
-      <div className="flex flex-col gap-1.5">
-        <Sk className="h-3 w-full" />
-        <Sk className="h-3 w-3/4" />
+    <>
+      <div className="px-4">
+        <Cabeza titulo="Respaldo" empujada />
       </div>
-      <div className="rounded-lg border">
-        {Array.from({ length: 9 }).map((_, i) => (
-          <div
-            key={i}
-            className="flex items-center justify-between border-b px-3 py-2 last:border-b-0"
-          >
-            <Sk className="h-3 w-28" />
-            <Sk className="h-3 w-6" />
+      <Hoja empujada>
+        <main className="mx-auto w-full max-w-md p-4">
+          <div role="status" aria-busy="true">
+            <span className="sr-only">Cargando…</span>
+            <div aria-hidden="true">
+              <Sk className="h-4 w-full" />
+              <Sk className="mt-2 h-4 w-3/4" />
+              <div className="mt-2.5 rounded-2xl shadow-[inset_0_0_0_1px_var(--color-hair)]">
+                {Array.from({ length: 9 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="flex min-h-9 items-center justify-between border-t border-hair px-3.5 first:border-t-0"
+                  >
+                    <Sk className="h-3 w-28" />
+                    <Sk className="h-3 w-6" />
+                  </div>
+                ))}
+              </div>
+              <Sk className="mt-[30px] h-[11px] w-[20%]" />
+              <Sk className="mt-3 h-24 w-full rounded-[20px]" />
+              <Sk className="mt-[30px] h-[11px] w-[34%]" />
+              <Sk className="mt-3 h-12 w-full" />
+            </div>
           </div>
-        ))}
-      </div>
-      <Sk className="h-40 rounded-lg" />
-      <Sk className="h-12" />
-    </Screen>
+        </main>
+      </Hoja>
+    </>
   );
 }
 
 // ── /mesociclos ─────────────────────────────────────────────────────────────
 export function MesociclosSkeleton() {
   return (
-    <Screen className="gap-3">
-      <Head title="Mesociclos" />
-      <div className="flex flex-col gap-1.5">
-        <Sk className="h-3 w-full" />
-        <Sk className="h-3 w-2/3" />
+    <>
+      <div className="px-4">
+        <Cabeza titulo="Mesociclos" empujada />
       </div>
-      <div className="flex gap-2">
-        <Sk className="h-9 flex-1" />
-        <Sk className="h-9 flex-1" />
-      </div>
-      <div className="flex flex-col gap-2">
-        {Array.from({ length: 2 }).map((_, i) => (
-          <div key={i} className="rounded-lg border p-3">
-            <Sk className="h-4 w-32" />
-            <Sk className="mt-1.5 h-3 w-40" />
+      <Hoja empujada>
+        <main className="mx-auto w-full max-w-md p-4">
+          <div role="status" aria-busy="true">
+            <span className="sr-only">Cargando…</span>
+            <div aria-hidden="true">
+              <div className="mt-2">
+                {Array.from({ length: 2 }).map((_, i) => (
+                  <Sk key={i} className="mt-2 h-[60px] w-full rounded-2xl" />
+                ))}
+              </div>
+              <div className="mt-[18px] flex gap-2.5">
+                <Sk className="h-12 w-40" />
+                <Sk className="h-12 w-32" />
+              </div>
+              <Sk className="mt-3 h-4 w-[86%]" />
+            </div>
           </div>
-        ))}
-      </div>
-    </Screen>
+        </main>
+      </Hoja>
+    </>
   );
 }
 
 // ── /ajustes ────────────────────────────────────────────────────────────────
 export function AjustesSkeleton() {
   return (
-    <Screen className="gap-3">
-      <Head title="Ajustes" />
-      <Sk className="h-4 w-64" />
-      <div className="flex flex-col gap-2">
-        {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="flex items-center gap-3 rounded-xl border px-4 py-3.5">
-            <Sk className="size-4 shrink-0" />
-            <Sk className="h-4 w-24 flex-1" />
-            <Sk className="size-4 shrink-0" />
-          </div>
-        ))}
+    <>
+      <div className="px-4">
+        <Cabeza titulo="Ajustes" empujada />
       </div>
-    </Screen>
+      <Hoja empujada>
+        <main className="mx-auto w-full max-w-md p-4">
+          <div role="status" aria-busy="true">
+            <span className="sr-only">Cargando…</span>
+            <div aria-hidden="true">
+              <div className="mt-2">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <Sk key={i} className="mt-2 h-[60px] w-full rounded-2xl" />
+                ))}
+              </div>
+            </div>
+          </div>
+        </main>
+      </Hoja>
+    </>
   );
 }

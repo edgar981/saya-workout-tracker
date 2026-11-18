@@ -5,8 +5,10 @@ import { useRouter } from "next/navigation";
 
 import { GruposPicker } from "@/components/grupos-picker";
 import { Button } from "@/components/ui/button";
+import { Cabeza, Hoja } from "@/components/ui/hoja";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Pildora } from "@/components/ui/pildora";
 import { createExercise } from "@/lib/db/queries";
 import type { AddedUnit, Exercise, Laterality, UnitType, WeightBasis } from "@/lib/db/types";
 import { UNIDADES, usaAddedUnit, usaBasis, usaStackLabel } from "@/lib/catalogo-units";
@@ -43,125 +45,134 @@ export default function CatalogoNuevoScreen() {
   };
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-4 p-4">
-      <header className="flex items-center gap-2 pt-2">
-        <h1 className="text-lg font-semibold">Ejercicio nuevo</h1>
-      </header>
-
-      <Input
-        id="nuevo-nombre"
-        value={nombre}
-        onChange={(e) => setNombre(e.target.value)}
-        placeholder="Nombre"
-        aria-label="Nombre"
-      />
-
-      <div className="flex flex-col gap-1.5">
-        <Label>Unidad</Label>
-        <div className="flex flex-wrap gap-1.5">
-          {UNIDADES.map((u) => (
-            <Button
-              key={u.valor}
-              variant={unitType === u.valor ? "default" : "outline"}
-              size="sm"
-              onClick={() => setUnitType(u.valor)}
-            >
-              {u.etiqueta}
-            </Button>
-          ))}
-        </div>
+    <>
+      <div className="px-4">
+        <Cabeza titulo="Ejercicio nuevo" empujada />
       </div>
-
-      {usaBasis(unitType) && (
-        <div className="flex flex-col gap-1.5">
-          <Label>Base del peso</Label>
-          <div className="flex gap-1.5">
-            <Button
-              variant={basis === "TOTAL" ? "default" : "outline"}
-              size="sm"
-              className="flex-1"
-              onClick={() => setBasis("TOTAL")}
-            >
-              Total
-            </Button>
-            <Button
-              variant={basis === "PER_IMPLEMENT" ? "default" : "outline"}
-              size="sm"
-              className="flex-1"
-              onClick={() => setBasis("PER_IMPLEMENT")}
-            >
-              Por mancuerna
-            </Button>
+      <Hoja empujada>
+        <main className="mx-auto w-full max-w-md p-4">
+          <div>
+            <Label htmlFor="nuevo-nombre" className="kicker mb-[9px]">
+              Nombre
+            </Label>
+            <Input
+              id="nuevo-nombre"
+              value={nombre}
+              onChange={(e) => setNombre(e.target.value)}
+              placeholder="Nombre"
+              aria-label="Nombre"
+            />
           </div>
-        </div>
-      )}
 
-      {usaAddedUnit(unitType) && (
-        <div className="flex flex-col gap-1.5">
-          <Label>Unidad del peso añadido</Label>
-          <div className="flex gap-1.5">
-            {(["KG", "LB"] as const).map((u) => (
-              <Button
-                key={u}
-                variant={addedUnit === u ? "default" : "outline"}
-                size="sm"
+          <div className="mt-5">
+            <Label className="kicker mb-[9px]">Unidad</Label>
+            <div className="flex flex-wrap gap-1.5">
+              {UNIDADES.map((u) => (
+                <Pildora
+                  key={u.valor}
+                  presionada={unitType === u.valor}
+                  onClick={() => setUnitType(u.valor)}
+                >
+                  {u.etiqueta}
+                </Pildora>
+              ))}
+            </div>
+            <p className="mt-2 text-[13px] leading-[18px] text-ink2">
+              Se fija con la primera serie y queda en cada serie que registres.
+            </p>
+          </div>
+
+          {usaBasis(unitType) && (
+            <div className="mt-5">
+              <Label className="kicker mb-[9px]">Base del peso</Label>
+              <div className="flex gap-1.5">
+                <Pildora
+                  className="flex-1"
+                  presionada={basis === "TOTAL"}
+                  onClick={() => setBasis("TOTAL")}
+                >
+                  Total
+                </Pildora>
+                <Pildora
+                  className="flex-1"
+                  presionada={basis === "PER_IMPLEMENT"}
+                  onClick={() => setBasis("PER_IMPLEMENT")}
+                >
+                  Por mancuerna
+                </Pildora>
+              </div>
+            </div>
+          )}
+
+          {usaAddedUnit(unitType) && (
+            <div className="mt-5">
+              <Label className="kicker mb-[9px]">Unidad del peso añadido</Label>
+              <div className="flex gap-1.5">
+                {(["KG", "LB"] as const).map((u) => (
+                  <Pildora
+                    key={u}
+                    className="flex-1"
+                    presionada={addedUnit === u}
+                    onClick={() => setAddedUnit(u)}
+                  >
+                    {u}
+                  </Pildora>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {usaStackLabel(unitType) && (
+            <div className="mt-5">
+              <Label htmlFor="nuevo-stack" className="kicker mb-[9px]">
+                Etiqueta del stack
+              </Label>
+              <Input
+                id="nuevo-stack"
+                value={stackLabel}
+                onChange={(e) => setStackLabel(e.target.value)}
+                placeholder="disc"
+              />
+            </div>
+          )}
+
+          <div className="mt-5">
+            <Label className="kicker mb-[9px]">Lateralidad</Label>
+            <div className="flex gap-1.5">
+              <Pildora
                 className="flex-1"
-                onClick={() => setAddedUnit(u)}
+                presionada={lateralidad === "BILATERAL"}
+                onClick={() => setLateralidad("BILATERAL")}
               >
-                {u.toLowerCase()}
-              </Button>
-            ))}
+                Bilateral
+              </Pildora>
+              <Pildora
+                className="flex-1"
+                presionada={lateralidad === "UNILATERAL"}
+                onClick={() => setLateralidad("UNILATERAL")}
+              >
+                Unilateral
+              </Pildora>
+            </div>
           </div>
-        </div>
-      )}
 
-      {usaStackLabel(unitType) && (
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="nuevo-stack">Etiqueta del stack</Label>
-          <Input
-            id="nuevo-stack"
-            value={stackLabel}
-            onChange={(e) => setStackLabel(e.target.value)}
-            placeholder="disc"
-          />
-        </div>
-      )}
+          <div className="mt-5">
+            <Label className="kicker mb-[9px]">Grupos musculares</Label>
+            <GruposPicker value={grupos} onChange={setGrupos} />
+          </div>
 
-      <div className="flex flex-col gap-1.5">
-        <Label>Lateralidad</Label>
-        <div className="flex gap-1.5">
           <Button
-            variant={lateralidad === "BILATERAL" ? "default" : "outline"}
-            size="sm"
-            className="flex-1"
-            onClick={() => setLateralidad("BILATERAL")}
+            className="mt-6 w-full"
+            onClick={() => void crear()}
+            disabled={nombre.trim() === ""}
           >
-            Bilateral
+            Crear ejercicio
           </Button>
-          <Button
-            variant={lateralidad === "UNILATERAL" ? "default" : "outline"}
-            size="sm"
-            className="flex-1"
-            onClick={() => setLateralidad("UNILATERAL")}
-          >
-            Unilateral
-          </Button>
-        </div>
-      </div>
-
-      <div className="flex flex-col gap-1.5">
-        <Label>Grupos musculares</Label>
-        <GruposPicker value={grupos} onChange={setGrupos} />
-      </div>
-
-      <p className="text-muted-foreground text-xs">
-        La unidad queda fija en cuanto registres la primera serie: se snapshotea en cada SetLog y
-        cambiarla después partiría el histórico.
-      </p>
-
-      <Button onClick={() => void crear()} disabled={nombre.trim() === ""}>
-        Crear
-      </Button>
-    </main>
+          {nombre.trim() === "" && (
+            <p className="mt-2 text-[13px] leading-[18px] text-ink3">Falta el nombre.</p>
+          )}
+        </main>
+      </Hoja>
+    </>
   );
 }
