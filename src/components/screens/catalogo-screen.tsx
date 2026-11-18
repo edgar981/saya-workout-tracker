@@ -198,7 +198,7 @@ function FilaEjercicio({ exercise }: { exercise: Exercise }) {
           <div className="mt-5">
             <Button
               variant="link"
-              className={armed ? "danger" : undefined}
+              className="danger"
               onClick={() => (armed ? void softDeleteExercise(exercise.id) : setArmed(true))}
             >
               {armed ? "Tocar de nuevo" : "Archivar"}
