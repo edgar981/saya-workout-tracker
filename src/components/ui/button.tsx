@@ -45,6 +45,14 @@ const buttonVariants = cva(
         "icon-sm": "size-11 min-h-11 min-w-11",
       },
     },
+    // El enlace de texto no hereda el relleno horizontal del tamaño: `px-0` va al final.
+    compoundVariants: [
+      { variant: "link", size: "default", className: "px-0" },
+      { variant: "link", size: "sm", className: "px-0" },
+      { variant: "link", size: "lg", className: "px-0" },
+      { variant: "link", size: "icon", className: "px-0" },
+      { variant: "link", size: "icon-sm", className: "px-0" },
+    ],
     defaultVariants: { variant: "default", size: "default" },
   },
 );

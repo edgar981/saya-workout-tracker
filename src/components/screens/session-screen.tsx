@@ -1,17 +1,18 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
-import { ChevronLeft, ChevronRight, Flag, Plus, X } from "lucide-react";
 
 import { ExercisePicker } from "@/components/exercise-picker";
 import { ExerciseCard } from "@/components/session/exercise-card";
 import { RestCounter } from "@/components/session/rest-counter";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
+import { SessionSkeleton } from "@/components/skeletons";
+import { Anillo } from "@/components/ui/anillo";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { Vacio } from "@/components/ui/estados";
+import { Panel } from "@/components/ui/panel";
 import {
   addAdHocExercise,
   getActiveSession,
@@ -19,7 +20,6 @@ import {
   type SessionView,
 } from "@/lib/db/queries";
 import { cn } from "@/lib/utils";
-import { SessionSkeleton } from "@/components/skeletons";
 
 const INDEX_KEY = (sessionId: string) => `saya:ejercicio:${sessionId}`;
 
@@ -47,7 +47,7 @@ export default function SessionScreen() {
     return <SessionSkeleton />;
   }
   if (view === null) {
-    return <p className="text-muted-foreground p-6 text-sm">Sin sesión activa.</p>;
+    return <p className="text-ink2 p-6 text-sm">Sin sesión activa.</p>;
   }
 
   return <ActiveSession key={view.session.id} view={view} />;
@@ -84,135 +84,121 @@ function ActiveSession({ view }: { view: SessionView }) {
   };
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col p-4">
-      {/* Cabecera compacta (v2): la barra que convive con el scroll. Salida que
-          deja la sesión abierta, nombre del día, y el contador desde la última
-          serie con su punto de acento. */}
-      <header className="flex items-center gap-2.5 pt-2 pb-3">
-        {/* Volver al home SIN cerrar: la sesión sigue activa (§1). Solo cambió el
-            rótulo (antes "Salir"); el comportamiento es el mismo. No toca Dexie;
-            el home no rebota porque ya no autorredirecciona a /sesion. Volver a
-            entrar reanuda en el mismo ejercicio (saya:ejercicio:<id>). */}
-        <Button
-          asChild
-          variant="outline"
-          size="sm"
-          className="-ml-1 shrink-0 gap-1.5 rounded-full px-3"
-        >
-          <Link href="/" aria-label="Volver al home sin cerrar la sesión">
-            <ChevronLeft /> Volver
-          </Link>
-        </Button>
-        <div className="flex-1" />
-        <span className="text-muted-foreground font-mono text-xs">
-          {view.routineDay?.nombre ?? "Sesión libre"}
-        </span>
-        {ultimoCreadoEn && <span className="bg-border-strong h-3.5 w-px shrink-0" />}
+    <>
+      {/* La barra: salida que deja la sesión abierta, el día y el contador desde la
+          última serie. La pantalla pinta su propia barra y su propia hoja (la regla
+          U de globals.css desenvuelve la del shell). */}
+      <header className="stop">
+        {/* Volver a Hoy SIN cerrar: la sesión sigue activa (§1). No toca Dexie; Hoy
+            no rebota porque no autorredirecciona a /sesion. Volver a entrar reanuda
+            en el mismo ejercicio (saya:ejercicio:<id>). */}
+        <Link href="/" aria-label="Volver al home sin cerrar la sesión" className="stop-back">
+          <b aria-hidden="true">‹</b> Volver
+        </Link>
+        <span className="stop-dia">{view.routineDay?.nombre ?? "Sesión libre"}</span>
         <RestCounter lastCreadoEn={ultimoCreadoEn} />
       </header>
 
-      {/* Salto directo, en orden_visual. Número + nombre corto (v2). Este orden NO
-          cambia según lo que vayas ejecutando: una lista que se reacomoda sola
-          entre series desorienta. */}
-      <nav className="-mx-4 mb-3 flex gap-1.5 overflow-x-auto px-4 pb-1">
-        {items.map((other, i) => (
-          <button
-            key={other.sessionExercise.id}
-            type="button"
-            onClick={() => setIndex(i)}
-            aria-label={other.exercise.nombre}
-            aria-current={i === safeIndex}
-            className={cn(
-              "flex shrink-0 flex-col gap-0.5 rounded-md border px-2.5 py-1.5 text-left",
-              i === safeIndex
-                ? "bg-primary text-primary-foreground border-transparent"
-                : other.sets.length > 0
-                  ? "bg-secondary text-secondary-foreground border-transparent"
-                  : "text-muted-foreground",
-              other.isAdHoc && i !== safeIndex && "border-dashed",
+      <div
+        className="hoja"
+        data-propia=""
+        style={{ "--ventana": "70px", "--hoja-pb": "0px", marginTop: 12 } as CSSProperties}
+      >
+        <main className="mx-auto flex w-full max-w-md flex-col px-4 pt-4">
+          <div className="flex-1 pb-4">
+            {/* Salto directo, en orden_visual. Este orden NO cambia según lo que
+                vayas ejecutando: una lista que se reacomoda sola entre series
+                desorienta. */}
+            <nav aria-label="Ejercicios" className="chips">
+              {items.map((other, i) => (
+                <button
+                  key={other.sessionExercise.id}
+                  type="button"
+                  className="chip"
+                  onClick={() => setIndex(i)}
+                  aria-label={`Ejercicio ${i + 1}: ${other.exercise.nombre}`}
+                  aria-current={i === safeIndex ? "step" : undefined}
+                  data-hecho={other.sets.some((s) => s.reps > 0) ? "" : undefined}
+                >
+                  {i === safeIndex && <Anillo redondo />}
+                  {i + 1}
+                </button>
+              ))}
+              <button
+                type="button"
+                className="chip chip-mas"
+                onClick={() => setShowPicker(true)}
+                aria-label="Agregar ejercicio"
+              >
+                +
+              </button>
+            </nav>
+
+            {items.length === 0 || !item ? (
+              <Vacio
+                className="mt-6"
+                titulo="Esta sesión no tiene ejercicios."
+                texto="Agrega uno del catálogo para registrar series."
+                salida={<Button onClick={() => setShowPicker(true)}>+ Ejercicio</Button>}
+              />
+            ) : (
+              <ExerciseCard
+                key={item.sessionExercise.id}
+                item={item}
+                sessionId={sessionId}
+                posicion={safeIndex + 1}
+                total={items.length}
+              />
             )}
-          >
-            <span className="font-mono text-[10px] font-semibold tabular-nums opacity-70">
-              {String(i + 1).padStart(2, "0")}
-            </span>
-            <span className="max-w-[7rem] truncate text-xs font-medium">
-              {other.exercise.nombre}
-            </span>
-          </button>
-        ))}
-        <button
-          type="button"
-          onClick={() => setShowPicker((v) => !v)}
-          aria-label="Agregar ejercicio a la sesión"
-          className="text-muted-foreground flex shrink-0 items-center justify-center rounded-md border border-dashed px-3 text-lg"
-        >
-          +
-        </button>
-      </nav>
-
-      {showPicker && (
-        <div className="mb-3 flex flex-col gap-2 rounded-lg border p-3">
-          <div className="flex items-center gap-2">
-            <Label htmlFor="filtro-adhoc">Agregar ejercicio del catálogo</Label>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              className="ml-auto"
-              onClick={() => setShowPicker(false)}
-              aria-label="Cerrar"
-            >
-              <X />
-            </Button>
           </div>
-          <ExercisePicker
-            inputId="filtro-adhoc"
-            onPick={(exercise) => void agregar(exercise.id)}
-          />
-          <p className="text-muted-foreground text-xs">
-            Solo del catálogo. Crear un ejercicio obliga a fijar su unidad, y eso se snapshotea en
-            cada serie — se decide en frío, en Catálogo.
-          </p>
-        </div>
-      )}
 
-      <Separator className="mb-4" />
-
-      {items.length === 0 || !item ? (
-        <div className="flex flex-col gap-3">
-          <p className="text-muted-foreground text-sm">Esta sesión no tiene ejercicios.</p>
-          <Button variant="outline" onClick={() => setShowPicker(true)}>
-            <Plus /> Ejercicio
-          </Button>
-        </div>
-      ) : (
-        <ExerciseCard key={item.sessionExercise.id} item={item} sessionId={sessionId} />
-      )}
-
-      <div className="mt-6 flex items-center gap-2 pb-2">
-        <Button
-          variant="outline"
-          size="icon"
-          disabled={safeIndex === 0}
-          onClick={() => setIndex(safeIndex - 1)}
-          aria-label="Ejercicio anterior"
-        >
-          <ChevronLeft />
-        </Button>
-        <Button
-          variant="outline"
-          size="icon"
-          disabled={safeIndex >= items.length - 1}
-          onClick={() => setIndex(safeIndex + 1)}
-          aria-label="Ejercicio siguiente"
-        >
-          <ChevronRight />
-        </Button>
-        <Button asChild variant="secondary" className="ml-auto">
-          <Link href="/sesion/cerrar">
-            <Flag /> Cerrar sesión
-          </Link>
-        </Button>
+          <nav className="sbot">
+            <button
+              type="button"
+              className="arw"
+              disabled={safeIndex === 0}
+              onClick={() => setIndex(safeIndex - 1)}
+              aria-label="Ejercicio anterior"
+            >
+              <span aria-hidden="true">‹</span>
+            </button>
+            <button
+              type="button"
+              className="arw"
+              disabled={safeIndex >= items.length - 1}
+              onClick={() => setIndex(safeIndex + 1)}
+              aria-label="Ejercicio siguiente"
+            >
+              <span aria-hidden="true">›</span>
+            </button>
+            <Link
+              href="/sesion/cerrar"
+              className={cn(buttonVariants({ variant: "secondary" }), "ml-auto")}
+            >
+              Cerrar sesión
+            </Link>
+          </nav>
+        </main>
       </div>
-    </main>
+
+      <Panel
+        abierto={showPicker}
+        alCerrar={() => setShowPicker(false)}
+        titulo="Agregar ejercicio del catálogo"
+      >
+        <label htmlFor="filtro-adhoc" className="sr-only">
+          Agregar ejercicio del catálogo
+        </label>
+        <ExercisePicker
+          inputId="filtro-adhoc"
+          className="mt-3.5"
+          onPick={(exercise) => void agregar(exercise.id)}
+        />
+        <p className="text-ink2 mt-3 text-[13px] leading-[19px] font-normal">
+          Solo del catálogo. Crear un ejercicio obliga a fijar su unidad, y eso se snapshotea en
+          cada serie — se decide en frío, en Catálogo.
+        </p>
+      </Panel>
+    </>
   );
 }

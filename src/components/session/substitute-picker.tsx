@@ -1,11 +1,9 @@
 "use client";
 
-import { Check, RotateCcw } from "lucide-react";
-
 import { ExercisePicker, unitTag } from "@/components/exercise-picker";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { substituteExercise, type SessionExerciseView } from "@/lib/db/queries";
+import type { Exercise } from "@/lib/db/types";
 
 /**
  * La sustitución no se escribe en ningún campo: cambiar el exercise_id de la
@@ -14,6 +12,9 @@ import { substituteExercise, type SessionExerciseView } from "@/lib/db/queries";
  *
  * Las alternativas del slot pueden tener unit_type distinto al del planeado —
  * Wide Grip Pull Down (LB) contra Wide Grip Pull Up (peso corporal + kg).
+ *
+ * Va dentro del panel «Cambiar ejercicio» (`Panel`, lo monta la tarjeta). Tocar
+ * una opción sustituye al momento; «Listo» sólo cierra el panel.
  */
 export function SubstitutePicker({
   item,
@@ -27,48 +28,74 @@ export function SubstitutePicker({
     onDone();
   };
 
+  const alternativas = item.alternatives.filter((alt) => alt.id !== item.exercise.id);
+
+  const opcion = (exercise: Exercise, marcada: boolean, onClick: () => void) => (
+    <button
+      key={exercise.id}
+      type="button"
+      role="radio"
+      aria-checked={marcada}
+      onClick={onClick}
+      className="opt"
+    >
+      <span className="rd" aria-hidden="true" />
+      <span className="min-w-0 flex-1">
+        <span className="fila-t block truncate">{exercise.nombre}</span>
+        <span className="fila-s block">{unitTag(exercise)}</span>
+      </span>
+    </button>
+  );
+
   return (
-    <div className="flex flex-col gap-3 rounded-lg border p-3">
-      {item.alternatives.length > 0 && (
-        <div className="flex flex-col gap-1.5">
-          <Label>Alternativas del plan</Label>
-          {item.alternatives
-            .filter((alt) => alt.id !== item.exercise.id)
-            .map((alt) => (
-              <Button
-                key={alt.id}
-                variant="outline"
-                className="h-auto justify-between py-2 text-left"
-                onClick={() => void pick(alt.id)}
-              >
-                <span className="truncate">{alt.nombre}</span>
-                <span className="text-muted-foreground shrink-0 text-xs">{unitTag(alt)}</span>
-              </Button>
-            ))}
-        </div>
-      )}
+    <div>
+      <p className="dek">
+        Solo en esta sesión. Las series que ya registraste quedan con este ejercicio.
+      </p>
 
-      {item.isSubstitution && item.slotExercise && (
-        <Button
-          variant="ghost"
-          className="h-auto justify-start py-2"
-          onClick={() => void pick(item.slotExercise!.id)}
-        >
-          <RotateCcw /> Volver a {item.slotExercise.nombre}
-        </Button>
-      )}
+      <div role="radiogroup" className="mt-3">
+        {opcion(item.exercise, true, () => {})}
+        {item.isSubstitution && item.slotExercise && (
+          <button
+            type="button"
+            role="radio"
+            aria-checked={false}
+            onClick={() => void pick(item.slotExercise!.id)}
+            className="opt"
+          >
+            <span className="rd" aria-hidden="true" />
+            <span className="fila-t min-w-0 flex-1 truncate">
+              Volver a {item.slotExercise.nombre}
+            </span>
+          </button>
+        )}
+      </div>
 
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="filtro-sustitucion">Cualquier ejercicio del catálogo</Label>
+      <div className="fg">
+        <h3 className="kicker">Alternativas del plan</h3>
+        {alternativas.length > 0 ? (
+          <div role="radiogroup" aria-label="Alternativas del plan" className="mt-1">
+            {alternativas.map((alt) => opcion(alt, false, () => void pick(alt.id)))}
+          </div>
+        ) : (
+          <p className="dek mt-1.5">Este ejercicio no tiene alternativas en la plantilla.</p>
+        )}
+      </div>
+
+      <div className="fg">
+        <label htmlFor="filtro-sustitucion" className="kicker block">
+          Cualquier ejercicio del catálogo
+        </label>
         <ExercisePicker
           inputId="filtro-sustitucion"
           excludeIds={[item.exercise.id]}
           onPick={(exercise) => void pick(exercise.id)}
+          className="mt-2"
         />
       </div>
 
-      <Button variant="secondary" onClick={onDone}>
-        <Check /> Listo
+      <Button className="mt-6 w-full" onClick={onDone}>
+        Listo
       </Button>
     </div>
   );

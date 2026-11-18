@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { listActiveExercises } from "@/lib/db/queries";
 import type { Exercise } from "@/lib/db/types";
 import { unitSuffix } from "@/lib/units";
+import { cn } from "@/lib/utils";
 
 /** Etiqueta corta de unidad, para no elegir a ciegas en el picker. */
 export function unitTag(exercise: Exercise): string {
@@ -32,11 +33,13 @@ export function ExercisePicker({
   onPick,
   inputId = "filtro-catalogo",
   placeholder = "Buscar…",
+  className,
 }: {
   excludeIds?: string[];
   onPick: (exercise: Exercise) => void;
   inputId?: string;
   placeholder?: string;
+  className?: string;
 }) {
   const [filter, setFilter] = useState("");
   const catalog = useLiveQuery(() => listActiveExercises(), []);
@@ -47,26 +50,23 @@ export function ExercisePicker({
   );
 
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className={cn("flex flex-col", className)}>
       <Input
         id={inputId}
         value={filter}
         onChange={(e) => setFilter(e.target.value)}
         placeholder={placeholder}
       />
-      <div className="max-h-64 overflow-y-auto rounded-md border">
+      <div className="max-h-64 overflow-y-auto overscroll-contain">
         {filtered.length === 0 ? (
-          <p className="text-muted-foreground p-3 text-sm">Nada coincide.</p>
+          <p className="dek mt-3">Nada coincide.</p>
         ) : (
           filtered.map((exercise) => (
-            <button
-              key={exercise.id}
-              type="button"
-              onClick={() => onPick(exercise)}
-              className="hover:bg-accent flex w-full items-center gap-2 border-b px-3 py-2.5 text-left last:border-b-0"
-            >
-              <span className="min-w-0 flex-1 truncate text-sm">{exercise.nombre}</span>
-              <span className="text-muted-foreground shrink-0 text-xs">{unitTag(exercise)}</span>
+            <button key={exercise.id} type="button" onClick={() => onPick(exercise)} className="opt">
+              <span className="min-w-0 flex-1">
+                <span className="fila-t block truncate">{exercise.nombre}</span>
+                <span className="fila-s block">{unitTag(exercise)}</span>
+              </span>
             </button>
           ))
         )}

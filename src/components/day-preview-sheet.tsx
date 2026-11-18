@@ -1,13 +1,16 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
-import { AlertTriangle, Flag } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
+import { unitTag } from "@/components/exercise-picker";
 import { Button } from "@/components/ui/button";
+import { Fila } from "@/components/ui/fila";
+import { formatoNeto } from "@/lib/cuerpo";
 import { loadDayPreview } from "@/lib/db/day-preview";
 import type { SessionVerdictNet } from "@/lib/db/verdicts";
+import { lineaCompacta, subtituloHoy } from "@/lib/hoy";
 import { cn } from "@/lib/utils";
 
 /** ms de la animación de entrada/salida. Solo la hoja se desliza; no es una
@@ -33,16 +36,15 @@ function fechaCorta(iso: string): string {
  */
 function VeredictoNeto({ net }: { net: SessionVerdictNet }) {
   const { net: n, sinComparacion } = net;
-  const texto = n > 0 ? `+${n}` : n < 0 ? `−${Math.abs(n)}` : "0";
   return (
-    <span
-      className={cn(
-        "font-mono text-sm tabular-nums",
-        n > 0 ? "text-foreground" : "text-muted-foreground",
+    <span className={cn("tabular-nums", n > 0 ? "text-ink" : "text-ink2")}>
+      {formatoNeto(n)}
+      {sinComparacion > 0 && (
+        <span className="align-super text-[9px]" style={{ color: "var(--ink3)" }}>
+          {" "}
+          •
+        </span>
       )}
-    >
-      {texto}
-      {sinComparacion > 0 && <span className="text-faint align-super text-[9px]"> •</span>}
     </span>
   );
 }
@@ -50,15 +52,19 @@ function VeredictoNeto({ net }: { net: SessionVerdictNet }) {
 export function DayPreviewSheet({
   dayId,
   sesionAbiertaNombre,
+  sesionAbiertaDiaId = null,
   onEmpezar,
   onClose,
 }: {
   dayId: string;
   /** Nombre del día de la sesión abierta, o null si no hay ninguna. */
   sesionAbiertaNombre: string | null;
+  /** Día (`routine_day_id`) de la sesión abierta; null si es libre o no hay. */
+  sesionAbiertaDiaId?: string | null;
   onEmpezar: () => void;
   onClose: () => void;
 }) {
+  const router = useRouter();
   const preview = useLiveQuery(() => loadDayPreview(dayId), [dayId]);
 
   const [shown, setShown] = useState(false);
@@ -66,6 +72,11 @@ export function DayPreviewSheet({
   const [dragging, setDragging] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const grabRef = useRef<HTMLDivElement>(null);
+
+  // La vista previa es del día de la sesión abierta: no hay aviso y el botón
+  // continúa esa sesión (sin escribir nada).
+  const mismoDia = sesionAbiertaNombre !== null && sesionAbiertaDiaId === dayId;
+  const aviso = sesionAbiertaNombre !== null && !mismoDia;
 
   // Entrada: desliza hacia arriba en el primer frame.
   useEffect(() => {
@@ -94,7 +105,7 @@ export function DayPreviewSheet({
     return () => window.removeEventListener("keydown", onKey);
   }, [cerrar]);
 
-  // Bloquea el scroll del home detrás de la hoja.
+  // Bloquea el scroll de Hoy detrás de la hoja.
   useEffect(() => {
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -148,12 +159,21 @@ export function DayPreviewSheet({
     };
   }, [cerrar]);
 
+  const nombreDia = preview?.day?.nombre ?? "";
+  const nEjercicios = preview?.slots.length ?? 0;
+  const cuenta = `${nEjercicios} ${nEjercicios === 1 ? "ejercicio" : "ejercicios"}`;
+  const subCabecera = preview
+    ? preview.mesocicloNombre
+      ? `${subtituloHoy(preview.mesocicloNombre, null)} · ${cuenta}`
+      : cuenta
+    : "";
+
   return (
     <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label="Vista previa del día">
       {/* Tocar fuera cierra. */}
       <div
         onClick={() => cerrar()}
-        className="bg-bg/80 absolute inset-0 transition-opacity"
+        className="absolute inset-0 bg-black/60 transition-opacity"
         style={{ opacity: shown ? 1 : 0, transitionDuration: `${SLIDE_MS}ms` }}
       />
 
@@ -161,98 +181,121 @@ export function DayPreviewSheet({
       <div
         ref={panelRef}
         tabIndex={-1}
-        className="bg-panel-solido border-border absolute inset-x-0 bottom-0 mx-auto flex max-h-[88dvh] w-full max-w-md flex-col rounded-t-2xl border-t pb-[env(safe-area-inset-bottom)] outline-none"
+        className="bg-panel-solido absolute inset-x-0 bottom-0 mx-auto flex max-h-[90dvh] w-full max-w-md flex-col rounded-t-[30px] px-5 pt-[18px] pb-[calc(22px+env(safe-area-inset-bottom))] outline-none [box-shadow:inset_0_1px_0_rgba(255,255,255,.2)]"
         style={{
           transform: shown ? `translateY(${dragY}px)` : "translateY(100%)",
           transition: dragging ? "none" : `transform ${SLIDE_MS}ms cubic-bezier(0.32,0.72,0,1)`,
         }}
       >
-        {/* Zona de agarre: el asa y la cabecera arrastran (listeners nativos, ver
-            arriba); el contenido de abajo hace scroll normal. `touch-none` para
-            que el arrastre no lo tome el navegador como scroll del fondo. */}
-        <div ref={grabRef} className="shrink-0 touch-none px-4 pt-2.5">
-          <div className="bg-border mx-auto mb-3 h-1 w-9 rounded-full" />
-          {preview === undefined || !preview.day ? (
-            <div className="bg-surface-2 h-6 w-32 rounded-md" />
-          ) : (
-            <>
-              <h2 className="text-xl font-semibold">{preview.day.nombre}</h2>
-              <p className="text-muted-foreground text-xs tabular-nums">
-                {preview.slots.length} {preview.slots.length === 1 ? "ejercicio" : "ejercicios"}
-              </p>
-            </>
-          )}
+        {/* Zona de agarre: la cabecera arrastra (listeners nativos, ver arriba); el
+            contenido de abajo hace scroll normal. `touch-none` para que el arrastre
+            no lo tome el navegador como scroll del fondo. */}
+        <div ref={grabRef} className="flex shrink-0 touch-none items-start justify-between gap-3">
+          <div className="min-w-0">
+            {preview === undefined || !preview.day ? (
+              <div className="sk h-6 w-32" />
+            ) : (
+              <>
+                <h2 className="tit-3">{nombreDia}</h2>
+                <p className="text-ink2 text-[13px] leading-[19px] font-normal tabular-nums">
+                  {subCabecera}
+                </p>
+              </>
+            )}
+          </div>
+          <button
+            type="button"
+            aria-label="Cerrar"
+            onClick={() => cerrar()}
+            className="text-ink2 -mt-2 -mr-3 inline-flex size-11 shrink-0 items-center justify-center rounded-full text-2xl leading-none outline-none focus-visible:[box-shadow:var(--fsh-f)]"
+          >
+            <span aria-hidden="true">×</span>
+          </button>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 pt-3 pb-4">
+        {aviso && (
+          <p className="wnote shrink-0">
+            Tienes una sesión de <span className="font-semibold">{sesionAbiertaNombre}</span>{" "}
+            abierta. Empezar este día la cierra (o la descarta si no registraste nada).
+          </p>
+        )}
+
+        <div className="mt-4 min-h-0 flex-1 overflow-y-auto overscroll-contain">
           {preview === undefined ? (
             <SheetSkeleton />
           ) : (
             <>
-              {/* Última vez que se hizo este día y cómo fue. */}
-              <div className="border-border bg-surface-2 mb-3 flex items-center gap-2 rounded-xl px-3.5 py-2.5">
-                {preview.ultima ? (
-                  <>
-                    <span className="text-muted-foreground text-xs">Última vez</span>
-                    <span className="text-foreground text-sm capitalize">
-                      {fechaCorta(preview.ultima.fecha)}
-                    </span>
+              {preview.ultima ? (
+                <div className="sec-cab">
+                  <h3 className="kicker">Última vez</h3>
+                  <span className="kicker kicker-d capitalize">
+                    {fechaCorta(preview.ultima.fecha)}
                     {preview.ultima.net.comparados > 0 && (
-                      <span className="ml-auto">
+                      <>
+                        {" "}
                         <VeredictoNeto net={preview.ultima.net} />
-                      </span>
+                      </>
                     )}
-                  </>
-                ) : (
-                  <span className="text-muted-foreground text-sm">Nunca has hecho este día.</span>
-                )}
-              </div>
+                  </span>
+                </div>
+              ) : (
+                <p className="dek">Nunca has hecho este día.</p>
+              )}
 
               {/* Ejercicios en orden (solo slots activos), con objetivo cuando exista. */}
-              <div className="flex flex-col">
-                {preview.slots.map(({ slot, exercise }, i) => (
-                  <div
-                    key={slot.id}
-                    className={cn(
-                      "flex items-center gap-3 py-2.5",
-                      i > 0 && "border-border border-t",
-                    )}
-                  >
-                    <span className="text-faint w-5 shrink-0 text-center font-mono text-xs tabular-nums">
-                      {String(i + 1).padStart(2, "0")}
-                    </span>
-                    <span className="min-w-0 flex-1 truncate text-sm">
-                      {exercise?.nombre ?? "—"}
-                    </span>
-                    {slot.target_sets !== null && slot.target_reps !== null && (
-                      <Badge variant="outline" className="shrink-0 tabular-nums">
-                        {slot.target_sets} × {slot.target_reps}
-                      </Badge>
-                    )}
-                  </div>
-                ))}
+              <div>
+                {preview.slots.map(({ slot, exercise }, i) => {
+                  const objetivo =
+                    slot.target_sets !== null && slot.target_reps !== null
+                      ? `objetivo ${slot.target_sets} × ${slot.target_reps}`
+                      : null;
+                  // La línea de la última vez sólo si fue el ejercicio de hoy del
+                  // slot: una sustitución no se compara con el ejercicio planeado.
+                  const previo = preview.ultima?.porSlot[slot.id];
+                  const linea =
+                    previo && previo.exerciseId === exercise?.id && previo.lineas.length > 0
+                      ? lineaCompacta(previo.lineas)
+                      : null;
+                  const partes = preview.ultima
+                    ? [linea, objetivo]
+                    : [exercise ? unitTag(exercise) : null, objetivo];
+                  const subtitulo =
+                    partes.filter((p): p is string => !!p).join(" · ") ||
+                    (exercise ? unitTag(exercise) : undefined);
+                  return (
+                    <Fila
+                      key={slot.id}
+                      indice={String(i + 1).padStart(2, "0")}
+                      titulo={exercise?.nombre ?? "—"}
+                      subtitulo={subtitulo}
+                    />
+                  );
+                })}
               </div>
             </>
           )}
         </div>
 
         {/* Acción: fuera del scroll, en la zona del pulgar. */}
-        <div className="border-border shrink-0 border-t px-4 pt-3 pb-4">
-          {/* Advertencia: con una sesión abierta, empezar la cierra (o descarta si
-              está vacía) — la regla de startSession no cambia, pero se avisa antes. */}
-          {sesionAbiertaNombre && (
-            <div className="text-muted-foreground mb-3 flex items-start gap-2 text-xs">
-              <AlertTriangle className="mt-px size-3.5 shrink-0" />
-              <span>
-                Tienes una sesión de <span className="text-foreground">{sesionAbiertaNombre}</span>{" "}
-                abierta. Empezar este día la cierra (o la descarta si no registraste nada).
-              </span>
-            </div>
-          )}
-          <Button size="lg" className="w-full" disabled={!preview?.day} onClick={onEmpezar}>
-            <Flag /> Empezar {preview?.day?.nombre ?? ""}
+        {mismoDia ? (
+          <Button
+            size="lg"
+            className="mt-4 w-full shrink-0"
+            disabled={!preview?.day}
+            onClick={() => router.push("/sesion")}
+          >
+            Continuar la sesión
           </Button>
-        </div>
+        ) : (
+          <Button
+            size="lg"
+            className="mt-4 w-full shrink-0"
+            disabled={!preview?.day}
+            onClick={onEmpezar}
+          >
+            Empezar {nombreDia}
+          </Button>
+        )}
       </div>
     </div>
   );
@@ -262,15 +305,12 @@ export function DayPreviewSheet({
 function SheetSkeleton() {
   return (
     <>
-      <div className="bg-surface-2 mb-3 h-11 rounded-xl" />
-      <div className="flex flex-col">
+      <div className="sk mb-3 h-4 w-40" />
+      <div>
         {Array.from({ length: 6 }).map((_, i) => (
-          <div
-            key={i}
-            className={cn("flex items-center gap-3 py-2.5", i > 0 && "border-border border-t")}
-          >
-            <div className="bg-surface-2 h-3 w-4 rounded" />
-            <div className="bg-surface-2 h-4 flex-1 rounded" />
+          <div key={i} className="fila">
+            <div className="sk h-3 w-4" />
+            <div className="sk h-4 flex-1" />
           </div>
         ))}
       </div>

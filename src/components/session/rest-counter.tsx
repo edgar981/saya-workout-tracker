@@ -49,15 +49,12 @@ export function RestCounter({ lastCreadoEn }: { lastCreadoEn: string | null }) {
   // eslint-disable-next-line react-hooks/purity
   const ms = Date.now() - new Date(lastCreadoEn).getTime();
 
-  // Forma compacta para la cabecera de /sesion (v2): punto de acento + tiempo,
-  // en la barra que convive con el scroll. Neutro: sin umbrales ni color por
-  // tiempo, sin rotularlo "descanso" — es información, no una meta.
+  // Forma compacta para la barra `.stop` de /sesion: punto + tiempo. Neutro:
+  // sin acento, sin umbrales ni color por tiempo, sin rotularlo "descanso" — es
+  // información, no una meta.
   return (
-    <span
-      className="text-primary flex items-center gap-1.5 font-mono text-xs font-medium tabular-nums"
-      aria-label="Tiempo desde la última serie"
-    >
-      <span className="bg-primary size-1.5 shrink-0 rounded-full" />
+    <span className="stop-ctr" role="timer" aria-label="Desde la última serie">
+      <span className="cdot" aria-hidden="true" />
       {formatGap(ms)}
     </span>
   );
