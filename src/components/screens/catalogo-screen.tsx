@@ -13,7 +13,7 @@ import { Cabeza, Hoja } from "@/components/ui/hoja";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Pildora } from "@/components/ui/pildora";
-import { contar, filtrarPorNombre } from "@/lib/ajustes-resumen";
+import { agruparPorGrupo, contar, filtrarPorNombre, resumenCatalogo } from "@/lib/ajustes-resumen";
 import {
   countSetLogsForExercise,
   listActiveExercises,
@@ -39,11 +39,12 @@ export default function CatalogoScreen() {
   }
 
   const visibles = filtrarPorNombre(exercises, q);
+  const grupos = agruparPorGrupo(exercises).filter((g) => g.grupo !== "Sin grupo").length;
 
   return (
     <>
       <div className="px-4">
-        <Cabeza titulo="Catálogo" subtitulo={contar(exercises.length, "ejercicio", "ejercicios")} empujada />
+        <Cabeza titulo="Catálogo" subtitulo={resumenCatalogo(exercises.length, grupos)} empujada />
       </div>
       <Hoja empujada>
         <main className="mx-auto w-full max-w-md p-4">
@@ -73,14 +74,25 @@ export default function CatalogoScreen() {
                 <Link href="/catalogo/nuevo">Nuevo ejercicio</Link>
               </Button>
 
-              <div className="mt-2 rounded-[20px] bg-white/[.035] px-4 py-0.5 shadow-[inset_0_0_0_1px_var(--color-hair)]">
-                {visibles.map((exercise) => (
-                  <FilaEjercicio key={exercise.id} exercise={exercise} />
-                ))}
-                {visibles.length === 0 && (
+              {visibles.length === 0 ? (
+                <div className="mt-2 rounded-[20px] bg-white/[.035] px-4 py-0.5 shadow-[inset_0_0_0_1px_var(--color-hair)]">
                   <p className="my-3 mt-1.5 text-[15px] leading-[22px] text-ink2">Nada coincide.</p>
-                )}
-              </div>
+                </div>
+              ) : (
+                agruparPorGrupo(visibles).map(({ grupo, ejercicios }) => (
+                  <section key={grupo} className="mt-[22px]">
+                    <div className="sec-cab">
+                      <h2 className="kicker">{grupo}</h2>
+                      <span className="kicker kicker-d">{ejercicios.length}</span>
+                    </div>
+                    <div className="rounded-[20px] bg-white/[.035] px-4 py-0.5 shadow-[inset_0_0_0_1px_var(--color-hair)]">
+                      {ejercicios.map((exercise) => (
+                        <FilaEjercicio key={exercise.id} exercise={exercise} />
+                      ))}
+                    </div>
+                  </section>
+                ))
+              )}
             </>
           )}
         </main>
@@ -201,7 +213,7 @@ function FilaEjercicio({ exercise }: { exercise: Exercise }) {
               className="danger"
               onClick={() => (armed ? void softDeleteExercise(exercise.id) : setArmed(true))}
             >
-              {armed ? "Tocar de nuevo" : "Archivar"}
+              {armed ? "Tocar de nuevo: archivar" : "Archivar"}
             </Button>
           </div>
           <p className="mt-3 text-[13px] leading-[18px] text-ink3">

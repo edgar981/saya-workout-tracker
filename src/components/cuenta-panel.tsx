@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { ErrorEnLinea } from "@/components/ui/estados";
+import { Fila } from "@/components/ui/fila";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { authClient } from "@/lib/auth/cliente";
@@ -181,11 +182,15 @@ function ConSesion({
 
   return (
     <div>
-      <div className="flex flex-col gap-0.5 text-sm leading-5">
-        <span>Sesión iniciada: {correo}</span>
-        <span className="text-ink2">Passkeys en esta cuenta: {passkeys.data ? passkeys.data.length : "…"}</span>
+      <div className="rounded-[20px] bg-white/[.035] px-4 py-0.5 shadow-[inset_0_0_0_1px_var(--color-hair)]">
+        <Fila className="min-h-[52px]" titulo="Sesión iniciada" subtitulo={correo} />
+        <Fila
+          className="min-h-[52px]"
+          titulo="Passkeys en esta cuenta"
+          valor={<span className="tabular-nums">{passkeys.data ? passkeys.data.length : "…"}</span>}
+        />
       </div>
-      <div className="mt-[18px] flex flex-wrap items-center gap-2.5">
+      <div className="mt-1.5 mb-3 flex flex-wrap items-center gap-2.5">
         <Button variant="secondary" disabled={ocupado} onClick={onAgregar}>
           {accion === "agregar" ? "Agregando…" : "Agregar un passkey"}
         </Button>

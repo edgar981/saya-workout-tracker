@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState, useSyncExternalStore } from "react";
-import { CloudUpload, RotateCw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { chipRespaldo } from "@/lib/ajustes-resumen";
 import { cn } from "@/lib/utils";
 import { TABLE_NAMES } from "@/lib/db/db";
 import { restoreFromServerPayload, type ImportOutcome } from "@/lib/db/backup";
@@ -158,11 +158,7 @@ export function BackupPanel({
     }
   };
 
-  const chip = state.pending
-    ? state.lastError
-      ? { label: "Falló", cls: "ko" }
-      : { label: "Pendiente", cls: "text-ink" }
-    : { label: "Al día", cls: "" };
+  const chip = chipRespaldo(state);
 
   return (
     <section className="sec">
@@ -213,12 +209,12 @@ export function BackupPanel({
       </div>
       )}
 
-      <div className="mt-[18px] flex flex-wrap gap-2">
-        <Button variant="outline" size="sm" className="flex-auto" disabled={pushing} onClick={() => void doBackup()}>
-          <CloudUpload /> {pushing ? "Respaldando…" : "Respaldar ahora"}
+      <div className="mt-[18px] flex flex-wrap items-center gap-2.5">
+        <Button variant="default" disabled={pushing} onClick={() => void doBackup()}>
+          {pushing ? "Respaldando…" : "Respaldar ahora"}
         </Button>
-        <Button variant="ghost" size="sm" className="flex-auto" onClick={() => void toggleRestore()}>
-          <RotateCw /> Restaurar del servidor
+        <Button variant="link" onClick={() => void toggleRestore()}>
+          Restaurar del servidor
         </Button>
       </div>
 
