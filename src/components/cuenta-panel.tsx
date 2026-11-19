@@ -182,7 +182,7 @@ function ConSesion({
 
   return (
     <div>
-      <div className="rounded-[20px] bg-white/[.035] px-4 py-0.5 shadow-[inset_0_0_0_1px_var(--color-hair)]">
+      <div>
         <Fila className="min-h-[52px]" titulo="Sesión iniciada" subtitulo={correo} />
         <Fila
           className="min-h-[52px]"
@@ -194,7 +194,7 @@ function ConSesion({
         <Button variant="secondary" disabled={ocupado} onClick={onAgregar}>
           {accion === "agregar" ? "Agregando…" : "Agregar un passkey"}
         </Button>
-        <Button variant="link" disabled={ocupado} onClick={onSalir}>
+        <Button variant="link" size="sm" className="font-medium [font-stretch:100%]" disabled={ocupado} onClick={onSalir}>
           {accion === "salir" ? "Saliendo…" : "Salir"}
         </Button>
       </div>

@@ -213,7 +213,7 @@ export function BackupPanel({
         <Button variant="default" disabled={pushing} onClick={() => void doBackup()}>
           {pushing ? "Respaldando…" : "Respaldar ahora"}
         </Button>
-        <Button variant="link" onClick={() => void toggleRestore()}>
+        <Button variant="link" size="sm" className="font-medium [font-stretch:100%]" onClick={() => void toggleRestore()}>
           Restaurar del servidor
         </Button>
       </div>

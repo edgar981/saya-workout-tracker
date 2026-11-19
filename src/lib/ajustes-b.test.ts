@@ -25,6 +25,27 @@ describe("Ajustes B (SAYA-19)", () => {
     expect(f).toContain("Passkeys en esta cuenta");
   });
 
+  it("la cuenta no anida una segunda caja", () => {
+    const f = leer("src/components/cuenta-panel.tsx");
+    const ini = f.indexOf("function ConSesion");
+    expect(ini).toBeGreaterThan(-1);
+    const ret = f.slice(f.indexOf("return (", ini));
+    expect(ret).not.toContain("rounded-[20px]");
+  });
+
+  it("los enlaces de Datos van al tamaño de .tl", () => {
+    const b = leer("src/components/backup-panel.tsx");
+    const i = b.indexOf("toggleRestore()}>");
+    const tagB = b.slice(b.lastIndexOf("<Button", i), i);
+    expect(tagB).toContain('size="sm"');
+    expect(tagB).toContain("font-medium");
+    const c = leer("src/components/cuenta-panel.tsx");
+    const j = c.indexOf("onClick={onSalir}>");
+    const tagC = c.slice(c.lastIndexOf("<Button", j), j);
+    expect(tagC).toContain('size="sm"');
+    expect(tagC).toContain("font-medium");
+  });
+
   it("la ruta de Ajustes carga sin SSR con su esqueleto", () => {
     const f = leer("src/app/ajustes/page.tsx");
     expect(f).toContain("ssr: false");
