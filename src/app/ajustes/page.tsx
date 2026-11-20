@@ -1,7 +1,14 @@
-import AjustesScreen from "@/components/screens/ajustes-screen";
+"use client";
 
-// Sin `dynamic(ssr:false)`: /ajustes no consulta Dexie, así que se prerenderiza
-// y abre al instante, sin esqueleto ni etapa de carga.
+import dynamic from "next/dynamic";
+
+import { AjustesSkeleton } from "@/components/skeletons";
+
+const AjustesScreen = dynamic(() => import("@/components/screens/ajustes-screen"), {
+  ssr: false,
+  loading: () => <AjustesSkeleton />,
+});
+
 export default function Page() {
   return <AjustesScreen />;
 }
