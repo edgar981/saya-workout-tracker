@@ -53,7 +53,7 @@ export function SubstitutePicker({
         Solo en esta sesión. Las series que ya registraste quedan con este ejercicio.
       </p>
 
-      <div role="radiogroup" className="mt-3">
+      <div role="radiogroup" aria-label="Ejercicio en esta sesión" className="mt-3">
         {opcion(item.exercise, true, () => {})}
         {item.isSubstitution && item.slotExercise && (
           <button

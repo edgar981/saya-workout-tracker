@@ -152,7 +152,7 @@ function ActiveSession({ view }: { view: SessionView }) {
             )}
           </div>
 
-          <nav className="sbot">
+          <nav aria-label="Sesión" className="sbot">
             <button
               type="button"
               className="arw"
