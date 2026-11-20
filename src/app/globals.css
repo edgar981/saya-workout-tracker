@@ -256,6 +256,11 @@
     display: inline-flex;
     align-items: center;
     min-height: 44px;
+    min-width: 44px;
+    font-size: 14px;
+    line-height: 18px;
+    font-weight: 500;
+    font-stretch: 100%;
     text-decoration: underline;
     text-underline-offset: 3px;
     color: var(--ink);

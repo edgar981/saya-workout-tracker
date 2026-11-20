@@ -75,9 +75,7 @@ export default function CatalogoScreen() {
               </Button>
 
               {visibles.length === 0 ? (
-                <div className="mt-2 rounded-[20px] bg-white/[.035] px-4 py-0.5 shadow-[inset_0_0_0_1px_var(--color-hair)]">
-                  <p className="my-3 mt-1.5 text-[15px] leading-[22px] text-ink2">Nada coincide.</p>
-                </div>
+                <p className="mt-4 text-[15px] leading-[22px] text-ink2">Nada coincide.</p>
               ) : (
                 agruparPorGrupo(visibles).map(({ grupo, ejercicios }) => (
                   <section key={grupo} className="mt-[22px]">
@@ -85,7 +83,7 @@ export default function CatalogoScreen() {
                       <h2 className="kicker">{grupo}</h2>
                       <span className="kicker kicker-d">{ejercicios.length}</span>
                     </div>
-                    <div className="rounded-[20px] bg-white/[.035] px-4 py-0.5 shadow-[inset_0_0_0_1px_var(--color-hair)]">
+                    <div className="mt-2">
                       {ejercicios.map((exercise) => (
                         <FilaEjercicio key={exercise.id} exercise={exercise} />
                       ))}
@@ -133,8 +131,9 @@ function FilaEjercicio({ exercise }: { exercise: Exercise }) {
   };
 
   return (
-    <div>
+    <div className="not-first:border-t not-first:border-hair">
       <Fila
+        chevron={false}
         onClick={() => setAbierto((v) => !v)}
         aria-expanded={abierto}
         titulo={exercise.nombre}
