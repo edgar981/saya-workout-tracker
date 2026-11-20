@@ -44,7 +44,7 @@ export default function AjustesScreen() {
       </div>
       <Hoja empujada>
         <main className="mx-auto w-full max-w-md p-4">
-          <div className="mt-2 rounded-[20px] bg-white/[.035] px-4 py-0.5 shadow-[inset_0_0_0_1px_var(--color-hair)]">
+          <div className="mt-2">
             <Fila
               href="/mesociclos"
               titulo="Mesociclos"

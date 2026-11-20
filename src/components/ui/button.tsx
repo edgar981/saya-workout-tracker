@@ -10,7 +10,8 @@ import { cn } from "@/lib/utils";
  * #0B0C0F encima), `secondary` es `.btn2`. «Máximo un botón de acento por
  * pantalla» es una regla de uso, no del componente. Todo tamaño tiene un alto de
  * toque de al menos 44px. El enlace de texto `.tl` es la variante `link` (su CSS
- * vive en globals.css; `className="danger"` lo pasa a --red-t).
+ * vive en globals.css; `className="danger"` lo pasa a --red-t). El enlace mide
+ * como `.tl` de la maqueta (500 14px/18px, 44px).
  */
 const buttonVariants = cva(
   [
@@ -35,7 +36,7 @@ const buttonVariants = cva(
           "[box-shadow:inset_0_1px_0_rgba(255,255,255,.16),inset_0_0_0_1px_rgba(255,255,255,.1)]",
         ],
         ghost: "bg-transparent text-ink hover:bg-white/[.08]",
-        link: "tl rounded-none px-0",
+        link: "tl rounded-none px-0 text-sm leading-[18px] font-medium [font-stretch:100%] min-w-11",
       },
       size: {
         default: "min-h-12 px-[22px]",
@@ -47,7 +48,7 @@ const buttonVariants = cva(
     },
     // El enlace de texto no hereda el relleno horizontal del tamaño: `px-0` va al final.
     compoundVariants: [
-      { variant: "link", size: "default", className: "px-0" },
+      { variant: "link", size: "default", className: "px-0 min-h-11" },
       { variant: "link", size: "sm", className: "px-0" },
       { variant: "link", size: "lg", className: "px-0" },
       { variant: "link", size: "icon", className: "px-0" },
