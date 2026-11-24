@@ -48,18 +48,12 @@ const FORMAS = [
   "buena idea",
   "vale la pena",
   "procura",
-  "evita",
   "evitar",
   "considere",
   "intente",
   "intentes",
-  "descansa",
-  "sube",
   "haz",
-  "agrega",
-  "anade",
   "manten",
-  "aumenta",
   "enfocate",
 ];
 

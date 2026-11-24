@@ -42,9 +42,6 @@ describe("esConsejo", () => {
     "Vale la pena bajar",
     "Necesitas descansar",
     "Procura dormir",
-    "Evita el fallo",
-    "Descansa mañana",
-    "Sube el peso",
   ])("«%s» es consejo", (t) => {
     expect(esConsejo(t)).toBe(true);
   });
@@ -66,8 +63,18 @@ describe("esConsejo", () => {
     "Hechas en 3 sesiones",
     "Evitado",
     "Aumentó 3 series",
+    "El peso sube 0,4 kg",
+    "El volumen aumenta 3 series",
+    "Saya descansa 2 días por semana",
+    "Agrega 2 series esta semana",
+    "El press añade 2,5 kg",
+    "La rutina evita el lunes",
   ])("«%s» no es consejo", (t) => {
     expect(esConsejo(t)).toBe(false);
+  });
+
+  it("los imperativos que son también tercera persona no se atrapan con palabras", () => {
+    expect(esConsejo("Sube de 78 a 79")).toBe(false);
   });
 
   it("sólo palabras enteras", () => {
