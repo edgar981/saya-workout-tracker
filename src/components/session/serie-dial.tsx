@@ -7,11 +7,11 @@ import {
   lanzamiento,
   MAX_PESO,
   MAX_REPS,
-  numeroEs,
   PX_POR_PASO,
   pasoDial,
   pasosDeArrastre,
   sufijoPeso,
+  textoDial,
   type CampoDial,
 } from "@/components/session/dial";
 import { resorte } from "@/components/session/resorte";
@@ -36,9 +36,11 @@ function DialCampo({
   paso,
   max,
   sufijo,
+  exercise,
   onChange,
 }: {
   campo: CampoDial;
+  exercise: Exercise;
   valor: number;
   paso: number;
   max: number;
@@ -65,7 +67,7 @@ function DialCampo({
   useEffect(() => () => cancelAnimationFrame(raf.current), []);
 
   const mostrado = previo ?? valor;
-  const cadena = esReps ? String(mostrado) : numeroEs(mostrado);
+  const cadena = esReps ? String(mostrado) : textoDial(exercise, mostrado);
   const etiquetaCampo = esReps ? "Repeticiones" : `Peso en ${sufijo}`;
 
   const sumar = (pasos: number) => onChange(ajustar(valor, pasos * paso, max));
@@ -267,6 +269,7 @@ export function SerieDial({
         paso={pasoDial(exercise, "reps") ?? 1}
         max={MAX_REPS}
         sufijo="reps"
+        exercise={exercise}
         onChange={onReps}
       />
       {pasoPeso === null || peso === null ? (
@@ -286,6 +289,7 @@ export function SerieDial({
           paso={pasoPeso}
           max={MAX_PESO}
           sufijo={sufijoPeso(exercise)}
+          exercise={exercise}
           onChange={onPeso}
         />
       )}

@@ -9,6 +9,7 @@ import {
   pasoDial,
   pasosDeArrastre,
   siguienteSerie,
+  textoDial,
   textoSerie,
   valoresIniciales,
 } from "@/components/session/dial";
@@ -206,6 +207,15 @@ describe("valoresIniciales", () => {
       reps: 6,
       peso: 45,
     });
+  });
+});
+
+describe("textoDial", () => {
+  it("«+» sólo en peso corporal más carga; coma decimal", () => {
+    expect(textoDial(ej({ unit_type: "BODYWEIGHT_PLUS", added_unit: "LB" }), 10)).toBe("+10");
+    expect(textoDial(ej({ unit_type: "BODYWEIGHT_PLUS", added_unit: "KG" }), 2.5)).toBe("+2,5");
+    expect(textoDial(ej({ unit_type: "LB" }), 135)).toBe("135");
+    expect(textoDial(ej({ unit_type: "KG" }), 62.5)).toBe("62,5");
   });
 });
 

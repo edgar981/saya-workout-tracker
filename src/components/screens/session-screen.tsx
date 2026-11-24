@@ -422,9 +422,9 @@ function ActiveSession({ view }: { view: SessionView }) {
       <div
         className="hoja"
         data-propia=""
-        style={{ "--ventana": "70px", "--hoja-pb": "0px", marginTop: 12 } as CSSProperties}
+        style={{ "--ventana": "58px", "--hoja-pt": "0px", "--hoja-pb": "0px" } as CSSProperties}
       >
-        <main className="mx-auto flex w-full max-w-md flex-col px-4 pt-4">
+        <main className="mx-auto flex w-full max-w-md flex-col px-4">
           {n === 0 || !item ? (
             <>
               <p className="h3 rise" style={{ marginTop: 36, "--i": 0 } as CSSProperties}>

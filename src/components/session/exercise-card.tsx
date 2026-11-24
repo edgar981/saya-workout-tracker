@@ -166,15 +166,19 @@ export function ExerciseCard({
         porDesplazar.current = existente[0].set_index;
         setRecien(existente[0].set_index);
       } else {
-        await addSet(sessionExercise.id, { esExtra: false, side: "AUTO" });
         const filasNuevas = async () => {
           const vista = await loadSessionView(sessionId);
           const it = vista?.items.find((i) => i.sessionExercise.id === sessionExercise.id);
           const todas = it?.sets ?? [];
-          const max = todas.length ? Math.max(...todas.map((s) => s.set_index)) : 0;
+          const max = todas.length ? Math.max(...todas.map((s) => s.set_index)) : -1;
           return { max, filas: todas.filter((s) => s.set_index === max) };
         };
+        const maxAntes = (await filasNuevas()).max;
+        await addSet(sessionExercise.id, { esExtra: false, side: "AUTO" });
         const primera = await filasNuevas();
+        // Si addSet no agregó nada, el índice más alto es el de una serie ya anotada:
+        // escribir encima la pisaría. El catch lo muestra como el error en línea.
+        if (primera.max <= maxAntes) throw new Error("addSet no agregó ninguna serie");
         let filas = primera.filas;
         if (exercise.laterality_default === "UNILATERAL") {
           await addOppositeSide(sessionExercise.id, primera.max);

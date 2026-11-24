@@ -15,6 +15,7 @@ const tarjeta = leer("src/components/session/exercise-card.tsx");
 const sustituir = leer("src/components/session/substitute-picker.tsx");
 const pasada = leer("src/components/session/last-performance.tsx");
 const css = leer("src/app/globals.css");
+const dialTsx = leer("src/components/session/serie-dial.tsx");
 
 describe("SAYA-R2-4: la pantalla", () => {
   it("la tira de abajo, las fichas y las hojas", () => {
@@ -70,6 +71,29 @@ describe("SAYA-R2-4: Cambiar y La pasada", () => {
 
   it("last-performance no pinta «sin registro previo»", () => {
     expect(pasada).not.toContain("Sin registro previo");
+  });
+});
+
+describe("SAYA-R2-4.W: los tres arreglos", () => {
+  it("Sesión va sin hoja de vidrio", () => {
+    expect(pantalla).not.toContain("marginTop: 12");
+    const main = pantalla.match(/<main className="([^"]*)"/);
+    expect(main).not.toBeNull();
+    expect(main![1]).not.toContain("pt-4");
+    expect(pantalla).toContain('"--ventana": "58px"');
+    expect(css).toMatch(
+      /\.ses > \.hoja\[data-propia\]::before,\s*\.ses > \.hoja\[data-propia\]::after\s*\{\s*display: none;/,
+    );
+  });
+
+  it("el dial de peso pinta textoDial", () => {
+    expect(dialTsx).toContain("textoDial(");
+  });
+
+  it("«Anotar serie» compara el set_index más alto de antes y de después de addSet", () => {
+    expect(tarjeta).toContain("maxAntes");
+    expect(tarjeta).toMatch(/primera\.max <= maxAntes/);
+    expect(tarjeta.indexOf("maxAntes = ")).toBeLessThan(tarjeta.indexOf("await addSet("));
   });
 });
 

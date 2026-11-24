@@ -89,6 +89,11 @@ export function numeroEs(n: number): string {
   return String(n).replace(".", ",");
 }
 
+/** El número del dial de peso: con «+» en peso corporal más carga, como la maqueta. */
+export function textoDial(exercise: Exercise, w: number): string {
+  return `${exercise.unit_type === "BODYWEIGHT_PLUS" ? "+" : ""}${numeroEs(w)}`;
+}
+
 /** El peso con su sufijo: «50 lb», «+10 kg», «peso corporal». */
 export function textoPeso(exercise: Exercise, w: number): string {
   if (exercise.unit_type === "BODYWEIGHT") return "peso corporal";

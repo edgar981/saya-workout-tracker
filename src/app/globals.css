@@ -1901,6 +1901,12 @@ html[data-hoja-baja] {
   --r24-sbot: #0c0c0f;
 }
 
+/* Sesión va sin hoja de vidrio, como la maqueta: ni vidrio ni asa. */
+.ses > .hoja[data-propia]::before,
+.ses > .hoja[data-propia]::after {
+  display: none;
+}
+
 /* La cabeza. `.stop` ya es sticky (la página es la que se desplaza); se conserva su
    área segura de arriba y no lleva márgenes laterales negativos (no está dentro del
    relleno de la hoja). */
