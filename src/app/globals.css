@@ -90,7 +90,7 @@
   --ink3: rgba(238, 240, 246, 0.66); /* solo placeholders y rótulos de ejes */
   --hair: rgba(255, 255, 255, 0.11); /* divisores de fila, aros de badge */
   --sheet: rgba(8, 8, 11, 0.78); /* la hoja esmerilada, una sola */
-  --tabbg: rgba(10, 10, 14, 0.72); /* pestañas y píldora de atrás (aquí solo se declara) */
+  --tabbg: rgba(10, 10, 14, 0.72); /* barra de abajo y píldora de atrás (aquí solo se declara) */
   --velo: rgba(0, 0, 0, 0.66); /* velo de la cabeza */
   --velo2: rgba(0, 0, 0, 0.6);
   --fbg: rgba(255, 255, 255, 0.06); /* campos */
@@ -407,12 +407,11 @@
 }
 
 /*
- * NAVEGACIÓN ARRIBA (§2): pestañas de vidrio `.tabs` y píldora de atrás `.pback`.
- * Ambas fijas, montadas a la vez; una se ve y la otra se esconde (visibility:
- * hidden), así nunca se pintan juntas y el desenfoque son dos capas por pantalla
- * (la hoja y una de las dos). Fuera de `@layer` para ganarle a las utilidades.
+ * LA PÍLDORA DE ATRÁS `.pback` (§2). Fija, siempre montada; se ve en las pantallas
+ * empujadas y se esconde (visibility: hidden) en las áreas. La navegación de las
+ * áreas es la barra de abajo (`.navg`, al final del archivo). Fuera de `@layer`
+ * para ganarle a las utilidades.
  */
-.tabs,
 .pback {
   position: fixed;
   top: calc(12px + env(safe-area-inset-top));
@@ -427,76 +426,8 @@
     0 10px 30px rgba(0, 0, 0, 0.35);
 }
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .tabs,
   .pback {
     background: rgba(14, 14, 18, 0.92);
-  }
-}
-.tabs {
-  right: 12px;
-  height: 50px;
-  padding: 3px;
-  border-radius: 25px;
-  display: grid;
-  grid-template-columns: repeat(var(--n), 1fr);
-  transition:
-    transform 0.5s var(--ease),
-    opacity 0.3s,
-    visibility 0s;
-}
-.tabs[data-oculto] {
-  transform: translateY(-140%);
-  opacity: 0;
-  pointer-events: none;
-  visibility: hidden;
-  transition:
-    transform 0.5s var(--ease),
-    opacity 0.3s,
-    visibility 0s 0.5s;
-}
-.tab {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 44px;
-  font-weight: 500;
-  font-size: 13.5px;
-  font-stretch: 104%;
-  color: var(--ink2);
-  text-decoration: none;
-}
-.tab[aria-current="page"] {
-  color: #fff;
-  font-weight: 600;
-}
-/* La pastilla que marca la activa: vidrio blanco, nunca cromo. */
-.tind {
-  position: absolute;
-  top: 3px;
-  bottom: 3px;
-  left: 3px;
-  width: calc((100% - 6px) / var(--n));
-  transform: translate3d(calc(var(--i) * 100%), 0, 0);
-  transition: transform 0.55s cubic-bezier(0.3, 1.25, 0.5, 1);
-  pointer-events: none;
-}
-.tind-i {
-  position: absolute;
-  inset: 0;
-  border-radius: 22px;
-  background: rgba(255, 255, 255, 0.16);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.34),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.12);
-}
-.tind-i[data-estira] {
-  animation: estira 0.55s both;
-}
-@keyframes estira {
-  35% {
-    transform: scaleX(1.4) scaleY(0.86);
   }
 }
 .pback {
@@ -532,17 +463,9 @@
     visibility 0s 0.45s;
 }
 @media (prefers-reduced-motion: reduce) {
-  .tind {
-    transition: none;
-  }
-  .tind-i[data-estira] {
-    animation: none;
-  }
-  .tabs,
   .pback {
     transition: opacity 0.3s;
   }
-  .tabs[data-oculto],
   .pback[data-oculto] {
     transform: none;
     transition:
@@ -1448,5 +1371,227 @@
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
+  }
+}
+
+/* SAYA-R2-2 · la barra de abajo y el orbe (ronda 2). Tres estados: oculta, recogida (escala .84) y llena
+   (escala 1). JS mueve transform y opacidad con resortes; nada más se anima. */
+:root {
+  --hi: rgba(255, 255, 255, 0.16);
+  --agbg: rgba(16, 16, 20, 0.94);
+  --floatsh: inset 0 1px 0 rgba(255, 255, 255, 0.18), inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 14px 36px rgba(0, 0, 0, 0.6);
+}
+.navg {
+  position: fixed;
+  left: max(12px, calc(50% - 224px));
+  right: max(12px, calc(50% - 224px));
+  bottom: calc(12px + env(safe-area-inset-bottom));
+  z-index: 40;
+  display: flex;
+  gap: 10px;
+  transform-origin: 50% 100%;
+  will-change: transform;
+}
+/* la opacidad vive en los dos hijos, nunca en .navg: un ancestro con opacidad menor que 1 corta el
+   desenfoque de la barra */
+.navg[data-oculta] {
+  visibility: hidden;
+  pointer-events: none;
+}
+.navg[data-snap],
+.navg[data-snap] > * {
+  transition: none !important;
+}
+.bbar {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  height: 62px;
+  padding: 4px;
+  border-radius: 31px;
+  display: grid;
+  grid-template-columns: repeat(var(--n), 1fr);
+  background: var(--tabbg);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  backdrop-filter: blur(16px) saturate(150%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 10px 30px rgba(0, 0, 0, 0.4);
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .bbar {
+    background: rgba(14, 14, 18, 0.92);
+  }
+}
+.bt {
+  position: relative;
+  z-index: 1;
+  border-radius: 27px;
+  display: grid;
+  place-items: center;
+  color: var(--ink2);
+  transition: color 0.15s;
+}
+.bt svg {
+  width: 24px;
+  height: 24px;
+}
+.bt[aria-selected="true"] {
+  color: var(--ink);
+}
+.bind {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  width: calc((100% - 8px) / var(--n));
+  border-radius: 27px;
+  background: var(--hi);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  pointer-events: none;
+  will-change: transform;
+}
+.orbb {
+  position: relative;
+  flex: none;
+  width: 62px;
+  height: 62px;
+  border-radius: 31px;
+  display: grid;
+  place-items: center;
+  background: var(--agbg);
+  box-shadow: var(--floatsh);
+  transition: transform 0.1s ease-out;
+}
+.orbb:active {
+  transform: scale(0.97);
+}
+@media (hover: hover) {
+  .bt:hover {
+    color: var(--ink);
+  }
+  .orbb:hover {
+    filter: brightness(1.08);
+  }
+}
+.orb {
+  position: relative;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #07070b;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+}
+.orb.big {
+  width: 46px;
+  height: 46px;
+}
+.liq {
+  position: absolute;
+  inset: -20%;
+  filter: blur(7px) saturate(130%);
+}
+.liq i {
+  position: absolute;
+  width: 58%;
+  height: 58%;
+  left: 21%;
+  top: 21%;
+  border-radius: 50%;
+  mix-blend-mode: screen;
+}
+.liq i:nth-child(1) {
+  background: #ff7a3d;
+  animation: gota-1 6s ease-in-out infinite alternate;
+}
+.liq i:nth-child(2) {
+  background: #ffd447;
+  animation: gota-2 6s ease-in-out infinite alternate;
+}
+.liq i:nth-child(3) {
+  background: #3fb0ff;
+  animation: gota-3 6s ease-in-out infinite alternate;
+}
+.liq i:nth-child(4) {
+  background: #5cf2b5;
+  opacity: 0.75;
+  animation: gota-1 6s ease-in-out infinite alternate-reverse;
+}
+@keyframes gota-1 {
+  to {
+    transform: translate(40%, -18%) scale(1.12);
+  }
+}
+@keyframes gota-2 {
+  to {
+    transform: translate(-38%, -10%) scale(0.9);
+  }
+}
+@keyframes gota-3 {
+  to {
+    transform: translate(-30%, -20%) scale(1.15);
+  }
+}
+
+/* La cabeza de un área sin pestañas arriba (la maqueta, .hd.nt): relleno 58, alto 212, Ajustes a 54. */
+.hoja[data-area] .cabeza:not([data-empujada]) {
+  padding-top: 58px;
+  min-height: 212px;
+}
+.hoja[data-area] .cabeza:not([data-empujada]) > .ib {
+  top: 54px;
+}
+.hoja[data-area] .hoja[data-propia] {
+  --ventana: 212px !important;
+}
+/* La hoja de un área deja abajo el sitio de la barra: 84 + los 16 del p-4 = los 100 de la maqueta. */
+.hoja[data-area],
+.hoja[data-area] .hoja {
+  --hoja-pb: calc(84px + env(safe-area-inset-bottom));
+}
+.hoja[data-entra] > * {
+  animation: area-entra 0.18s ease both;
+}
+@keyframes area-entra {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* nada se desliza: la barra entra y sale con un fundido de .2s y el tamaño salta */
+  .navg {
+    transition: visibility 0s linear 0.2s;
+  }
+  .navg:not([data-oculta]) {
+    transition: visibility 0s linear 0s;
+  }
+  .navg > .bbar {
+    transition: opacity 0.2s ease;
+  }
+  .navg > .orbb {
+    transition:
+      opacity 0.2s ease,
+      transform 0.1s ease-out;
+  }
+  .liq i {
+    animation: none !important;
+  }
+  .hoja[data-entra] > * {
+    animation: none;
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .bbar {
+    background: #111116;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
   }
 }

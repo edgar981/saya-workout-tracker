@@ -10,6 +10,7 @@ import {
 } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
+import { movimientoReducido } from "@/components/barra-estado";
 import { Liquido } from "@/components/liquido";
 import { NavBar } from "@/components/nav-bar";
 import { esRutaSesion } from "@/lib/liquido";
@@ -24,12 +25,13 @@ import {
 /**
  * Apilado (de atrás hacia delante): el lienzo y el póster · la hoja (que
  * envuelve a las pantallas; si la pantalla pinta la suya, la envoltura no es
- * caja) · el velo superior · pestañas de vidrio o píldora.
+ * caja) · el velo superior · la barra de abajo o la píldora de atrás.
  *
- * La navegación vive ARRIBA (nav-bar.tsx) y no reserva espacio abajo: la hoja
- * llega al borde de abajo. En `/sesion` y `/sesion/cerrar` no se monta ninguna
- * (nivel `sesion`). Las reglas de nivel, de «‹» y de la pila son puras, en
- * `lib/navegacion.ts`; el shell sólo lleva la pila en estado de React.
+ * La navegación de las áreas es la barra de abajo (nav-bar.tsx), fija y encima de
+ * la hoja; la hoja de un área deja abajo espacio para ella (globals.css,
+ * `[data-area]`). En `/sesion` y `/sesion/cerrar` no se monta (nivel `sesion`).
+ * Las reglas de nivel, de «‹» y de la pila son puras, en `lib/navegacion.ts`; el
+ * shell sólo lleva la pila en estado de React.
  */
 
 /**
@@ -74,6 +76,32 @@ export function AppShell({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("popstate", alPop);
   }, []);
 
+  // De un área a otra el contenido entra con un fundido (`area-entra`), no en la
+  // primera pintura ni con movimiento reducido.
+  const hojaRef = useRef<HTMLDivElement>(null);
+  const antesRef = useRef<{ pathname: string; nivel: string } | null>(null);
+  useEffect(() => {
+    const antes = antesRef.current;
+    antesRef.current = { pathname, nivel };
+    if (!antes || antes.nivel !== "area" || nivel !== "area" || antes.pathname === pathname) return;
+    if (movimientoReducido()) return;
+    const el = hojaRef.current;
+    if (!el) return;
+    el.removeAttribute("data-entra");
+    void el.offsetWidth;
+    el.setAttribute("data-entra", "");
+    const quitar = () => el.removeAttribute("data-entra");
+    const alFin = (e: AnimationEvent) => {
+      if (e.animationName === "area-entra") quitar();
+    };
+    el.addEventListener("animationend", alFin);
+    const t = setTimeout(quitar, 250);
+    return () => {
+      el.removeEventListener("animationend", alFin);
+      clearTimeout(t);
+    };
+  }, [pathname, nivel]);
+
   // Velo `.tscrim`: se prende por atributo (sin re-render en cada evento).
   useEffect(() => {
     if (sesion) return;
@@ -107,7 +135,12 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <>
       <Liquido />
-      <div className="hoja" style={estiloHoja}>
+      <div
+        ref={hojaRef}
+        className="hoja"
+        data-area={nivel === "area" ? "" : undefined}
+        style={estiloHoja}
+      >
         {children}
       </div>
       {!sesion && <div ref={veloRef} className="tscrim" aria-hidden="true" />}

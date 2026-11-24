@@ -16,6 +16,11 @@ describe("áreas", () => {
     expect(indiceDeArea("/cuerpo/")).toBe(1);
     expect(indiceDeArea("/historial")).toBeNull();
   });
+
+  it("cada área trae su icono, de los cuatro", () => {
+    for (const a of AREAS) expect(["hoy", "cuerpo", "dinero", "tiempo"]).toContain(a.icono);
+    expect(AREAS.map((a) => a.icono)).toEqual(["hoy", "cuerpo"]);
+  });
 });
 
 describe("nivelDeRuta", () => {
