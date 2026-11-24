@@ -89,7 +89,6 @@ describe("respuestaConConsejo", () => {
     cifra: "6",
     unidad: "series",
     desglose: [{ etiqueta: "Weighted Dips", valor: "3" }],
-    fuente: "Day 4 de hoy, abierta",
   };
   it("limpia es falso", () => {
     expect(respuestaConConsejo(base)).toBe(false);
@@ -99,8 +98,15 @@ describe("respuestaConConsejo", () => {
       respuestaConConsejo({ ...base, desglose: [{ etiqueta: "Deberías descansar", valor: "3" }] }),
     ).toBe(true);
   });
-  it("consejo en la fuente", () => {
-    expect(respuestaConConsejo({ ...base, fuente: "Hoy toca Day 3" })).toBe(true);
+  it("consejo en la cifra, en la unidad o en una etiqueta se detecta", () => {
+    expect(respuestaConConsejo({ ...base, cifra: "Deberías descansar" })).toBe(true);
+    expect(respuestaConConsejo({ ...base, unidad: "Hoy toca Day 3" })).toBe(true);
+    expect(
+      respuestaConConsejo({ ...base, desglose: [{ etiqueta: "Te recomiendo parar", valor: "3" }] }),
+    ).toBe(true);
+  });
+  it("una clave «fuente» de más no se mira", () => {
+    expect(respuestaConConsejo({ ...base, fuente: "Hoy toca Day 3" } as typeof base)).toBe(false);
   });
   it("sin_datos nunca es consejo", () => {
     expect(respuestaConConsejo({ estado: "sin_datos" })).toBe(false);

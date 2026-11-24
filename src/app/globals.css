@@ -135,6 +135,9 @@
 
   html {
     -webkit-text-size-adjust: 100%;
+    /* El pull-to-refresh y el rebote del documento no deben dispararse al arrastrar
+       la hoja de Hoy: el navegador lee esto de la raíz para el viewport. */
+    overscroll-behavior-y: none;
     /* Controles del navegador (scrollbars, autofill, form widgets) en oscuro. */
     color-scheme: dark;
   }

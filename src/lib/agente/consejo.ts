@@ -78,7 +78,6 @@ export function respuestaConConsejo(r: RespuestaAgente): boolean {
   const textos = [
     r.cifra,
     r.unidad,
-    r.fuente,
     ...r.desglose.flatMap((d) => [d.etiqueta, d.valor]),
   ];
   return textos.some(esConsejo);
