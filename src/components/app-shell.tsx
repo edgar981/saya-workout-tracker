@@ -11,6 +11,7 @@ import {
 import { usePathname, useRouter } from "next/navigation";
 
 import { movimientoReducido } from "@/components/barra-estado";
+import { HojaAgente } from "@/components/agente/hoja";
 import { Liquido } from "@/components/liquido";
 import { NavBar } from "@/components/nav-bar";
 import { esRutaSesion } from "@/lib/liquido";
@@ -148,6 +149,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       {nivel !== "sesion" && (
         <NavBar pathname={pathname} nivel={nivel} etiqueta={atras.etiqueta} alAtras={alAtras} />
       )}
+      <HojaAgente />
     </>
   );
 }
