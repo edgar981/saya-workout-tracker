@@ -121,6 +121,12 @@ describe("atenderPedido", () => {
     expect(r.status).toBe(413);
     expect(llamadas).toHaveLength(0);
   });
+  it("cuerpo de MAX_CUERPO_BYTES / 2 + 1 caracteres de dos bytes → 413 sin llamar", async () => {
+    const { fetch, llamadas } = falso(() => mensaje([texto(maqueta)]));
+    const r = await atenderPedido({ clave: CLAVE, modelo: "m", texto: "ñ".repeat(MAX_CUERPO_BYTES / 2 + 1), fetch });
+    expect(r.status).toBe(413);
+    expect(llamadas).toHaveLength(0);
+  });
   it("JSON roto → 400 sin llamar", async () => {
     const { fetch, llamadas } = falso(() => mensaje([texto(maqueta)]));
     const r = await atenderPedido({ clave: CLAVE, modelo: "m", texto: "{", fetch });

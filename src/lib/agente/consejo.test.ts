@@ -25,6 +25,26 @@ describe("esConsejo", () => {
     "Prueba a subir",
     "Te toca pierna",
     "Hoy toca Day 3",
+    "Te recomendaría descansar",
+    "Recomendamos parar",
+    "Sugeriría bajar",
+    "Deberían bajar",
+    "Debe descansar",
+    "Tendrías que subir",
+    "Habría que bajar",
+    "Te aconsejo parar",
+    "Es aconsejable",
+    "Considere bajar",
+    "Intente otra",
+    "Podrías subir",
+    "Lo ideal sería parar",
+    "Es buena idea descansar",
+    "Vale la pena bajar",
+    "Necesitas descansar",
+    "Procura dormir",
+    "Evita el fallo",
+    "Descansa mañana",
+    "Sube el peso",
   ])("«%s» es consejo", (t) => {
     expect(esConsejo(t)).toBe(true);
   });
@@ -37,6 +57,15 @@ describe("esConsejo", () => {
     "3 mejor · 1 peor",
     "78,4 kg",
     "Semana 6 desde la última pausa",
+    "Subiste 2,5 kg desde octubre",
+    "Bajó 1,2 kg",
+    "Haces 4 series de pecho",
+    "Deadlift",
+    "Día de descanso",
+    "Sin registrar",
+    "Hechas en 3 sesiones",
+    "Evitado",
+    "Aumentó 3 series",
   ])("«%s» no es consejo", (t) => {
     expect(esConsejo(t)).toBe(false);
   });

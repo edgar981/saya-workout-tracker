@@ -23,13 +23,51 @@ const FORMAS = [
   "prueba a",
   "te toca",
   "hoy toca",
+  "recomendaria",
+  "recomendamos",
+  "recomendar",
+  "sugeriria",
+  "sugerimos",
+  "sugerir",
+  "aconsejo",
+  "te aconsejo",
+  "aconsejable",
+  "aconsejaria",
+  "aconsejar",
+  "deberian",
+  "debe",
+  "deben",
+  "deberas",
+  "tendrias que",
+  "tendras que",
+  "habria que",
+  "podrias",
+  "necesitas",
+  "necesitarias",
+  "lo ideal",
+  "buena idea",
+  "vale la pena",
+  "procura",
+  "evita",
+  "evitar",
+  "considere",
+  "intente",
+  "intentes",
+  "descansa",
+  "sube",
+  "haz",
+  "agrega",
+  "anade",
+  "manten",
+  "aumenta",
+  "enfocate",
 ];
 
 function normalizar(texto: string): string {
   return texto
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "");
+    .replace(/[\u0300-\u036f]/g, "");
 }
 
 const PATRON = new RegExp(

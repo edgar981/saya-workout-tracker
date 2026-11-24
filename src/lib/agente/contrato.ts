@@ -196,7 +196,7 @@ export function validarRespuesta(
   if (cifra === null || unidad === null || fuente === null) return { ok: false };
   if (
     /^sale\s+de(?![a-z])/.test(
-      fuente.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, ""),
+      fuente.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""),
     )
   ) {
     return { ok: false };

@@ -70,9 +70,12 @@ describe("validarPedido", () => {
     expect(validarPedido(pedido({ filas: Array.from({ length: MAX_FILAS }, () => peso) })).ok).toBe(true);
   });
   it("clave de más o no objeto → 400", () => {
-    expect(!validarPedido({ ...pedido(), extra: 1 }).ok).toBe(true);
-    expect(validarPedido(null).ok).toBe(false);
-    expect(validarPedido([]).ok).toBe(false);
+    const conExtra = validarPedido({ ...pedido(), extra: 1 });
+    expect(!conExtra.ok && conExtra.status).toBe(400);
+    const nulo = validarPedido(null);
+    expect(!nulo.ok && nulo.status).toBe(400);
+    const lista = validarPedido([]);
+    expect(!lista.ok && lista.status).toBe(400);
   });
   it("los errores no repiten la pregunta", () => {
     const r = validarPedido(pedido({ hoy: "x" }));
