@@ -1,8 +1,19 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { leerRespuesta, prepararPedido } from "@/components/agente/estado";
 import { MAX_FILAS } from "@/lib/agente/contrato";
 import type { DatosCuerpo } from "@/lib/agente/filas";
+
+// `elegirFilas` real salvo cuando una prueba fuerza una fila que el contrato rechaza.
+const forzada = vi.hoisted(() => ({ filas: null as unknown[] | null }));
+vi.mock("@/lib/agente/filas", async (original) => {
+  const real = await original<typeof import("@/lib/agente/filas")>();
+  return {
+    ...real,
+    elegirFilas: (...args: Parameters<typeof real.elegirFilas>) =>
+      forzada.filas ?? real.elegirFilas(...args),
+  };
+});
 
 const HOY = "2026-03-18";
 const vacio: DatosCuerpo = {
@@ -35,6 +46,16 @@ describe("prepararPedido", () => {
     expect(p.pregunta).toBe("¿Cuánto pesé este mes?");
     expect(p.hoy).toBe(HOY);
     expect(p.filas).toHaveLength(2);
+  });
+  it("una fila que el contrato rechaza (series negativo) → error, no se manda", () => {
+    forzada.filas = [
+      { tipo: "sesion", fecha: "2026-03-10", sesion: "Day 1", abierta: false, ejercicios: 1, series: -1 },
+    ];
+    try {
+      expect(prepararPedido("¿Cuántas sesiones hice este mes?", HOY, vacio)).toEqual({ tipo: "error" });
+    } finally {
+      forzada.filas = null;
+    }
   });
   it("demasiados bytes → error", () => {
     // 400 filas de peso caben; con una pregunta enorme no, pero el tope de bytes

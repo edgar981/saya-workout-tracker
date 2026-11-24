@@ -177,12 +177,16 @@ describe("elegirFilas", () => {
   it("una aparición con todas las reps en 0 no sale", () => {
     const d = datos();
     d.sets = d.sets.map((s) => (s.session_exercise_id === "a2" ? { ...s, reps: 0 } : s));
-    expect(elegirFilas("series de pecho esta semana", HOY, d)).toHaveLength(1);
+    const filas = elegirFilas("series de pecho esta semana", HOY, d);
+    expect(filas).toHaveLength(1);
+    valido(filas);
   });
 
   it("una sesión ni cerrada ni activa no sale", () => {
     const d = datos({ sesiones: [ses({ id: "s4", fecha: HOY, activa: 0, cerrada_en: null })] });
-    expect(elegirFilas("series de pecho esta semana", HOY, d)).toEqual([]);
+    const filas = elegirFilas("series de pecho esta semana", HOY, d);
+    expect(filas).toEqual([]);
+    valido(filas);
   });
 
   it("KG y LB en una aparición dan dos filas", () => {
@@ -216,13 +220,16 @@ describe("elegirFilas", () => {
   it("ejercicio y series en general", () => {
     const e = elegirFilas("Weighted Dips este mes", HOY, datos()) as FilaSerie[];
     expect(e.map((f) => f.ejercicio)).toEqual(["Weighted Dips"]);
+    valido(e);
     const todas = elegirFilas("¿Cuántas series este mes?", HOY, datos());
     expect(todas).toHaveLength(4);
     valido(todas);
   });
 
   it("sin tema → []", () => {
-    expect(elegirFilas("¿Cuánto gasté?", HOY, datos())).toEqual([]);
+    const filas = elegirFilas("¿Cuánto gasté?", HOY, datos());
+    expect(filas).toEqual([]);
+    valido(filas);
   });
 });
 

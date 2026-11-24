@@ -2,6 +2,7 @@
 import {
   MAX_CUERPO_BYTES,
   MAX_FILAS,
+  validarPedido,
   validarRespuesta,
   type PedidoAgente,
   type RespuestaAgente,
@@ -29,6 +30,7 @@ export function prepararPedido(
   if (filas.length === 0) return { tipo: "sin_datos" };
   if (filas.length > MAX_FILAS) return { tipo: "error" };
   const pedido: PedidoAgente = { pregunta: p, hoy, filas };
+  if (!validarPedido(pedido).ok) return { tipo: "error" };
   const texto = JSON.stringify(pedido);
   if (new TextEncoder().encode(texto).length > MAX_CUERPO_BYTES) return { tipo: "error" };
   return { tipo: "pedido", texto };

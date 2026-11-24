@@ -3066,24 +3066,6 @@ html[data-hoja-baja] {
     background: #07070b;
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
   }
-  .ag-pensando > .liq {
-    position: absolute;
-    inset: -40% -10%;
-    filter: blur(9px) saturate(140%) brightness(0.58);
-  }
-  /* las cuatro gotas, en su orden: 3.2s, 2.7s, 3.6s, 4.1s de duración */
-  .ag-pensando .liq i:nth-child(1) {
-    animation-duration: 3.2s;
-  }
-  .ag-pensando .liq i:nth-child(2) {
-    animation-duration: 2.7s;
-  }
-  .ag-pensando .liq i:nth-child(3) {
-    animation-duration: 3.6s;
-  }
-  .ag-pensando .liq i:nth-child(4) {
-    animation-duration: 4.1s;
-  }
   .ag-pensando b {
     position: relative;
     color: #fff;
@@ -3092,14 +3074,38 @@ html[data-hoja-baja] {
     text-shadow: 0 1px 10px rgba(0, 0, 0, 0.7);
   }
   @media (prefers-reduced-motion: reduce) {
-    .ag-pensando * {
-      animation: none;
-    }
     .ag-q {
       transition: none;
     }
     .ag-q:active {
       transform: none;
     }
+  }
+}
+
+/* SAYA-R2-6.W: fuera de capa, como el orbe */
+.ag-pensando > .liq {
+  position: absolute;
+  inset: -40% -10%;
+  filter: blur(9px) saturate(140%) brightness(0.58);
+}
+/* las cuatro gotas, en su orden: 3.2s, 2.7s, 3.6s, 4.1s de duración */
+.ag-pensando .liq i:nth-child(1) {
+  animation-duration: 3.2s;
+}
+.ag-pensando .liq i:nth-child(2) {
+  animation-duration: 2.7s;
+}
+.ag-pensando .liq i:nth-child(3) {
+  animation-duration: 3.6s;
+}
+.ag-pensando .liq i:nth-child(4) {
+  animation-duration: 4.1s;
+}
+@media (prefers-reduced-motion: reduce) {
+  /* `.liq i:nth-child(n)` del orbe pesa (0,2,1): el comodín solo (0,1,0) no le ganaría */
+  .ag-pensando *,
+  .ag-pensando .liq i:nth-child(n) {
+    animation: none;
   }
 }

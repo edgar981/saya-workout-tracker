@@ -53,6 +53,24 @@ describe("hoja del agente", () => {
     expect(css.slice(i)).toContain("prefers-reduced-motion");
   });
 
+  it("las reglas de la píldora van fuera de toda @layer, como las del orbe", () => {
+    const css = leer("src/app/globals.css");
+    const ini = css.indexOf("/* SAYA-R2-6.W: fuera de capa, como el orbe */");
+    expect(ini).toBeGreaterThan(-1);
+    let profundidad = 0;
+    for (const c of css.slice(0, ini)) {
+      if (c === "{") profundidad++;
+      else if (c === "}") profundidad--;
+    }
+    expect(profundidad).toBe(0);
+    const fin = css.indexOf(".ag-pensando .liq i:nth-child(4)", ini);
+    expect(fin).toBeGreaterThan(ini);
+    const bloque = css.slice(ini, fin);
+    expect(bloque).not.toContain("@layer");
+    expect(bloque).toContain("brightness(0.58)");
+    expect(bloque).toContain("3.2s");
+  });
+
   it("el shell la monta una vez", () => {
     const shell = leer("src/components/app-shell.tsx");
     expect(shell).toContain('import { HojaAgente } from "@/components/agente/hoja";');
