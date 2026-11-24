@@ -51,10 +51,10 @@ export default function ProgresoScreen() {
   return (
     <>
       <div className="px-4">
-        <Cabeza titulo="Progreso" subtitulo={sub} empujada />
+        <Cabeza titulo="Progreso" subtitulo={sub} />
       </div>
-      <Hoja empujada>
-        <main className="pro mx-auto w-full max-w-md p-4">
+      <Hoja>
+        <main className="pro mx-auto w-full max-w-md px-4 pb-4">
           {!lectura.ok ? (
             <Seccion primera indice={1}>
               <BloqueError
@@ -179,7 +179,7 @@ function Contenido({
             <button
               key={t.estado}
               type="button"
-              disabled={t.cuenta === 0}
+              disabled={vacio || t.cuenta === 0}
               onClick={() => setAbierto(t.estado)}
             >
               <b className={vacio ? "mut" : undefined}>{vacio ? "—" : t.cuenta}</b>

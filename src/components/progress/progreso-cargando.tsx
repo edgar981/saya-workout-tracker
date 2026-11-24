@@ -15,10 +15,10 @@ export function ProgresoCargando() {
   return (
     <>
       <div className="px-4">
-        <Cabeza titulo="Progreso" empujada />
+        <Cabeza titulo="Progreso" />
       </div>
-      <Hoja empujada>
-        <main className="pro mx-auto w-full max-w-md p-4">
+      <Hoja>
+        <main className="pro mx-auto w-full max-w-md px-4 pb-4">
           <p className="sr-only" role="status">
             Cargando
           </p>

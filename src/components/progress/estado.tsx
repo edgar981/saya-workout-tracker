@@ -29,11 +29,14 @@ export function estadoClass(estado: EstadoProgreso): string {
   return estado === "subiendo" ? "text-foreground" : "text-muted-foreground";
 }
 
+const MESES_CORTOS = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+
 /** Partido a mano: `new Date('2026-08-14')` se parsea como UTC y en América
- *  muestra el día anterior. */
+ *  muestra el día anterior. Los meses van de una tabla fija, de tres letras como
+ *  la maqueta («sep», no «sept» como da `toLocaleDateString`). */
 export function fechaCorta(iso: string): string {
-  const [y, m, d] = iso.split("-").map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString("es", { day: "numeric", month: "short" });
+  const [, m, d] = iso.split("-").map(Number);
+  return `${d} ${MESES_CORTOS[m - 1]}`;
 }
 
 function porcentaje(fraccion: number): string {

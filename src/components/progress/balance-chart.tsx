@@ -127,7 +127,8 @@ export function BalanceChart({
 
   // En reposo el cursor vive en la columna elegida (invisible hasta el recorrido).
   useEffect(() => {
-    if (gesto.current === null && tecla.current === null) saltar(cx(sel));
+    // Con un resorte en marcha ya va a la columna elegida: saltar lo cancelaría.
+    if (gesto.current === null && tecla.current === null && fis.current.raf === 0) saltar(cx(sel));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sel, n, saltar]);
 
@@ -174,6 +175,7 @@ export function BalanceChart({
       g.eje = dy > dx ? "v" : "h";
       if (g.eje === "v") {
         elegir(g.prev);
+        saltar(cx(g.prev));
         setScrub(false);
         return;
       }

@@ -433,10 +433,10 @@
 .pback {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 2px;
   height: 44px;
   max-width: calc(100% - 24px);
-  padding: 0 18px 0 12px;
+  padding: 0 18px 0 10px;
   border-radius: 22px;
   font-weight: 500;
   font-size: 15px;
@@ -447,10 +447,8 @@
     opacity 0.3s,
     visibility 0s;
 }
-.pback b {
-  font-size: 22px;
-  font-weight: 400;
-  margin-top: -2px;
+.pback svg {
+  flex: none;
 }
 .pback[data-oculto] {
   transform: translateY(-140%);

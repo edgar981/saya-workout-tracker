@@ -2,18 +2,13 @@
 
 import Link from "next/link";
 
+import { fechaCorta } from "@/components/progress/estado";
 import type { LastPerformance as LastPerformanceData } from "@/lib/db/queries";
 import type { SetLog } from "@/lib/db/types";
 import { formatSetWeight } from "@/lib/units";
 
 function formatFecha(iso: string): string {
-  // Partido a mano: new Date('2026-08-14') se parsea como UTC y en América
-  // muestra el día anterior.
-  const [y, m, d] = iso.split("-").map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString("es", {
-    day: "numeric",
-    month: "short",
-  });
+  return fechaCorta(iso);
 }
 
 function summarize(sets: SetLog[], stackLabel: string | null): string[] {

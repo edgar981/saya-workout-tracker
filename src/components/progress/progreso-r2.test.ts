@@ -3,6 +3,8 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { fechaCorta } from "./estado";
+
 /**
  * Progreso «Semanas» de la ronda 2 (SAYA-R2-5). Test de fuente (vitest corre en
  * `node`, sin DOM): lee los componentes como texto, igual que `cromo-7.test.ts`.
@@ -56,5 +58,27 @@ describe("SAYA-R2-5: Progreso", () => {
 
   it("el bloque de CSS", () => {
     expect(css).toContain("/* SAYA-R2-5");
+  });
+
+  it("SAYA-R2-5.W: fechaCorta con meses de tres letras", () => {
+    expect(fechaCorta("2026-09-15")).toBe("15 sep");
+    expect(fechaCorta("2026-11-03")).toBe("3 nov");
+    expect(fechaCorta("2026-01-01")).toBe("1 ene");
+  });
+
+  it("SAYA-R2-5.W: los cinco arreglos, en el texto fuente", () => {
+    const cargando = leer("src/components/progress/progreso-cargando.tsx");
+    for (const f of [pantalla, cargando]) {
+      expect(f).not.toContain("empujada");
+      expect(f).not.toContain(" p-4");
+    }
+    const ultima = leer("src/components/session/last-performance.tsx");
+    expect(ultima).toContain("fechaCorta");
+    expect(ultima).not.toContain("toLocaleDateString");
+    const nav = leer("src/components/nav-bar.tsx");
+    expect(nav).toContain("M14.5 5.5L8 12l6.5 6.5");
+    expect(nav).not.toContain("‹");
+    expect(grafico).toContain("fis.current.raf");
+    expect(pantalla).toContain("disabled={vacio || t.cuenta === 0}");
   });
 });
