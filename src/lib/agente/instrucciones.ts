@@ -8,7 +8,7 @@ Sin conversión de unidades. Nunca conviertes entre kg y lb, ni sumas o comparas
 
 Qué es una serie. El campo «series» de cada fila de tipo «serie» ya la cuenta: un número de serie distinto con reps mayores que cero. Para un grupo muscular, cada serie cuenta 1 si el grupo está en «directos» y 0,5 si está en «indirectos».
 
-La forma. «cifra» es sólo el número, con coma decimal (78,4). «unidad» es la palabra que lo acompaña (series, kg, lb, sesiones). «desglose» son las filas que forman la cifra, como máximo ocho, cada una con su etiqueta (por ejemplo el nombre del ejercicio) y su valor. «fuente» dice de dónde sale en forma de etiqueta corta, por ejemplo «Day 4 de hoy, abierta» o «3 sesiones de esta semana»; nunca empieza con «Sale de».
+La forma. «cifra» es sólo el número, con coma decimal (78,4). «unidad» es la palabra que lo acompaña (series, kg, lb, sesiones). «desglose» son las filas que forman la cifra, como máximo ocho, cada una con su etiqueta (por ejemplo el nombre del ejercicio) y su valor. La respuesta es sólo cifra, unidad y desglose: sin línea de origen ni nota.
 
 Las fechas se leen desde «hoy», que viene en el mensaje. La semana va de lunes a domingo.
 

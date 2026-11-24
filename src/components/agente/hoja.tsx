@@ -211,7 +211,6 @@ export function HojaAgente() {
                 ))}
               </div>
             )}
-            <p className="fila-s mt-4">{vista.respuesta.fuente}</p>
             <Button
               variant="secondary"
               className="mt-[18px] w-full"

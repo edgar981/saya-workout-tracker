@@ -92,7 +92,6 @@ describe("validarRespuesta", () => {
       { etiqueta: "Incline Bench Press Wide Grip", valor: "3" },
       { etiqueta: "Weighted Dips", valor: "3" },
     ],
-    fuente: "Day 4 de hoy, abierta",
   };
   it("sin_datos ignora los demás campos", () => {
     expect(validarRespuesta({ ...maqueta, estado: "sin_datos" })).toEqual({
@@ -104,14 +103,22 @@ describe("validarRespuesta", () => {
     const r = validarRespuesta(maqueta);
     expect(r).toEqual({ ok: true, respuesta: maqueta });
   });
-  it("fuente «Sale de…» no pasa, con cualquier caja", () => {
-    expect(validarRespuesta({ ...maqueta, fuente: "Sale de tu sesión de hoy" }).ok).toBe(false);
-    expect(validarRespuesta({ ...maqueta, fuente: "sale de tu sesión" }).ok).toBe(false);
-    expect(validarRespuesta({ ...maqueta, fuente: "Salé de tu sesión" }).ok).toBe(false);
+  it("una «fuente» de más se ignora: pasa y el resultado no la trae", () => {
+    for (const fuente of ["Sale de tu sesión", "Hoy toca Day 3", ""]) {
+      const r = validarRespuesta({ ...maqueta, fuente });
+      expect(r.ok).toBe(true);
+      if (r.ok) {
+        expect("fuente" in r.respuesta).toBe(false);
+        expect(r.respuesta).toEqual(maqueta);
+      }
+    }
   });
-  it("cifra vacía, fuente vacía o campos de más largos no pasan", () => {
+  it("el esquema ya no pide ni declara «fuente»", () => {
+    expect(ESQUEMA_RESPUESTA.required).not.toContain("fuente");
+    expect(Object.keys(ESQUEMA_RESPUESTA.properties)).not.toContain("fuente");
+  });
+  it("cifra vacía o campos de más largos no pasan", () => {
     expect(validarRespuesta({ ...maqueta, cifra: " " }).ok).toBe(false);
-    expect(validarRespuesta({ ...maqueta, fuente: "" }).ok).toBe(false);
     expect(validarRespuesta({ ...maqueta, cifra: "1".repeat(25) }).ok).toBe(false);
     expect(validarRespuesta({ ...maqueta, unidad: "" }).ok).toBe(true);
   });

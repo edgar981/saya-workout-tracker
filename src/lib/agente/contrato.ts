@@ -39,7 +39,6 @@ export type RespuestaAgente =
       cifra: string;
       unidad: string;
       desglose: { etiqueta: string; valor: string }[];
-      fuente: string;
     }
   | { estado: "sin_datos" };
 export type ErrorAgente = { error: string };
@@ -159,7 +158,7 @@ export function validarPedido(raw: unknown): ResultadoPedido {
 export const ESQUEMA_RESPUESTA = {
   type: "object",
   additionalProperties: false,
-  required: ["estado", "cifra", "unidad", "desglose", "fuente"],
+  required: ["estado", "cifra", "unidad", "desglose"],
   properties: {
     estado: { type: "string", enum: ["respuesta", "sin_datos"] },
     cifra: { type: "string" },
@@ -173,7 +172,6 @@ export const ESQUEMA_RESPUESTA = {
         properties: { etiqueta: { type: "string" }, valor: { type: "string" } },
       },
     },
-    fuente: { type: "string" },
   },
 } as const;
 
@@ -192,15 +190,7 @@ export function validarRespuesta(
 
   const cifra = texto(raw.cifra, 1, 24);
   const unidad = texto(raw.unidad, 0, 24);
-  const fuente = texto(raw.fuente, 1, 80);
-  if (cifra === null || unidad === null || fuente === null) return { ok: false };
-  if (
-    /^sale\s+de(?![a-z])/.test(
-      fuente.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""),
-    )
-  ) {
-    return { ok: false };
-  }
+  if (cifra === null || unidad === null) return { ok: false };
   if (!Array.isArray(raw.desglose) || raw.desglose.length > MAX_DESGLOSE) return { ok: false };
   const desglose: { etiqueta: string; valor: string }[] = [];
   for (const d of raw.desglose) {
@@ -210,5 +200,5 @@ export function validarRespuesta(
     if (etiqueta === null || valor === null) return { ok: false };
     desglose.push({ etiqueta, valor });
   }
-  return { ok: true, respuesta: { estado: "respuesta", cifra, unidad, desglose, fuente } };
+  return { ok: true, respuesta: { estado: "respuesta", cifra, unidad, desglose } };
 }

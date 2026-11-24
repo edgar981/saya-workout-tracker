@@ -24,7 +24,6 @@ const maqueta = {
     { etiqueta: "Incline Bench Press Wide Grip", valor: "3" },
     { etiqueta: "Weighted Dips", valor: "3" },
   ],
-  fuente: "Day 4 de hoy, abierta",
 };
 
 type Llamada = { url: string; init: RequestInit };

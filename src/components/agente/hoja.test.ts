@@ -35,6 +35,12 @@ describe("hoja del agente", () => {
     },
   );
 
+  it("la línea de fuente se quitó", () => {
+    expect(hoja).not.toContain(".fuente");
+    expect(hoja).not.toContain("fila-s");
+    expect(hoja).toContain("Otra pregunta");
+  });
+
   it("no importa db.ts", () => {
     expect(hoja).not.toMatch(/from\s+["']@\/lib\/db\/db["']/);
   });

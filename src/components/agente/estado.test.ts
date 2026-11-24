@@ -84,7 +84,6 @@ const buena = {
     { etiqueta: "Incline Bench Press Wide Grip", valor: "3" },
     { etiqueta: "Weighted Dips", valor: "3" },
   ],
-  fuente: "Day 4 de hoy, abierta",
 };
 
 describe("leerRespuesta", () => {
@@ -95,8 +94,13 @@ describe("leerRespuesta", () => {
   it("200 con sin_datos → sin_datos", () => {
     expect(leerRespuesta("p", 200, { estado: "sin_datos" })).toEqual({ tipo: "sin_datos", pregunta: "p" });
   });
-  it("«Sale de…» o basura → error", () => {
-    expect(leerRespuesta("p", 200, { ...buena, fuente: "Sale de tus sesiones" }).tipo).toBe("error");
+  it("una respuesta con «fuente» de más se lee como respuesta, sin fuente", () => {
+    const v = leerRespuesta("p", 200, { ...buena, fuente: "Sale de tus sesiones" });
+    expect(v.tipo).toBe("respuesta");
+    expect("fuente" in v).toBe(false);
+    if (v.tipo === "respuesta") expect("fuente" in v.respuesta).toBe(false);
+  });
+  it("basura → error", () => {
     expect(leerRespuesta("p", 200, "basura").tipo).toBe("error");
     expect(leerRespuesta("p", 200, null).tipo).toBe("error");
   });
