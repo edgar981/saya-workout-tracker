@@ -1,9 +1,11 @@
 "use client";
 
-import { ExercisePicker, unitTag } from "@/components/exercise-picker";
-import { Button } from "@/components/ui/button";
+import { useState } from "react";
+import { ChevronRight } from "lucide-react";
+
+import { ExercisePicker } from "@/components/exercise-picker";
+import { etiquetaUnidad, grupoDirecto } from "@/components/session/dial";
 import { substituteExercise, type SessionExerciseView } from "@/lib/db/queries";
-import type { Exercise } from "@/lib/db/types";
 
 /**
  * La sustitución no se escribe en ningún campo: cambiar el exercise_id de la
@@ -13,90 +15,96 @@ import type { Exercise } from "@/lib/db/types";
  * Las alternativas del slot pueden tener unit_type distinto al del planeado —
  * Wide Grip Pull Down (LB) contra Wide Grip Pull Up (peso corporal + kg).
  *
- * Va dentro del panel «Cambiar ejercicio» (`Panel`, lo monta la tarjeta). Tocar
- * una opción sustituye al momento; «Listo» sólo cierra el panel.
+ * Va dentro de la hoja «Cambiar ejercicio» (`Panel`, la monta la pantalla). Tocar
+ * una opción sustituye al momento y cierra; «Listo» sólo cierra la hoja.
  */
 export function SubstitutePicker({
   item,
+  enSesion,
   onDone,
 }: {
   item: SessionExerciseView;
+  /** Los ejercicios que ya están en la sesión: no se ofrecen. */
+  enSesion: string[];
   onDone: () => void;
 }) {
+  const [filtro, setFiltro] = useState("");
+
   const pick = async (exerciseId: string) => {
     await substituteExercise(item.sessionExercise.id, exerciseId);
     onDone();
   };
 
   const alternativas = item.alternatives.filter((alt) => alt.id !== item.exercise.id);
-
-  const opcion = (exercise: Exercise, marcada: boolean, onClick: () => void) => (
-    <button
-      key={exercise.id}
-      type="button"
-      role="radio"
-      aria-checked={marcada}
-      onClick={onClick}
-      className="opt"
-    >
-      <span className="rd" aria-hidden="true" />
-      <span className="min-w-0 flex-1">
-        <span className="fila-t block truncate">{exercise.nombre}</span>
-        <span className="fila-s block">{unitTag(exercise)}</span>
-      </span>
-    </button>
-  );
+  const volver = item.isSubstitution ? item.slotExercise : null;
 
   return (
     <div>
-      <p className="dek">
-        Solo en esta sesión. Las series que ya registraste quedan con este ejercicio.
-      </p>
-
-      <div role="radiogroup" aria-label="Ejercicio en esta sesión" className="mt-3">
-        {opcion(item.exercise, true, () => {})}
-        {item.isSubstitution && item.slotExercise && (
-          <button
-            type="button"
-            role="radio"
-            aria-checked={false}
-            onClick={() => void pick(item.slotExercise!.id)}
-            className="opt"
-          >
-            <span className="rd" aria-hidden="true" />
-            <span className="fila-t min-w-0 flex-1 truncate">
-              Volver a {item.slotExercise.nombre}
-            </span>
-          </button>
-        )}
-      </div>
-
-      <div className="fg">
-        <h3 className="kicker">Alternativas del plan</h3>
-        {alternativas.length > 0 ? (
-          <div role="radiogroup" aria-label="Alternativas del plan" className="mt-1">
-            {alternativas.map((alt) => opcion(alt, false, () => void pick(alt.id)))}
+      {volver && (
+        <div className="sec first">
+          <div role="radiogroup" aria-label="Ejercicio en esta sesión">
+            <button
+              type="button"
+              role="radio"
+              aria-checked={false}
+              className="row"
+              onClick={() => void pick(volver.id)}
+            >
+              <span className="m">
+                <span className="t">Volver a {volver.nombre}</span>
+              </span>
+            </button>
           </div>
-        ) : (
-          <p className="dek mt-1.5">Este ejercicio no tiene alternativas en la plantilla.</p>
-        )}
-      </div>
+        </div>
+      )}
 
-      <div className="fg">
-        <label htmlFor="filtro-sustitucion" className="kicker block">
-          Cualquier ejercicio del catálogo
-        </label>
+      {alternativas.length > 0 && (
+        <div className={volver ? "sec" : "sec first"}>
+          <p className="kick">Alternativas del plan</p>
+          {alternativas.map((alt) => (
+            <button
+              key={alt.id}
+              type="button"
+              className="row"
+              onClick={() => void pick(alt.id)}
+            >
+              <span className="m">
+                <span className="t">{alt.nombre}</span>
+                <span className="s">
+                  {etiquetaUnidad(alt)} · {grupoDirecto(alt)}
+                </span>
+              </span>
+              <ChevronRight size={22} aria-hidden="true" style={{ color: "var(--ink3)" }} />
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div className={volver || alternativas.length > 0 ? "sec" : "sec first"}>
+        <p className="kick">Cualquier ejercicio del catálogo</p>
+        <input
+          type="search"
+          className="tin"
+          style={{ marginTop: 10 }}
+          placeholder="Buscar…"
+          aria-label="Buscar en el catálogo"
+          value={filtro}
+          onChange={(e) => setFiltro(e.target.value)}
+        />
         <ExercisePicker
-          inputId="filtro-sustitucion"
-          excludeIds={[item.exercise.id]}
+          variante="filas"
+          sufijo="chevron"
+          filtro={filtro}
+          excludeIds={[...enSesion, ...alternativas.map((a) => a.id)]}
           onPick={(exercise) => void pick(exercise.id)}
-          className="mt-2"
         />
       </div>
 
-      <Button className="mt-6 w-full" onClick={onDone}>
-        Listo
-      </Button>
+      <div className="acts">
+        <button type="button" className="btn2 w" onClick={onDone}>
+          Listo
+        </button>
+      </div>
     </div>
   );
 }

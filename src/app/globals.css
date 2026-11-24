@@ -1900,3 +1900,654 @@ html[data-hoja-baja] {
     backdrop-filter: none;
   }
 }
+
+/* SAYA-R2-4 · Sesión (la maqueta de la ronda 2). Todo cuelga de `.ses` (la pantalla)
+   o de `.ses-hoja` (las tres hojas, que se montan en un portal). Sin capa: gana a las
+   reglas de `@layer components` que comparten nombre (.stop, .chip, .prow, .badges…). */
+.ses,
+.ses-hoja {
+  --r24-fill: rgba(255, 255, 255, 0.07);
+  --r24-fill2: rgba(255, 255, 255, 0.12);
+  --r24-hair2: rgba(255, 255, 255, 0.35);
+  --r24-sbot: #0c0c0f;
+}
+
+/* La cabeza. `.stop` ya es sticky (la página es la que se desplaza); se conserva su
+   área segura de arriba y no lleva márgenes laterales negativos (no está dentro del
+   relleno de la hoja). */
+.ses .stop {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  height: calc(58px + env(safe-area-inset-top));
+  margin: calc(-1 * env(safe-area-inset-top)) 0 0;
+  padding: env(safe-area-inset-top) calc(var(--pad) - 10px) 0;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  background: linear-gradient(180deg, var(--r24-sbot) 62%, transparent);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: none;
+}
+.ses .back {
+  height: 44px;
+  padding: 0 12px 0 6px;
+  border-radius: 22px;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--ink);
+  justify-self: start;
+}
+.ses .day {
+  font-weight: 600;
+  font-stretch: 125%;
+  font-size: 17px;
+  justify-self: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 170px;
+}
+.ses .ctr {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 15px;
+  color: var(--ink2);
+  font-variant-numeric: tabular-nums;
+  padding-right: 10px;
+  justify-self: end;
+}
+.ses .cdot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* Las fichas de ejercicio y el anillo que viaja con el deslizamiento. */
+.ses .chips {
+  position: relative;
+  display: flex;
+  gap: 8px;
+  height: auto;
+  margin: 0 calc(-1 * var(--pad));
+  padding: 16px var(--pad) 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  flex: none;
+}
+.ses .chip {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 22px;
+  background: var(--r24-fill);
+  box-shadow: none;
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--ink2);
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+.ses .chip.cur {
+  color: var(--ink);
+  background: var(--r24-fill2);
+}
+.ses .chip[data-hecho]::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 5px;
+  width: 4px;
+  height: 4px;
+  margin-left: -2px;
+  border-radius: 50%;
+  background: var(--ink2);
+}
+.ses .chip.add {
+  font-size: 20px;
+  font-weight: 400;
+}
+.ses .cring {
+  position: absolute;
+  z-index: 2;
+  top: 16px;
+  left: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 22px;
+  pointer-events: none;
+  will-change: transform;
+}
+.ses .chip:active {
+  transform: scale(0.97);
+}
+
+/* El pager y la tarjeta. */
+.ses .pg {
+  flex: none;
+  margin: 0 calc(-1 * var(--pad));
+  overflow: hidden;
+  touch-action: pan-y;
+}
+.ses .trk {
+  display: flex;
+  align-items: flex-start;
+  will-change: transform;
+}
+.ses .card {
+  flex: 0 0 100%;
+  padding: 0 var(--pad);
+  min-width: 0;
+}
+.ses .kick,
+.ses-hoja .kick {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  font-weight: 600;
+  font-size: 11px;
+  line-height: 14px;
+  font-stretch: 112%;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--ink2);
+}
+.ses .kick .r {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: none;
+}
+.ses .exk {
+  margin-top: 18px;
+}
+.ses .h2 {
+  font-weight: 600;
+  font-stretch: 125%;
+  font-size: 28px;
+  line-height: 1.12;
+  letter-spacing: -0.02em;
+  margin-top: 6px;
+}
+.ses .hk {
+  margin-top: 22px;
+}
+.ses .hist {
+  margin-top: 24px;
+}
+.ses .hist > :first-child {
+  margin-top: 0;
+}
+.ses .h3 {
+  font-weight: 600;
+  font-stretch: 125%;
+  font-size: 21px;
+  line-height: 1.2;
+  letter-spacing: -0.015em;
+}
+
+/* Los diales. */
+.ses .lbl {
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 600;
+  color: var(--ink2);
+}
+.ses .dial {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 16px;
+}
+.ses .dc {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px 8px 12px;
+  border-radius: 24px;
+  background: var(--r24-fill);
+  box-shadow: var(--glass);
+}
+.ses .dpm {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--r24-fill2);
+  font-size: 22px;
+  display: grid;
+  place-items: center;
+}
+.ses .dpm:active {
+  transform: scale(0.97);
+}
+.ses .dv {
+  position: relative;
+  width: 100%;
+  height: 84px;
+  display: grid;
+  place-items: center;
+  touch-action: none;
+  cursor: ns-resize;
+  border-radius: 16px;
+  outline: none;
+}
+.ses .dv:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: -2px;
+}
+.ses .dnum {
+  font-weight: 600;
+  font-stretch: 125%;
+  font-size: 58px;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+.ses .dnum.l4 {
+  font-size: 44px;
+}
+.ses .dnum.bw {
+  font-size: 20px;
+  font-weight: 500;
+  color: var(--ink2);
+}
+.ses .dv input {
+  position: absolute;
+  inset: 6px 4px;
+  height: 72px;
+  text-align: center;
+  background: var(--fbg);
+  box-shadow: var(--fsh-f);
+  border-radius: 14px;
+  font-weight: 600;
+  font-stretch: 125%;
+  font-size: 40px;
+  color: var(--ink);
+  outline: none;
+}
+.ses .dunit {
+  display: inline-flex;
+  gap: 6px;
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--ink2);
+  min-height: 22px;
+}
+
+/* «Anotar», las fichas de «Hoy» y la edición. */
+.ses .lchips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+.ses .lchip {
+  height: 44px;
+  padding: 0 14px;
+  border-radius: 22px;
+  background: var(--r24-fill);
+  box-shadow: var(--glass);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.ses .lchip:active {
+  transform: scale(0.97);
+}
+.ses .lchip .ix {
+  width: auto;
+  margin-right: 2px;
+  font-size: 12px;
+  color: var(--ink3);
+}
+.ses .lchip .warn {
+  width: 18px;
+  height: 18px;
+}
+.ses .lchip.miss {
+  box-shadow: inset 0 0 0 1.5px var(--amber);
+}
+.ses .lchip.ed {
+  box-shadow: var(--fsh-f);
+}
+.ses .lchip.popin {
+  animation: r24-popin 0.45s var(--ease) both;
+}
+@keyframes r24-popin {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+}
+.ses .ed3 {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+.ses .ed3 .btn {
+  flex: 1;
+}
+.ses .ed3 .btn2 {
+  height: 60px;
+  border-radius: 30px;
+}
+.ses .arw {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: var(--r24-fill);
+  box-shadow: var(--glass);
+  font-size: 24px;
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+.ses .ed3 .arw {
+  width: 60px;
+  height: 60px;
+  color: var(--red-t);
+}
+
+/* Los botones. `.btn` es el cromo; `.btn2`, el vidrio. */
+.ses .btn,
+.ses .btn2,
+.ses-hoja .btn,
+.ses-hoja .btn2 {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  min-height: 48px;
+  padding: 0 22px;
+  border-radius: 24px;
+  font-weight: 600;
+  font-size: 15px;
+  line-height: 20px;
+  font-stretch: 110%;
+}
+.ses .btn,
+.ses-hoja .btn {
+  background-color: #dcdfe5;
+  background-image: var(--chrome);
+  color: var(--accent-ink);
+  box-shadow:
+    inset 0 1px 0 #fff,
+    inset 0 -1px 0 rgba(0, 0, 0, 0.25),
+    0 10px 24px rgba(0, 0, 0, 0.45);
+}
+.ses .btn2,
+.ses-hoja .btn2 {
+  background: var(--r24-fill);
+  box-shadow: var(--glass);
+  color: var(--ink);
+}
+.ses .btn.big,
+.ses .btn2.big,
+.ses-hoja .btn.big,
+.ses-hoja .btn2.big {
+  min-height: 60px;
+  border-radius: 30px;
+  font-size: 17px;
+}
+.ses .w,
+.ses-hoja .w {
+  width: 100%;
+}
+.ses .btn:active,
+.ses .btn2:active,
+.ses-hoja .btn:active,
+.ses-hoja .btn2:active {
+  transform: scale(0.97);
+}
+.ses .tl,
+.ses-hoja .tl {
+  min-height: 44px;
+  font-size: 15px;
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  text-decoration-color: var(--r24-hair2);
+}
+.ses .tl.danger,
+.ses-hoja .tl.danger {
+  color: var(--red-t);
+}
+
+/* Los badges y «La pasada». */
+.ses .badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 18px;
+}
+.ses .badges > span {
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 13px;
+  background: var(--r24-fill);
+  font-size: 12.5px;
+  line-height: 26px;
+  color: var(--ink2);
+}
+.ses .pas {
+  margin-top: 10px;
+  padding: 8px 14px 10px;
+  border-radius: 18px;
+  background: var(--r24-fill);
+}
+.ses .phd {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 44px;
+}
+.ses .prow {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-height: 0;
+  padding: 4px 0;
+  border-top: 0;
+  font-size: 15px;
+  line-height: 21px;
+}
+.ses .prow .ix {
+  width: 24px;
+  font-size: 12px;
+  color: var(--ink3);
+}
+
+/* Nota y Quitar, y el error en línea. */
+.ses .note-t {
+  margin-top: 12px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: var(--r24-fill);
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--ink2);
+  white-space: pre-wrap;
+}
+.ses .lxa {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 16px;
+  margin-top: 10px;
+  margin-bottom: 8px;
+}
+.ses .errbox {
+  margin-top: 14px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 77, 94, 0.45);
+  background: rgba(255, 77, 94, 0.07);
+  font-size: 15px;
+  line-height: 21px;
+}
+.ses .es {
+  display: block;
+  margin-top: 6px;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--ink2);
+}
+
+/* La tira de abajo. */
+.ses .sbot {
+  position: sticky;
+  bottom: 0;
+  z-index: 4;
+  margin: auto calc(-1 * var(--pad)) 0;
+  padding: 12px var(--pad) calc(12px + env(safe-area-inset-bottom));
+  display: flex;
+  gap: 10px;
+  background: var(--r24-sbot);
+  box-shadow: none;
+}
+.ses .sbot::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -24px;
+  bottom: auto;
+  height: 24px;
+  pointer-events: none;
+  background: linear-gradient(0deg, var(--r24-sbot), transparent);
+}
+.ses .sbot .btn2 {
+  flex: 1;
+  min-height: 50px;
+  border-radius: 25px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.ses .sbot .btn2.sw {
+  flex: none;
+}
+
+/* El vacío y la entrada. */
+.ses .acts {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 20px;
+}
+.ses .rise {
+  animation: r24-rise 0.52s var(--ease) calc(var(--i, 0) * 70ms) both;
+}
+@keyframes r24-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+@keyframes r24-fade {
+  from {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ses .rise {
+    animation: r24-fade 0.2s ease both;
+  }
+  .ses .lchip.popin {
+    animation: r24-fade 0.2s ease both;
+  }
+}
+
+/* Las hojas (agregar, cambiar, nota). */
+.ses-hoja .tin {
+  width: 100%;
+  height: 52px;
+  border-radius: 16px;
+  padding: 0 16px;
+  background: var(--fbg);
+  box-shadow: var(--fsh);
+  font-size: 16px;
+  color: var(--ink);
+}
+.ses-hoja .tin:focus {
+  box-shadow: var(--fsh-f);
+  outline: none;
+}
+.ses-hoja textarea.tin {
+  height: 110px;
+  padding: 14px 16px;
+  resize: none;
+}
+.ses-hoja .r24-sub {
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--ink2);
+  margin-top: -4px;
+}
+.ses-hoja .row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 60px;
+  padding: 12px 0;
+  border-top: 1px solid var(--hair);
+  text-align: left;
+  isolation: isolate;
+}
+.ses-hoja .row:first-child {
+  border-top: 0;
+}
+.ses-hoja .row:active::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 3px -10px;
+  border-radius: 14px;
+  background: var(--r24-fill2);
+}
+.ses-hoja .row .m {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.ses-hoja .row .t {
+  font-size: 16px;
+  line-height: 22px;
+}
+.ses-hoja .row .s {
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--ink2);
+}
+.ses-hoja .row .v {
+  font-weight: 500;
+  font-size: 16px;
+  line-height: 22px;
+  font-stretch: 108%;
+  font-variant-numeric: tabular-nums;
+}
+.ses-hoja .sec {
+  margin-top: 30px;
+}
+.ses-hoja .sec.first {
+  margin-top: 22px;
+}
+.ses-hoja .acts {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 20px;
+}

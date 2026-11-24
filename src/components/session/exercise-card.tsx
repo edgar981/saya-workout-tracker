@@ -1,267 +1,349 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 
-import { unitTag } from "@/components/exercise-picker";
-import { LastPerformance } from "@/components/session/last-performance";
-import { SetGroup } from "@/components/session/set-group";
-import { SubstitutePicker } from "@/components/session/substitute-picker";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { ErrorEnLinea } from "@/components/ui/estados";
-import { Panel } from "@/components/ui/panel";
-import { Pildora } from "@/components/ui/pildora";
 import {
+  estaAnotado,
+  etiquetaUnidad,
+  faltaPeso,
+  gruposDeHoy,
+  siguienteSerie,
+  textoSerie,
+  valoresIniciales,
+} from "@/components/session/dial";
+import { LastPerformance } from "@/components/session/last-performance";
+import { SerieDial } from "@/components/session/serie-dial";
+import { ErrorEnLinea } from "@/components/ui/estados";
+import {
+  addOppositeSide,
   addSet,
-  deleteSessionExercise,
   getLastPerformance,
-  updateSessionExerciseNote,
+  loadSessionView,
+  updateSet,
   type SessionExerciseView,
 } from "@/lib/db/queries";
-import type { SetLog } from "@/lib/db/types";
-import { useAutosave } from "@/lib/use-autosave";
-import { cn } from "@/lib/utils";
 
-const ARMED_MS = 5000;
+const ARMED_MS = 4000;
 
-function groupBySetIndex(sets: SetLog[]): [number, SetLog[]][] {
-  const groups = new Map<number, SetLog[]>();
-  for (const set of sets) {
-    const list = groups.get(set.set_index) ?? [];
-    list.push(set);
-    groups.set(set.set_index, list);
-  }
-  return [...groups.entries()].sort((a, b) => a[0] - b[0]);
+/** La clave con que la pantalla esconde un grupo borrado mientras espera el «Deshacer». */
+export function claveSerie(sessionExerciseId: string, setIndex: number): string {
+  return `${sessionExerciseId}:${setIndex}`;
 }
 
-type OpcionesSerie = Parameters<typeof addSet>[1];
+function sinMovimiento(): boolean {
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+function Advertencia() {
+  return (
+    <svg className="warn" viewBox="0 0 24 24" width="22" height="22" role="img" aria-label="Falta el peso">
+      <path d="M12 2.5 22.5 20.5h-21z" fill="var(--amber)" />
+      <path d="M11 8.5h2v6.5h-2zM11 16.5h2v2h-2z" fill="#1A1200" />
+    </svg>
+  );
+}
+
+interface Fallo {
+  /** Número de serie que se intentó escribir (1-based). */
+  n: number;
+  reps: number;
+  peso: number | null;
+  editando: number | null;
+}
 
 export function ExerciseCard({
   item,
   sessionId,
   posicion,
   total,
+  activa,
+  ocultas,
+  onNota,
+  onBorrarSerie,
+  onQuitar,
 }: {
   item: SessionExerciseView;
   sessionId: string;
-  /** Posición (1-based) del ejercicio en la sesión, para el kicker. */
+  /** Posición (1-based) del ejercicio entre los que se ven, para el kicker. */
   posicion: number;
   total: number;
+  /** Es la tarjeta que está a la vista. */
+  activa: boolean;
+  /** Claves (`claveSerie`) de las series borradas que esperan el «Deshacer». */
+  ocultas: ReadonlySet<string>;
+  onNota: () => void;
+  onBorrarSerie: (sessionExerciseId: string, setIndex: number, n: number) => void;
+  onQuitar: (sessionExerciseId: string) => void;
 }) {
-  const [showSubstitute, setShowSubstitute] = useState(false);
-  const [showNote, setShowNote] = useState(!!item.sessionExercise.nota);
-  const [showExtra, setShowExtra] = useState(false);
-  const [note, setNote] = useState(item.sessionExercise.nota ?? "");
+  const { exercise, slot, sessionExercise } = item;
   const [armed, setArmed] = useState(false);
-  // Estado `error` de «Nueva serie» / «Extra»: la llamada que falló, para repetirla.
-  const [fallo, setFallo] = useState<OpcionesSerie | null>(null);
-  const pendingNote = useRef<string | null>(null);
-  const { schedule, flush } = useAutosave();
+  const [editando, setEditando] = useState<number | null>(null);
+  const [manual, setManual] = useState<{ clave: string; reps?: number; peso?: number | null } | null>(
+    null,
+  );
+  const [fallo, setFallo] = useState<Fallo | null>(null);
+  const [recien, setRecien] = useState<number | null>(null);
+  const porDesplazar = useRef<number | null>(null);
+  const chips = useRef(new Map<number, HTMLButtonElement>());
 
+  // Se desarma a los 4000 ms; cambiar de ejercicio (`activa` pasa a false) lo
+  // desarma al momento.
   useEffect(() => {
     if (!armed) return;
-    const t = setTimeout(() => setArmed(false), ARMED_MS);
+    const t = setTimeout(() => setArmed(false), activa ? ARMED_MS : 0);
     return () => clearTimeout(t);
-  }, [armed]);
+  }, [armed, activa]);
+  const armado = armed && activa;
 
-  // Última aparición del ejercicio: la MISMA fuente que ya alimenta la precarga
-  // de peso (getLastPerformance → getPerformanceHistory, la única travesía). Se
-  // carga una vez aquí y se reusa para «La pasada» y para los placeholders de
-  // reps (§2 / criterio 11).
+  // Última aparición del ejercicio: la MISMA fuente que ya alimentaba la precarga
+  // (getLastPerformance → getPerformanceHistory, la única travesía). Se carga una
+  // vez aquí y se reusa para «La pasada» y para los valores iniciales de los
+  // diales.
   const anterior = useLiveQuery(
-    () => getLastPerformance(item.exercise.id, sessionId),
-    [item.exercise.id, sessionId],
+    () => getLastPerformance(exercise.id, sessionId),
+    [exercise.id, sessionId],
   );
-  const prevSets = anterior?.sets ?? [];
-  // §3.5: la aparición anterior seed la captura solo si su snapshot de unidad
-  // coincide con el ejercicio de hoy. Si cambió, no hay placeholder y se avisa.
-  const comparable =
-    prevSets.length > 0 &&
-    prevSets[0].weight_unit === item.exercise.unit_type &&
-    prevSets[0].weight_basis === item.exercise.weight_basis;
-  const unidadCambio = anterior != null && !comparable;
-  const refSets = comparable ? prevSets : [];
+  const pasada = useMemo(() => anterior?.sets ?? [], [anterior]);
 
-  const groups = groupBySetIndex(item.sets);
-  const { exercise, slot, sessionExercise } = item;
+  const visibles = useMemo(
+    () => item.sets.filter((s) => !ocultas.has(claveSerie(sessionExercise.id, s.set_index))),
+    [item.sets, ocultas, sessionExercise.id],
+  );
+  const grupos = gruposDeHoy(visibles);
+  const anotados = grupos
+    .map((g, j) => ({ g, j }))
+    .filter(({ g }) => estaAnotado(g));
+  const sinPeso = exercise.unit_type === "BODYWEIGHT";
 
-  const commitNote = () => {
-    const value = pendingNote.current;
-    pendingNote.current = null;
-    if (value !== null) {
-      void updateSessionExerciseNote(sessionExercise.id, value.trim() === "" ? null : value);
+  const editIdx = editando !== null && grupos[editando] ? editando : null;
+  const inicial = valoresIniciales({ exercise, slot, pasada, hoy: visibles, editando: editIdx });
+  const clave = [
+    exercise.id,
+    editIdx,
+    grupos.length,
+    grupos.map((g) => g.map((f) => `${f.reps}/${f.weight_value}`).join("+")).join("|"),
+    inicial.reps,
+    inicial.peso,
+  ].join(";");
+  // Lo que el dedo movió vale sólo mientras nada de abajo cambie; si cambia (se
+  // anotó una serie, se abrió otra para editar), vuelven los valores iniciales.
+  const vigente = manual && manual.clave === clave ? manual : null;
+  const reps = vigente?.reps ?? inicial.reps;
+  const peso = sinPeso ? null : vigente && vigente.peso !== undefined ? vigente.peso : inicial.peso;
+
+  const numero = (editIdx ?? siguienteSerie(grupos)) + 1;
+
+  // Tras anotar, la página baja lo justo para que la ficha nueva quede 12 px por
+  // encima de la tira de abajo.
+  useEffect(() => {
+    const setIndex = porDesplazar.current;
+    if (setIndex === null) return;
+    const chip = chips.current.get(setIndex);
+    const sbot = document.querySelector(".sbot");
+    if (!chip) return;
+    porDesplazar.current = null;
+    if (!sbot) return;
+    const exceso = chip.getBoundingClientRect().bottom - (sbot.getBoundingClientRect().top - 12);
+    if (exceso > 0) {
+      window.scrollBy({ top: exceso, behavior: sinMovimiento() ? "auto" : "smooth" });
+    }
+  });
+
+  const escribir = async (v: { reps: number; peso: number | null; editando: number | null }) => {
+    const pesoFila = sinPeso ? null : v.peso;
+    const j = v.editando ?? siguienteSerie(grupos);
+    const existente = grupos[j];
+    try {
+      if (existente) {
+        // Reusa el grupo: todas las filas del segmento 0 (los dos lados, si hay).
+        for (const fila of existente.filter((f) => f.segment_index === 0)) {
+          await updateSet(fila.id, { reps: v.reps, weight_value: pesoFila });
+        }
+        porDesplazar.current = existente[0].set_index;
+        setRecien(existente[0].set_index);
+      } else {
+        await addSet(sessionExercise.id, { esExtra: false, side: "AUTO" });
+        const filasNuevas = async () => {
+          const vista = await loadSessionView(sessionId);
+          const it = vista?.items.find((i) => i.sessionExercise.id === sessionExercise.id);
+          const todas = it?.sets ?? [];
+          const max = todas.length ? Math.max(...todas.map((s) => s.set_index)) : 0;
+          return { max, filas: todas.filter((s) => s.set_index === max) };
+        };
+        const primera = await filasNuevas();
+        let filas = primera.filas;
+        if (exercise.laterality_default === "UNILATERAL") {
+          await addOppositeSide(sessionExercise.id, primera.max);
+          filas = (await filasNuevas()).filas;
+        }
+        for (const fila of filas.filter((f) => f.segment_index === 0)) {
+          await updateSet(fila.id, { reps: v.reps, weight_value: pesoFila });
+        }
+        porDesplazar.current = primera.max;
+        setRecien(primera.max);
+      }
+      setFallo(null);
+      setEditando(null);
+      setManual(null);
+    } catch {
+      setFallo({ n: j + 1, reps: v.reps, peso: v.peso, editando: v.editando });
     }
   };
 
-  const onNote = (value: string) => {
-    setNote(value);
-    pendingNote.current = value;
-    schedule(commitNote);
-  };
+  const confirmar = () => void escribir({ reps, peso, editando: editIdx });
 
-  // La misma `addSet` de siempre, con los mismos argumentos; sólo se atrapa su
-  // rechazo para mostrarlo.
-  const agregarSerie = (opciones: OpcionesSerie) => {
-    addSet(sessionExercise.id, opciones).then(
-      () => setFallo(null),
-      () => setFallo(opciones),
-    );
-  };
+  const nSeries = anotados.length;
+  const textoQuitar = armado
+    ? nSeries === 0
+      ? "Sí, quitar"
+      : `Sí, quitar · ${nSeries} ${nSeries === 1 ? "serie" : "series"}`
+    : "Quitar de la sesión";
+
+  const hayBadges =
+    (item.isSubstitution && !!item.slotExercise) ||
+    item.isAdHoc ||
+    sessionExercise.orden_ejecucion !== null ||
+    (!!slot && slot.target_sets !== null && slot.target_reps !== null);
+  const hayPasada = anterior !== null;
 
   return (
-    <div>
-      <p className="kicker mt-[18px]">
-        Ejercicio {posicion} de {total} · {unitTag(exercise)}
+    <section className="card" aria-label={`Ejercicio ${posicion} de ${total}`}>
+      <p className="kick exk">
+        Ejercicio {posicion} de {total} · {etiquetaUnidad(exercise)}
       </p>
-      <div className="mt-2 flex items-start justify-between gap-2.5">
-        <h2 className="tit-2 min-w-0 leading-tight">{exercise.nombre}</h2>
-        <Button variant="link" onClick={() => setShowSubstitute(true)} className="shrink-0">
-          Cambiar
-        </Button>
-      </div>
+      <h2 className="h2">{exercise.nombre}</h2>
 
-      <div className="badges">
-        {item.isSubstitution && item.slotExercise && (
-          <Badge variant="secondary">sustituye a {item.slotExercise.nombre}</Badge>
-        )}
-        {item.isAdHoc && <Badge variant="outline">fuera de plantilla</Badge>}
-        {/* Derivado, nunca editable. Se muestra para que la secuencia real sea
-            legible sin reacomodar la lista. */}
-        {sessionExercise.orden_ejecucion !== null && (
-          <Badge variant="outline" className="tabular-nums">
-            ejecutado {sessionExercise.orden_ejecucion}º
-          </Badge>
-        )}
-        {slot && slot.target_sets !== null && slot.target_reps !== null && (
-          <Badge variant="outline">
-            objetivo {slot.target_sets} × {slot.target_reps}
-          </Badge>
-        )}
-      </div>
-
-      <Panel
-        abierto={showSubstitute}
-        alCerrar={() => setShowSubstitute(false)}
-        titulo="Cambiar ejercicio"
-      >
-        <SubstitutePicker item={item} onDone={() => setShowSubstitute(false)} />
-      </Panel>
-
-      <LastPerformance
-        exerciseId={exercise.id}
-        stackLabel={exercise.stack_label}
-        last={anterior}
+      <SerieDial
+        exercise={exercise}
+        reps={reps}
+        peso={peso}
+        onReps={(n) => setManual({ clave, reps: n, peso: vigente?.peso })}
+        onPeso={(n) => setManual({ clave, reps: vigente?.reps, peso: n })}
       />
 
-      {/* §3: hay historial pero no comparable (cambió la unidad). Se avisa y no
-          se propone placeholder de reps de la aparición vieja (§3.5). */}
-      {unidadCambio && (
-        <p className="fila-s mt-2">
-          La unidad cambió desde la última vez. No se compara ni se propone.
-        </p>
-      )}
-
-      <section className="sets">
-        <h3 className="kicker">Hoy</h3>
-        {groups.length === 0 ? (
-          <p className="dek mt-1.5">Sin series todavía.</p>
-        ) : (
-          groups.map(([setIndex, sets]) => (
-            <SetGroup
-              key={setIndex}
-              sessionExerciseId={sessionExercise.id}
-              setIndex={setIndex}
-              sets={sets}
-              stackLabel={exercise.stack_label}
-              refSets={refSets}
-            />
-          ))
-        )}
-      </section>
-
-      {fallo && (
-        <ErrorEnLinea className="mt-3">
-          <p>No se pudo guardar la serie {groups.length + 1}. Sigue en pantalla.</p>
-          <p className="err-s">Tus datos no se tocaron.</p>
-          <Button variant="link" className="danger" onClick={() => agregarSerie(fallo)}>
-            Reintentar
-          </Button>
-        </ErrorEnLinea>
-      )}
-
-      <div className="mt-[18px] flex w-full gap-2.5">
-        <Button className="flex-1" onClick={() => agregarSerie({ esExtra: false, side: "AUTO" })}>
-          {/* "Nueva serie" cuando aún no hay ninguna; "Otra" a partir de la segunda. */}
-          {groups.length === 0 ? "Nueva serie" : "Otra serie"}
-        </Button>
-        <Button
-          variant="secondary"
-          className="flex-1"
-          onClick={() => {
-            // Unilateral: elegir con qué lado empieza la extra (el opuesto se
-            // agrega después). Bilateral: agrega una fila directo, sin menú.
-            if (exercise.laterality_default === "UNILATERAL") setShowExtra((v) => !v);
-            else agregarSerie({ esExtra: true, side: "AUTO" });
-          }}
-        >
-          + Extra
-        </Button>
-      </div>
-
-      {showExtra && exercise.laterality_default === "UNILATERAL" && (
-        <div className="mt-3 flex gap-2">
-          {(["L", "R"] as const).map((side) => (
-            <Pildora
-              key={side}
-              onClick={() => {
-                agregarSerie({ esExtra: true, side });
-                setShowExtra(false);
-              }}
-            >
-              {side === "L" ? "Izquierdo" : "Derecho"}
-            </Pildora>
-          ))}
+      {editIdx === null ? (
+        <button type="button" className="btn big w" style={{ marginTop: 14 }} onClick={confirmar}>
+          Anotar serie {numero}
+        </button>
+      ) : (
+        <div className="ed3">
+          <button
+            type="button"
+            className="arw"
+            aria-label={`Borrar serie ${numero}`}
+            onClick={() => {
+              setEditando(null);
+              onBorrarSerie(sessionExercise.id, grupos[editIdx][0].set_index, numero);
+            }}
+          >
+            <span aria-hidden="true">×</span>
+          </button>
+          <button type="button" className="btn2" onClick={() => setEditando(null)}>
+            Cancelar
+          </button>
+          <button
+            type="button"
+            className="btn big"
+            aria-label={`Guardar serie ${numero}`}
+            onClick={confirmar}
+          >
+            Guardar
+          </button>
         </div>
       )}
 
-      <div className="mt-2">
-        <Button variant="link" aria-expanded={showNote} onClick={() => setShowNote((v) => !v)}>
-          Nota del ejercicio
-          <span
-            aria-hidden="true"
-            className={cn(
-              "inline-block transition-transform duration-200 motion-reduce:transition-none",
-              showNote && "rotate-180",
-            )}
-          >
-            ▾
-          </span>
-        </Button>
-        {showNote && (
-          <textarea
-            value={note}
-            onChange={(e) => onNote(e.target.value)}
-            onBlur={flush}
-            placeholder="Máquina distinta, molestia, agarre…"
-            aria-label="Nota del ejercicio"
-            className="nota"
-          />
-        )}
-      </div>
+      <p className="kick hk">
+        Hoy
+        <span className="r">
+          {nSeries === 0 ? "—" : `${nSeries} ${nSeries === 1 ? "serie" : "series"}`}
+        </span>
+      </p>
+      {nSeries > 0 && (
+        <div className="lchips">
+          {anotados.map(({ g, j }) => {
+            const falta = faltaPeso(exercise, g);
+            const setIndex = g[0].set_index;
+            const clases = ["lchip", falta && "miss", editIdx === j && "ed", recien === setIndex && "popin"]
+              .filter(Boolean)
+              .join(" ");
+            return (
+              <button
+                key={setIndex}
+                ref={(el) => {
+                  if (el) chips.current.set(setIndex, el);
+                  else chips.current.delete(setIndex);
+                }}
+                type="button"
+                className={clases}
+                aria-label={`Editar serie ${j + 1}${falta ? " · Falta el peso" : ""}`}
+                aria-pressed={editIdx === j}
+                onClick={() => setEditando(editIdx === j ? null : j)}
+              >
+                <span className="ix">{g.some((f) => f.es_extra) ? "E" : j + 1}</span>
+                {textoSerie(exercise, g)}
+                {falta && <Advertencia />}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
-      {/* Borra la instancia y sus series en una sola transacción. Sin cascada
-          en Dexie, borrar solo la instancia dejaría SetLog huérfanos que la
-          verificación de conteos del import no vería. Guarda de doble toque. */}
-      <div>
-        <Button
-          variant="link"
-          className="danger"
-          onClick={() => (armed ? void deleteSessionExercise(sessionExercise.id) : setArmed(true))}
+      {fallo && (
+        <ErrorEnLinea>
+          <p>No se pudo guardar la serie {fallo.n}.</p>
+          <span className="es">Tus datos no se tocaron.</span>
+          <button
+            type="button"
+            className="tl"
+            onClick={() => void escribir({ reps: fallo.reps, peso: fallo.peso, editando: fallo.editando })}
+          >
+            Reintentar
+          </button>
+        </ErrorEnLinea>
+      )}
+
+      {(hayBadges || hayPasada) && (
+        <div className="hist">
+          {hayBadges && (
+            <div className="badges">
+              {item.isSubstitution && item.slotExercise && (
+                <span>sustituye a {item.slotExercise.nombre}</span>
+              )}
+              {item.isAdHoc && <span>fuera de plantilla</span>}
+              {/* Derivado, nunca editable. Se muestra para que la secuencia real sea
+                  legible sin reacomodar la lista. */}
+              {sessionExercise.orden_ejecucion !== null && (
+                <span>ejecutado {sessionExercise.orden_ejecucion}º</span>
+              )}
+              {slot && slot.target_sets !== null && slot.target_reps !== null && (
+                <span>
+                  objetivo {slot.target_sets} × {slot.target_reps}
+                </span>
+              )}
+            </div>
+          )}
+          <LastPerformance exerciseId={exercise.id} stackLabel={exercise.stack_label} last={anterior} />
+        </div>
+      )}
+
+      {sessionExercise.nota && <p className="note-t">{sessionExercise.nota}</p>}
+
+      <div className="lxa">
+        <button type="button" className="tl" onClick={onNota}>
+          Nota del ejercicio <span aria-hidden="true">▾</span>
+        </button>
+        {/* Quitar borra la instancia y sus series en una sola transacción (la
+            pantalla lo hace con deleteSessionExercise tras el «Deshacer»). Guarda
+            de doble toque. */}
+        <button
+          type="button"
+          className="tl danger"
+          onClick={() => (armado ? onQuitar(sessionExercise.id) : setArmed(true))}
         >
-          {armed ? `Tocar de nuevo: borra ${item.sets.length} series` : "Quitar de la sesión"}
-        </Button>
+          {textoQuitar}
+        </button>
       </div>
-    </div>
+    </section>
   );
 }
