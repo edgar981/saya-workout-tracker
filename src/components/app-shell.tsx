@@ -99,6 +99,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     return () => {
       el.removeEventListener("animationend", alFin);
       clearTimeout(t);
+      el.removeAttribute("data-entra");
     };
   }, [pathname, nivel]);
 

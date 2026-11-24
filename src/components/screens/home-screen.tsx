@@ -277,10 +277,7 @@ function useHojaDeHoy() {
     } | null = null;
 
     const alEmpezarToque = (e: TouchEvent) => {
-      if (nace(e) || e.touches.length !== 1) {
-        toque = null;
-        return;
-      }
+      if (nace(e) || e.touches.length !== 1) return;
       toque = {
         x0: e.touches[0].clientX,
         y0: e.touches[0].clientY,

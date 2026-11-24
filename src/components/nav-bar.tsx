@@ -260,6 +260,7 @@ export function NavBar({
     if (paso === 0) return;
     e.preventDefault();
     const i = Math.min(n - 1, Math.max(0, activo + paso));
+    if (i === activo) return;
     const pestanas = bbarRef.current?.querySelectorAll<HTMLElement>('[role="tab"]');
     pestanas?.[i]?.focus();
     tocar(i);

@@ -1,3 +1,5 @@
+"use client";
+
 import { abrirAgente } from "@/lib/agente/abrir";
 
 /** Las gotas del orbe. `SAYA-R2-6` las reusa en su píldora «Pensando…». */

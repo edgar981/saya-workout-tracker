@@ -85,6 +85,7 @@ export function ExerciseCard({
   const [fallo, setFallo] = useState<Fallo | null>(null);
   const [recien, setRecien] = useState<number | null>(null);
   const porDesplazar = useRef<number | null>(null);
+  const escribiendo = useRef<boolean>(false);
   const chips = useRef(new Map<number, HTMLButtonElement>());
 
   // Se desarma a los 4000 ms; cambiar de ejercicio (`activa` pasa a false) lo
@@ -151,6 +152,8 @@ export function ExerciseCard({
   });
 
   const escribir = async (v: { reps: number; peso: number | null; editando: number | null }) => {
+    if (escribiendo.current) return;
+    escribiendo.current = true;
     const pesoFila = sinPeso ? null : v.peso;
     const j = v.editando ?? siguienteSerie(grupos);
     const existente = grupos[j];
@@ -188,6 +191,8 @@ export function ExerciseCard({
       setManual(null);
     } catch {
       setFallo({ n: j + 1, reps: v.reps, peso: v.peso, editando: v.editando });
+    } finally {
+      escribiendo.current = false;
     }
   };
 
