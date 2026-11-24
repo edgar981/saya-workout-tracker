@@ -5,11 +5,15 @@ import type { SetLine } from "@/lib/history-format";
 import {
   estadoSesion,
   fechaCabeza,
+  fechaDiaMes,
+  fechaUltimaVez,
   lineaCierre,
   lineaCompacta,
   lineaProgreso,
+  lineaSesionTesela,
   subtituloHoy,
   subtituloPesoHoy,
+  textoBotonDia,
 } from "@/lib/hoy";
 
 const linea = (p: Partial<SetLine>): SetLine => ({
@@ -141,6 +145,33 @@ describe("lineaCierre", () => {
   it("sin día", () => {
     expect(lineaCierre({ dia: null, hace: "ayer", hechos: 0, total: 0, series: 3 })).toBe(
       "Sesión libre · ayer · 3 series",
+    );
+  });
+});
+
+describe("SAYA-R2-3: fechas y textos de las teselas", () => {
+  it("fechaDiaMes", () => {
+    expect(fechaDiaMes("2026-11-09")).toBe("9 nov");
+  });
+  it("fechaUltimaVez", () => {
+    expect(fechaUltimaVez("2026-11-05")).toBe("Jue, 5 nov");
+    expect(fechaUltimaVez("2026-11-04")).toBe("Mié, 4 nov");
+    expect(fechaUltimaVez("2026-11-07")).toBe("Sáb, 7 nov");
+    expect(fechaUltimaVez("2026-09-15")).toBe("Mar, 15 sep");
+  });
+  it("lineaSesionTesela", () => {
+    expect(lineaSesionTesela("Day 1", 10)).toBe("Day 1 · 10 series");
+    expect(lineaSesionTesela("Day 1", 1)).toBe("Day 1 · 1 serie");
+  });
+  it("textoBotonDia", () => {
+    expect(textoBotonDia({ mismoDia: true, abierta: "Day 1", nombreDia: "Day 1" })).toBe(
+      "Continuar donde ibas →",
+    );
+    expect(textoBotonDia({ mismoDia: false, abierta: "Day 1", nombreDia: "Day 2" })).toBe(
+      "Cerrar Day 1 y empezar Day 2",
+    );
+    expect(textoBotonDia({ mismoDia: false, abierta: null, nombreDia: "Day 2" })).toBe(
+      "Empezar Day 2",
     );
   });
 });

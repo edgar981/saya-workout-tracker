@@ -94,22 +94,11 @@ export function HomeSkeleton() {
       <Hoja>
         <main className="mx-auto w-full max-w-md p-4">
           <div role="status" aria-busy="true">
-            <span className="sr-only">Cargando…</span>
-            <div aria-hidden="true">
-              {/* La tarjeta del anillo. */}
-              <Sk className="h-[218px] w-full rounded-[24px]" />
-              <Sk className="mt-[30px] h-[11px] w-[34%]" />
-              <div className="mt-2.5">
-                {Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="fila">
-                    <Sk className="h-3 w-5" />
-                    <div className="flex-1">
-                      <Sk className="h-4 w-24" />
-                    </div>
-                    <Sk className="h-4 w-14" />
-                  </div>
-                ))}
-              </div>
+            <span className="sr-only">Cargando</span>
+            <div className="bento" aria-hidden="true">
+              {/* La tesela ancha y la del peso (la única área que existe). */}
+              <Sk className="col-span-2 h-[206px] rounded-[24px]" />
+              <Sk className="h-[132px] rounded-[24px]" />
             </div>
           </div>
         </main>

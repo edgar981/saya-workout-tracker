@@ -1595,3 +1595,308 @@
     backdrop-filter: none;
   }
 }
+
+/* SAYA-R2-3 · Hoy v3 «Cifras», su hoja y la hoja del día (la maqueta de la ronda 2) */
+:root {
+  --fill: rgba(255, 255, 255, 0.07);
+  --fill2: rgba(255, 255, 255, 0.12);
+  --hair2: rgba(255, 255, 255, 0.35);
+  --trk: rgba(255, 255, 255, 0.12);
+  --skc: rgba(255, 255, 255, 0.08);
+  --cardg: linear-gradient(160deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02));
+}
+
+/* la hoja que baja (.lam.pull, .grip) */
+.hoja[data-tirable] {
+  will-change: transform;
+}
+.hoja[data-tirable]::after {
+  display: none;
+}
+html[data-hoja-baja] {
+  overflow: hidden;
+}
+.grip {
+  position: absolute;
+  z-index: 3;
+  top: -14px;
+  left: 50%;
+  width: 120px;
+  height: 44px;
+  margin-left: -60px;
+  border-radius: 22px;
+  touch-action: none;
+}
+.grip::before {
+  content: "";
+  position: absolute;
+  top: 22px;
+  left: 50%;
+  width: 38px;
+  height: 4px;
+  margin-left: -19px;
+  border-radius: 2px;
+  background: var(--hair2);
+  opacity: 0.55;
+  transition:
+    opacity 0.15s,
+    transform 0.2s var(--ease);
+}
+.grip:focus-visible {
+  outline: none;
+  box-shadow: var(--fsh-f);
+}
+
+/* la rejilla (.bento, .tile) */
+.bento {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 6px;
+}
+.tile {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  min-height: 132px;
+  padding: 16px;
+  border-radius: 24px;
+  min-width: 0;
+  text-align: left;
+  background: var(--fill);
+  box-shadow: var(--glass);
+  transition:
+    transform 0.1s ease-out,
+    background-color 0.15s;
+}
+.tile-big {
+  grid-column: 1 / -1;
+  min-height: 0;
+  padding: 18px;
+  background: var(--cardg);
+  box-shadow: none;
+}
+.tile .kicker {
+  width: 100%;
+}
+.tile-f2 {
+  font-weight: 500;
+  font-stretch: 125%;
+  font-size: 26px;
+  line-height: 30px;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.tile-f2-big {
+  font-size: 44px;
+  line-height: 48px;
+  margin-top: 6px;
+}
+.tile-u {
+  font-size: 15px;
+  margin-left: 3px;
+  letter-spacing: 0;
+}
+.tile-s {
+  margin-top: auto;
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--ink2);
+}
+.tile-s0 {
+  margin-top: 0;
+}
+.tile-st {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--ink2);
+}
+.tile .segs {
+  width: 100%;
+  margin: 6px 0 0;
+}
+.segs {
+  display: flex;
+  gap: 4px;
+}
+.segs i {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--trk);
+}
+.segs i.on {
+  background: var(--chrome);
+}
+.spk {
+  flex: none;
+  overflow: visible;
+}
+.spk path {
+  fill: none;
+  stroke: var(--ink2);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.tile-dias {
+  grid-column: 1 / -1;
+  min-height: 0;
+}
+.dstrip {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+  width: 100%;
+  margin-top: 4px;
+}
+.dk {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--fill2);
+  box-shadow: var(--glass);
+  transition:
+    transform 0.1s ease-out,
+    background-color 0.15s;
+}
+.dk b {
+  font-weight: 600;
+  font-stretch: 125%;
+  font-size: 20px;
+  line-height: 22px;
+}
+.dk span {
+  font-size: 11.5px;
+  line-height: 14px;
+  color: var(--ink2);
+  white-space: nowrap;
+}
+.tile:active,
+.dk:active,
+.xbtn:active {
+  transform: scale(0.97);
+}
+.tile-dias:active {
+  transform: none;
+}
+.tile:focus-visible,
+.dk:focus-visible,
+.xbtn:focus-visible {
+  outline: none;
+  box-shadow: var(--fsh-f);
+}
+@media (hover: hover) and (pointer: fine) {
+  .tile:hover,
+  .dk:hover,
+  .xbtn:hover {
+    background-color: var(--fill2);
+  }
+  .tile-big:hover {
+    background-color: transparent;
+  }
+  .tile-dias:hover {
+    background-color: var(--fill);
+  }
+  .grip:hover::before {
+    opacity: 0.95;
+  }
+}
+
+/* la entrada (.rise: 14 px, 70 ms de escalón) */
+.sube {
+  animation: tesela-sube 0.52s var(--ease) both;
+  animation-delay: calc(var(--i, 0) * 70ms);
+}
+@keyframes tesela-sube {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+
+/* la hoja del día (.grab, .ph, .xbtn, .acts) */
+.dia-hoja .grab {
+  position: relative;
+  height: 24px;
+  margin: -18px -20px 0;
+  touch-action: none;
+  cursor: grab;
+}
+.dia-hoja .grab::before {
+  content: "";
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  width: 38px;
+  height: 4px;
+  margin-left: -19px;
+  border-radius: 2px;
+  background: var(--hair2);
+}
+.dia-hoja .ph {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 4px;
+  touch-action: none;
+}
+.xbtn {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin: -6px -8px 0 0;
+  border-radius: 22px;
+  background: var(--fill);
+  color: var(--ink);
+  transition:
+    transform 0.1s ease-out,
+    background-color 0.15s;
+}
+.dia-hoja .acts {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  margin-top: 20px;
+}
+.dia-hoja [tabindex="-1"]::-webkit-scrollbar {
+  display: none;
+}
+.dia-hoja[data-fundido] > * {
+  animation: aparece 0.2s ease both;
+}
+.dia-hoja[data-sale] > * {
+  transition: opacity 0.18s ease;
+  opacity: 0 !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sube {
+    animation: aparece 0.2s ease both;
+    animation-delay: 0s;
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .hoja[data-tirable]::before {
+    background: #0b0b0e;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}

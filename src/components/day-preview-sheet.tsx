@@ -1,32 +1,29 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 
+import { movimientoReducido } from "@/components/barra-estado";
 import { unitTag } from "@/components/exercise-picker";
 import { Button } from "@/components/ui/button";
 import { Fila } from "@/components/ui/fila";
+import { agregarMuestra, clamp, crearResorte, ejeDe, velocidad, type Muestra } from "@/lib/barra";
 import { formatoNeto } from "@/lib/cuerpo";
 import { loadDayPreview } from "@/lib/db/day-preview";
 import type { SessionVerdictNet } from "@/lib/db/verdicts";
-import { lineaCompacta, subtituloHoy } from "@/lib/hoy";
+import {
+  ALTO_DIA_POR_OMISION,
+  AMORTIGUACION_VUELTA,
+  cierraDia,
+  FUNDIDO_CIERRE_MS,
+  MARGEN_CIERRE_PX,
+  RESPUESTA_DIA,
+  seguirDia,
+  UMBRAL_DIA_PX,
+} from "@/lib/hoja-hoy";
+import { fechaUltimaVez, lineaCompacta, subtituloHoy, textoBotonDia } from "@/lib/hoy";
 import { cn } from "@/lib/utils";
-
-/** ms de la animación de entrada/salida. Solo la hoja se desliza; no es una
- *  transición de ruta (esas siguen fuera, sin disparador). */
-const SLIDE_MS = 240;
-/** Umbral de arrastre para descartar al soltar. */
-const DISMISS_PX = 100;
-
-function fechaCorta(iso: string): string {
-  const [y, m, d] = iso.split("-").map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString("es", {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-  });
-}
 
 /**
  * Veredicto compacto de la última sesión, con las mismas reglas de color que la
@@ -67,97 +64,168 @@ export function DayPreviewSheet({
   const router = useRouter();
   const preview = useLiveQuery(() => loadDayPreview(dayId), [dayId]);
 
-  const [shown, setShown] = useState(false);
-  const [dragY, setDragY] = useState(0);
-  const [dragging, setDragging] = useState(false);
+  const raizRef = useRef<HTMLDivElement>(null);
+  const veloRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
-  const grabRef = useRef<HTMLDivElement>(null);
+  const cerrarRef = useRef<((v: number) => void) | null>(null);
 
-  // La vista previa es del día de la sesión abierta: no hay aviso y el botón
-  // continúa esa sesión (sin escribir nada).
+  // La vista previa es del día de la sesión abierta: el botón continúa esa sesión
+  // (sin escribir nada).
   const mismoDia = sesionAbiertaNombre !== null && sesionAbiertaDiaId === dayId;
-  const aviso = sesionAbiertaNombre !== null && !mismoDia;
 
-  // Entrada: desliza hacia arriba en el primer frame.
-  useEffect(() => {
-    const id = requestAnimationFrame(() => setShown(true));
-    return () => cancelAnimationFrame(id);
-  }, []);
-
-  // `cerrar` estable (useCallback []) que siempre llama al `onClose` más reciente
-  // vía un ref actualizado en un efecto — el patrón "latest ref", para no
-  // re-suscribir los listeners en cada render.
+  // `onClose` más reciente sin re-suscribir nada (patrón «latest ref»).
   const onCloseRef = useRef(onClose);
   useEffect(() => {
     onCloseRef.current = onClose;
   });
-  const cerrar = useCallback(() => {
-    setShown(false);
-    window.setTimeout(() => onCloseRef.current(), SLIDE_MS);
-  }, []);
 
-  // Escape cierra (paridad con tocar fuera y deslizar).
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") cerrar();
+  // La hoja entra y sale con un resorte cerrado en el tiempo (el dedo puede
+  // agarrarlo a medio camino). Entra en un efecto de layout: antes de pintar.
+  useLayoutEffect(() => {
+    const raiz = raizRef.current;
+    const velo = veloRef.current;
+    const panel = panelRef.current;
+    if (!raiz || !velo || !panel) return;
+
+    const volver = document.activeElement as HTMLElement | null;
+    const H = () => panel.offsetHeight || ALTO_DIA_POR_OMISION;
+    const pintar = (y: number) => {
+      panel.style.transform = "translate3d(0," + y + "px,0)";
+      velo.style.opacity = String(clamp(1 - y / H(), 0, 1));
     };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [cerrar]);
+    const resorte = crearResorte(pintar, {
+      respuesta: RESPUESTA_DIA,
+      reducido: movimientoReducido,
+    });
+
+    let abierta = true;
+    let temporizador: number | null = null;
+
+    const cerrar = (v: number) => {
+      abierta = false;
+      if (movimientoReducido()) {
+        raiz.setAttribute("data-sale", "");
+        temporizador = window.setTimeout(() => onCloseRef.current(), FUNDIDO_CIERRE_MS);
+        return;
+      }
+      resorte.ir(panel.offsetHeight + MARGEN_CIERRE_PX, {
+        v: Math.max(v, 0),
+        listo: () => {
+          if (!abierta) onCloseRef.current();
+        },
+      });
+    };
+    cerrarRef.current = cerrar;
+
+    if (movimientoReducido()) {
+      resorte.poner(0);
+      raiz.setAttribute("data-fundido", "");
+    } else {
+      resorte.poner(H());
+      resorte.ir(0);
+    }
+    panel.focus({ preventScroll: true });
+
+    /* el arrastre: el asa y la cabecera con el dedo; con el ratón, el panel entero en el tope */
+    let g: {
+      id: number;
+      x0: number;
+      y0: number;
+      estado: "espera" | "mio";
+      muestras: Muestra[];
+      base: number;
+    } | null = null;
+
+    const alBajar = (e: PointerEvent) => {
+      const t = e.target;
+      if (!(t instanceof Element)) return;
+      const raton = e.pointerType === "mouse";
+      if (raton && e.button !== 0) return;
+      const enAsa = t.closest(".grab,.ph") !== null && t.closest(".xbtn") === null;
+      const enRaton = raton && panel.scrollTop <= 0 && t.closest("input,textarea") === null;
+      if (!enAsa && !enRaton) return;
+      g = { id: e.pointerId, x0: e.clientX, y0: e.clientY, estado: "espera", muestras: [], base: 0 };
+    };
+    const alMover = (e: PointerEvent) => {
+      const p = g;
+      if (!p || p.id !== e.pointerId) return;
+      const dx = e.clientX - p.x0;
+      const dy = e.clientY - p.y0;
+      if (p.estado === "espera") {
+        const eje = ejeDe(dx, dy, UMBRAL_DIA_PX);
+        if (eje === null) return;
+        if (eje === "x") {
+          g = null;
+          return;
+        }
+        abierta = true;
+        raiz.removeAttribute("data-sale");
+        if (temporizador !== null) {
+          window.clearTimeout(temporizador);
+          temporizador = null;
+        }
+        resorte.parar();
+        p.base = resorte.x;
+        p.estado = "mio";
+        try {
+          panel.setPointerCapture(e.pointerId);
+        } catch {
+          /* sin captura: el gesto sigue mientras el puntero esté encima */
+        }
+      }
+      p.muestras = agregarMuestra(p.muestras, { x: e.clientX, y: e.clientY, t: e.timeStamp });
+      resorte.poner(seguirDia(p.base + dy, H()));
+    };
+    const alSoltar = (e: PointerEvent) => {
+      const p = g;
+      if (!p || p.id !== e.pointerId) return;
+      g = null;
+      if (p.estado !== "mio") return;
+      const vy = velocidad(p.muestras, e.timeStamp).vy;
+      if (cierraDia(resorte.x, vy, H())) cerrar(vy);
+      else resorte.ir(0, { v: vy, amortiguacion: AMORTIGUACION_VUELTA });
+    };
+    const alCancelar = (e: PointerEvent) => {
+      const p = g;
+      if (!p || p.id !== e.pointerId) return;
+      g = null;
+      if (p.estado === "mio") resorte.ir(0);
+    };
+
+    // Escape cierra (paridad con tocar fuera y deslizar).
+    const alTeclear = (e: KeyboardEvent) => {
+      if (e.key === "Escape") cerrar(0);
+    };
+
+    panel.addEventListener("pointerdown", alBajar);
+    panel.addEventListener("pointermove", alMover);
+    panel.addEventListener("pointerup", alSoltar);
+    panel.addEventListener("pointercancel", alCancelar);
+    window.addEventListener("keydown", alTeclear);
+
+    return () => {
+      cerrarRef.current = null;
+      panel.removeEventListener("pointerdown", alBajar);
+      panel.removeEventListener("pointermove", alMover);
+      panel.removeEventListener("pointerup", alSoltar);
+      panel.removeEventListener("pointercancel", alCancelar);
+      window.removeEventListener("keydown", alTeclear);
+      if (temporizador !== null) window.clearTimeout(temporizador);
+      resorte.parar();
+      if (volver && volver.isConnected) volver.focus({ preventScroll: true });
+    };
+  }, []);
 
   // Bloquea el scroll de Hoy detrás de la hoja.
   useEffect(() => {
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    panelRef.current?.focus();
     return () => {
       document.body.style.overflow = prev;
     };
   }, []);
 
-  // Arrastre para cerrar, en listeners NATIVOS sobre la zona de agarre. El
-  // `touchmove` debe ser NON-PASSIVE para poder `preventDefault()` y consumir el
-  // gesto — si no, iOS lo interpreta también como overscroll del viewport y el
-  // fondo rebota. React registra sus `onTouchMove` como passive, así que su
-  // `preventDefault` no serviría; de ahí el listener a mano. La otra mitad es
-  // `touch-action: none` (clase `touch-none`) en el elemento: le dice al
-  // navegador que no haga scroll/zoom por su cuenta al tocar aquí.
-  useEffect(() => {
-    const el = grabRef.current;
-    if (!el) return;
-    let startY = 0;
-    let activo = false;
-    let dy = 0;
-    const onStart = (e: TouchEvent) => {
-      activo = true;
-      startY = e.touches[0].clientY;
-      dy = 0;
-      setDragging(true);
-    };
-    const onMove = (e: TouchEvent) => {
-      if (!activo) return;
-      e.preventDefault(); // consume el gesto: nada de scroll/rebote del fondo
-      dy = Math.max(0, e.touches[0].clientY - startY);
-      setDragY(dy);
-    };
-    const onEnd = () => {
-      if (!activo) return;
-      activo = false;
-      setDragging(false);
-      if (dy > DISMISS_PX) cerrar();
-      else setDragY(0);
-    };
-    el.addEventListener("touchstart", onStart, { passive: true });
-    el.addEventListener("touchmove", onMove, { passive: false });
-    el.addEventListener("touchend", onEnd);
-    el.addEventListener("touchcancel", onEnd);
-    return () => {
-      el.removeEventListener("touchstart", onStart);
-      el.removeEventListener("touchmove", onMove);
-      el.removeEventListener("touchend", onEnd);
-      el.removeEventListener("touchcancel", onEnd);
-    };
-  }, [cerrar]);
+  const cerrar = (v: number) => cerrarRef.current?.(v);
 
   const nombreDia = preview?.day?.nombre ?? "";
   const nEjercicios = preview?.slots.length ?? 0;
@@ -169,78 +237,76 @@ export function DayPreviewSheet({
     : "";
 
   return (
-    <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label="Vista previa del día">
+    <div
+      className="dia-hoja fixed inset-0 z-50"
+      ref={raizRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label={nombreDia || "Vista previa del día"}
+    >
       {/* Tocar fuera cierra. */}
-      <div
-        onClick={() => cerrar()}
-        className="absolute inset-0 bg-black/60 transition-opacity"
-        style={{ opacity: shown ? 1 : 0, transitionDuration: `${SLIDE_MS}ms` }}
-      />
+      <div ref={veloRef} onClick={() => cerrar(0)} className="absolute inset-0 bg-black/60" />
 
-      {/* Hoja desde ABAJO. */}
+      {/* Hoja desde ABAJO. El panel entero hace scroll. */}
       <div
         ref={panelRef}
         tabIndex={-1}
-        className="bg-panel-solido absolute inset-x-0 bottom-0 mx-auto flex max-h-[90dvh] w-full max-w-md flex-col rounded-t-[30px] px-5 pt-[18px] pb-[calc(22px+env(safe-area-inset-bottom))] outline-none [box-shadow:inset_0_1px_0_rgba(255,255,255,.2)]"
-        style={{
-          transform: shown ? `translateY(${dragY}px)` : "translateY(100%)",
-          transition: dragging ? "none" : `transform ${SLIDE_MS}ms cubic-bezier(0.32,0.72,0,1)`,
-        }}
+        className="bg-panel-solido absolute inset-x-0 bottom-0 mx-auto max-h-[90dvh] w-full max-w-md overflow-y-auto overscroll-contain rounded-t-[30px] px-5 pt-[18px] pb-[calc(22px+env(safe-area-inset-bottom))] outline-none will-change-transform [scrollbar-width:none] [box-shadow:0_-10px_40px_rgba(0,0,0,.4)]"
       >
-        {/* Zona de agarre: la cabecera arrastra (listeners nativos, ver arriba); el
-            contenido de abajo hace scroll normal. `touch-none` para que el arrastre
-            no lo tome el navegador como scroll del fondo. */}
-        <div ref={grabRef} className="flex shrink-0 touch-none items-start justify-between gap-3">
+        <div className="grab" aria-hidden="true" />
+        <div className="ph">
           <div className="min-w-0">
             {preview === undefined || !preview.day ? (
               <div className="sk h-6 w-32" />
             ) : (
               <>
                 <h2 className="tit-3">{nombreDia}</h2>
-                <p className="text-ink2 text-[13px] leading-[19px] font-normal tabular-nums">
+                <p className="text-ink2 mt-1 text-[13px] leading-[18px] tabular-nums">
                   {subCabecera}
                 </p>
               </>
             )}
           </div>
-          <button
-            type="button"
-            aria-label="Cerrar"
-            onClick={() => cerrar()}
-            className="text-ink2 -mt-2 -mr-3 inline-flex size-11 shrink-0 items-center justify-center rounded-full text-2xl leading-none outline-none focus-visible:[box-shadow:var(--fsh-f)]"
-          >
-            <span aria-hidden="true">×</span>
+          <button type="button" className="xbtn" aria-label="Cerrar" onClick={() => cerrar(0)}>
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M6.5 6.5l11 11M17.5 6.5l-11 11" />
+            </svg>
           </button>
         </div>
 
-        {aviso && (
-          <p className="wnote shrink-0">
-            Tienes una sesión de <span className="font-semibold">{sesionAbiertaNombre}</span>{" "}
-            abierta. Empezar este día la cierra (o la descarta si no registraste nada).
-          </p>
-        )}
-
-        <div className="mt-4 min-h-0 flex-1 overflow-y-auto overscroll-contain">
+        <div className="sec">
           {preview === undefined ? (
             <SheetSkeleton />
           ) : (
             <>
-              {preview.ultima ? (
-                <div className="sec-cab">
-                  <h3 className="kicker">Última vez</h3>
-                  <span className="kicker kicker-d capitalize">
-                    {fechaCorta(preview.ultima.fecha)}
-                    {preview.ultima.net.comparados > 0 && (
-                      <>
-                        {" "}
-                        <VeredictoNeto net={preview.ultima.net} />
-                      </>
-                    )}
-                  </span>
-                </div>
-              ) : (
-                <p className="dek">Nunca has hecho este día.</p>
-              )}
+              <div className="sec-cab">
+                {preview.ultima ? (
+                  <>
+                    <h3 className="kicker">Última vez</h3>
+                    <span className="kicker kicker-d">
+                      {fechaUltimaVez(preview.ultima.fecha)}
+                      {preview.ultima.net.comparados > 0 && (
+                        <>
+                          {" "}
+                          <VeredictoNeto net={preview.ultima.net} />
+                        </>
+                      )}
+                    </span>
+                  </>
+                ) : (
+                  <h3 className="kicker">Ejercicios</h3>
+                )}
+              </div>
 
               {/* Ejercicios en orden (solo slots activos), con objetivo cuando exista. */}
               <div>
@@ -276,26 +342,15 @@ export function DayPreviewSheet({
           )}
         </div>
 
-        {/* Acción: fuera del scroll, en la zona del pulgar. */}
-        {mismoDia ? (
+        <div className="acts">
           <Button
-            size="lg"
-            className="mt-4 w-full shrink-0"
+            className="min-h-[60px] w-full rounded-[30px] text-[17px]"
             disabled={!preview?.day}
-            onClick={() => router.push("/sesion")}
+            onClick={mismoDia ? () => router.push("/sesion") : onEmpezar}
           >
-            Continuar la sesión
+            {textoBotonDia({ mismoDia, abierta: sesionAbiertaNombre, nombreDia })}
           </Button>
-        ) : (
-          <Button
-            size="lg"
-            className="mt-4 w-full shrink-0"
-            disabled={!preview?.day}
-            onClick={onEmpezar}
-          >
-            Empezar {nombreDia}
-          </Button>
-        )}
+        </div>
       </div>
     </div>
   );
