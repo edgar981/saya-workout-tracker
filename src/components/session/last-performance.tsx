@@ -2,18 +2,13 @@
 
 import Link from "next/link";
 
+import { fechaCorta } from "@/components/progress/estado";
 import type { LastPerformance as LastPerformanceData } from "@/lib/db/queries";
 import type { SetLog } from "@/lib/db/types";
 import { formatSetWeight } from "@/lib/units";
 
 function formatFecha(iso: string): string {
-  // Partido a mano: new Date('2026-08-14') se parsea como UTC y en América
-  // muestra el día anterior.
-  const [y, m, d] = iso.split("-").map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString("es", {
-    day: "numeric",
-    month: "short",
-  });
+  return fechaCorta(iso);
 }
 
 function summarize(sets: SetLog[], stackLabel: string | null): string[] {
@@ -65,15 +60,15 @@ export function LastPerformance({
   if (last === undefined) {
     return (
       <div className="pas" aria-hidden="true">
-        <div className="pas-cab min-h-11">
-          <span className="kicker">
+        <div className="phd">
+          <span className="kick">
             <span className="sk inline-block h-[11px] w-28 align-middle" />
           </span>
           <span className="sk inline-block h-[18px] w-16" />
         </div>
         {[0, 1, 2].map((i) => (
           <div key={i} className="prow">
-            <span className="fila-s fila-ix">
+            <span className="ix">
               <span className="sk inline-block h-3 w-5 align-middle" />
             </span>
             <span className="fila-v">
@@ -85,28 +80,24 @@ export function LastPerformance({
     );
   }
 
-  if (last === null) {
-    return (
-      <div className="pas">
-        <p className="dek">Sin registro previo de este ejercicio.</p>
-      </div>
-    );
-  }
+  // Si el ejercicio nunca se hizo no se pinta nada (SAYA-R2-4): «La pasada» sólo
+  // aparece cuando hay algo que mostrar.
+  if (last === null) return null;
 
-  // Las series de la vez pasada por posición (S1 · S2 · S3). El enlace al
-  // historial completo del ejercicio se conserva — es el punto donde vas a querer
-  // más contexto que la última sesión.
+  // Las series de la vez pasada por posición (1 · 2 · 3). El enlace al historial
+  // completo del ejercicio se conserva — es el punto donde vas a querer más
+  // contexto que la última sesión.
   return (
     <div className="pas">
-      <div className="pas-cab">
-        <h3 className="kicker">La pasada · {formatFecha(last.session.fecha)}</h3>
+      <div className="phd">
+        <span className="kick">La pasada · {formatFecha(last.session.fecha)}</span>
         <Link href={`/ejercicio/${exerciseId}`} className="tl">
           Historial ›
         </Link>
       </div>
       {summarize(last.sets, stackLabel).map((valor, i) => (
         <div key={i} className="prow">
-          <span className="fila-s fila-ix">S{i + 1}</span>
+          <span className="ix">{i + 1}</span>
           <span className="fila-v">{valor}</span>
         </div>
       ))}

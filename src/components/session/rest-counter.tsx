@@ -49,11 +49,11 @@ export function RestCounter({ lastCreadoEn }: { lastCreadoEn: string | null }) {
   // eslint-disable-next-line react-hooks/purity
   const ms = Date.now() - new Date(lastCreadoEn).getTime();
 
-  // Forma compacta para la barra `.stop` de /sesion: punto + tiempo. Neutro:
+  // Forma compacta para la cabeza `.ses .stop` de /sesion: punto + tiempo. Neutro:
   // sin acento, sin umbrales ni color por tiempo, sin rotularlo "descanso" — es
   // información, no una meta.
   return (
-    <span className="stop-ctr" role="timer" aria-label="Desde la última serie">
+    <span className="ctr" role="timer" aria-label="Desde la última serie">
       <span className="cdot" aria-hidden="true" />
       {formatGap(ms)}
     </span>

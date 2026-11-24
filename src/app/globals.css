@@ -90,7 +90,7 @@
   --ink3: rgba(238, 240, 246, 0.66); /* solo placeholders y rótulos de ejes */
   --hair: rgba(255, 255, 255, 0.11); /* divisores de fila, aros de badge */
   --sheet: rgba(8, 8, 11, 0.78); /* la hoja esmerilada, una sola */
-  --tabbg: rgba(10, 10, 14, 0.72); /* pestañas y píldora de atrás (aquí solo se declara) */
+  --tabbg: rgba(10, 10, 14, 0.72); /* barra de abajo y píldora de atrás (aquí solo se declara) */
   --velo: rgba(0, 0, 0, 0.66); /* velo de la cabeza */
   --velo2: rgba(0, 0, 0, 0.6);
   --fbg: rgba(255, 255, 255, 0.06); /* campos */
@@ -407,12 +407,11 @@
 }
 
 /*
- * NAVEGACIÓN ARRIBA (§2): pestañas de vidrio `.tabs` y píldora de atrás `.pback`.
- * Ambas fijas, montadas a la vez; una se ve y la otra se esconde (visibility:
- * hidden), así nunca se pintan juntas y el desenfoque son dos capas por pantalla
- * (la hoja y una de las dos). Fuera de `@layer` para ganarle a las utilidades.
+ * LA PÍLDORA DE ATRÁS `.pback` (§2). Fija, siempre montada; se ve en las pantallas
+ * empujadas y se esconde (visibility: hidden) en las áreas. La navegación de las
+ * áreas es la barra de abajo (`.navg`, al final del archivo). Fuera de `@layer`
+ * para ganarle a las utilidades.
  */
-.tabs,
 .pback {
   position: fixed;
   top: calc(12px + env(safe-area-inset-top));
@@ -427,85 +426,17 @@
     0 10px 30px rgba(0, 0, 0, 0.35);
 }
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .tabs,
   .pback {
     background: rgba(14, 14, 18, 0.92);
-  }
-}
-.tabs {
-  right: 12px;
-  height: 50px;
-  padding: 3px;
-  border-radius: 25px;
-  display: grid;
-  grid-template-columns: repeat(var(--n), 1fr);
-  transition:
-    transform 0.5s var(--ease),
-    opacity 0.3s,
-    visibility 0s;
-}
-.tabs[data-oculto] {
-  transform: translateY(-140%);
-  opacity: 0;
-  pointer-events: none;
-  visibility: hidden;
-  transition:
-    transform 0.5s var(--ease),
-    opacity 0.3s,
-    visibility 0s 0.5s;
-}
-.tab {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 44px;
-  font-weight: 500;
-  font-size: 13.5px;
-  font-stretch: 104%;
-  color: var(--ink2);
-  text-decoration: none;
-}
-.tab[aria-current="page"] {
-  color: #fff;
-  font-weight: 600;
-}
-/* La pastilla que marca la activa: vidrio blanco, nunca cromo. */
-.tind {
-  position: absolute;
-  top: 3px;
-  bottom: 3px;
-  left: 3px;
-  width: calc((100% - 6px) / var(--n));
-  transform: translate3d(calc(var(--i) * 100%), 0, 0);
-  transition: transform 0.55s cubic-bezier(0.3, 1.25, 0.5, 1);
-  pointer-events: none;
-}
-.tind-i {
-  position: absolute;
-  inset: 0;
-  border-radius: 22px;
-  background: rgba(255, 255, 255, 0.16);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.34),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.12);
-}
-.tind-i[data-estira] {
-  animation: estira 0.55s both;
-}
-@keyframes estira {
-  35% {
-    transform: scaleX(1.4) scaleY(0.86);
   }
 }
 .pback {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 2px;
   height: 44px;
   max-width: calc(100% - 24px);
-  padding: 0 18px 0 12px;
+  padding: 0 18px 0 10px;
   border-radius: 22px;
   font-weight: 500;
   font-size: 15px;
@@ -516,10 +447,8 @@
     opacity 0.3s,
     visibility 0s;
 }
-.pback b {
-  font-size: 22px;
-  font-weight: 400;
-  margin-top: -2px;
+.pback svg {
+  flex: none;
 }
 .pback[data-oculto] {
   transform: translateY(-140%);
@@ -532,17 +461,9 @@
     visibility 0s 0.45s;
 }
 @media (prefers-reduced-motion: reduce) {
-  .tind {
-    transition: none;
-  }
-  .tind-i[data-estira] {
-    animation: none;
-  }
-  .tabs,
   .pback {
     transition: opacity 0.3s;
   }
-  .tabs[data-oculto],
   .pback[data-oculto] {
     transform: none;
     transition:
@@ -608,7 +529,7 @@
   /* Cabeza (ui/hoja.tsx): una ventana de cromo; el texto va sobre un velo. */
   .cabeza {
     position: relative;
-    padding: 82px 4px 0;
+    padding: 82px 8px 0;
     min-height: 236px;
   }
   .cabeza[data-empujada] {
@@ -1401,17 +1322,6 @@
     opacity: 0.35;
   }
 
-  .wnote {
-    margin-top: 14px;
-    padding: 14px 16px;
-    border-radius: 16px;
-    background: rgba(255, 255, 255, 0.06);
-    box-shadow: inset 0 0 0 1px var(--hair);
-    font-weight: 400;
-    font-size: 14px;
-    line-height: 20px;
-    color: var(--ink);
-  }
   .opt {
     display: flex;
     align-items: center;
@@ -1448,5 +1358,1754 @@
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
+  }
+}
+
+/* SAYA-R2-2 · la barra de abajo y el orbe (ronda 2). Tres estados: oculta, recogida (escala .84) y llena
+   (escala 1). JS mueve transform y opacidad con resortes; nada más se anima. */
+:root {
+  --hi: rgba(255, 255, 255, 0.16);
+  --agbg: rgba(16, 16, 20, 0.94);
+  --floatsh: inset 0 1px 0 rgba(255, 255, 255, 0.18), inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 14px 36px rgba(0, 0, 0, 0.6);
+}
+.navg {
+  position: fixed;
+  left: max(12px, calc(50% - 224px));
+  right: max(12px, calc(50% - 224px));
+  bottom: calc(12px + env(safe-area-inset-bottom));
+  z-index: 40;
+  display: flex;
+  gap: 10px;
+  transform-origin: 50% 100%;
+  will-change: transform;
+}
+/* la opacidad vive en los dos hijos, nunca en .navg: un ancestro con opacidad menor que 1 corta el
+   desenfoque de la barra */
+.navg[data-oculta] {
+  visibility: hidden;
+  pointer-events: none;
+}
+.navg[data-snap],
+.navg[data-snap] > * {
+  transition: none !important;
+}
+.bbar {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  height: 62px;
+  padding: 4px;
+  border-radius: 31px;
+  display: grid;
+  grid-template-columns: repeat(var(--n), 1fr);
+  background: var(--tabbg);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  backdrop-filter: blur(16px) saturate(150%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 10px 30px rgba(0, 0, 0, 0.4);
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .bbar {
+    background: rgba(14, 14, 18, 0.92);
+  }
+}
+.bt {
+  position: relative;
+  z-index: 1;
+  border-radius: 27px;
+  display: grid;
+  place-items: center;
+  color: var(--ink2);
+  transition: color 0.15s;
+}
+.bt svg {
+  width: 24px;
+  height: 24px;
+}
+.bt[aria-selected="true"] {
+  color: var(--ink);
+}
+.bind {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  width: calc((100% - 8px) / var(--n));
+  border-radius: 27px;
+  background: var(--hi);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  pointer-events: none;
+  will-change: transform;
+}
+.orbb {
+  position: relative;
+  flex: none;
+  width: 62px;
+  height: 62px;
+  border-radius: 31px;
+  display: grid;
+  place-items: center;
+  background: var(--agbg);
+  box-shadow: var(--floatsh);
+  transition: transform 0.1s ease-out;
+}
+.orbb:active {
+  transform: scale(0.97);
+}
+@media (hover: hover) {
+  .bt:hover {
+    color: var(--ink);
+  }
+  .orbb:hover {
+    filter: brightness(1.08);
+  }
+}
+.orb {
+  position: relative;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #07070b;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+}
+.orb.big {
+  width: 46px;
+  height: 46px;
+}
+.liq {
+  position: absolute;
+  inset: -20%;
+  filter: blur(7px) saturate(130%);
+}
+.liq i {
+  position: absolute;
+  width: 58%;
+  height: 58%;
+  left: 21%;
+  top: 21%;
+  border-radius: 50%;
+  mix-blend-mode: screen;
+}
+.liq i:nth-child(1) {
+  background: #ff7a3d;
+  animation: gota-1 6s ease-in-out infinite alternate;
+}
+.liq i:nth-child(2) {
+  background: #ffd447;
+  animation: gota-2 6s ease-in-out infinite alternate;
+}
+.liq i:nth-child(3) {
+  background: #3fb0ff;
+  animation: gota-3 6s ease-in-out infinite alternate;
+}
+.liq i:nth-child(4) {
+  background: #5cf2b5;
+  opacity: 0.75;
+  animation: gota-1 6s ease-in-out infinite alternate-reverse;
+}
+@keyframes gota-1 {
+  to {
+    transform: translate(40%, -18%) scale(1.12);
+  }
+}
+@keyframes gota-2 {
+  to {
+    transform: translate(-38%, -10%) scale(0.9);
+  }
+}
+@keyframes gota-3 {
+  to {
+    transform: translate(-30%, -20%) scale(1.15);
+  }
+}
+
+/* La cabeza de un área sin pestañas arriba (la maqueta, .hd.nt): relleno 58, alto 212, Ajustes a 54. */
+.hoja[data-area] .cabeza:not([data-empujada]) {
+  padding-top: 58px;
+  min-height: 212px;
+}
+.hoja[data-area] .cabeza:not([data-empujada]) > .ib {
+  top: 54px;
+}
+.hoja[data-area] .hoja[data-propia] {
+  --ventana: 212px !important;
+}
+/* La hoja de un área deja abajo el sitio de la barra: 84 + los 16 del p-4 = los 100 de la maqueta. */
+.hoja[data-area],
+.hoja[data-area] .hoja {
+  --hoja-pb: calc(84px + env(safe-area-inset-bottom));
+}
+.hoja[data-entra] > * {
+  animation: area-entra 0.18s ease both;
+}
+@keyframes area-entra {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* nada se desliza: la barra entra y sale con un fundido de .2s y el tamaño salta */
+  .navg {
+    transition: visibility 0s linear 0.2s;
+  }
+  .navg:not([data-oculta]) {
+    transition: visibility 0s linear 0s;
+  }
+  .navg > .bbar {
+    transition: opacity 0.2s ease;
+  }
+  .navg > .orbb {
+    transition:
+      opacity 0.2s ease,
+      transform 0.1s ease-out;
+  }
+  .liq i {
+    animation: none !important;
+  }
+  .hoja[data-entra] > * {
+    animation: none;
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .bbar {
+    background: #111116;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+/* SAYA-R2-3 · Hoy v3 «Cifras», su hoja y la hoja del día (la maqueta de la ronda 2) */
+:root {
+  --fill: rgba(255, 255, 255, 0.07);
+  --fill2: rgba(255, 255, 255, 0.12);
+  --hair2: rgba(255, 255, 255, 0.35);
+  --trk: rgba(255, 255, 255, 0.12);
+  --skc: rgba(255, 255, 255, 0.08);
+  --cardg: linear-gradient(160deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02));
+}
+
+/* la hoja que baja (.lam.pull, .grip) */
+.hoja[data-tirable] {
+  will-change: transform;
+}
+.hoja[data-tirable]::after {
+  display: none;
+}
+html[data-hoja-baja] {
+  overflow: hidden;
+}
+.grip {
+  position: absolute;
+  z-index: 3;
+  top: -14px;
+  left: 50%;
+  width: 120px;
+  height: 44px;
+  margin-left: -60px;
+  border-radius: 22px;
+  touch-action: none;
+}
+.grip::before {
+  content: "";
+  position: absolute;
+  top: 22px;
+  left: 50%;
+  width: 38px;
+  height: 4px;
+  margin-left: -19px;
+  border-radius: 2px;
+  background: var(--hair2);
+  opacity: 0.55;
+  transition:
+    opacity 0.15s,
+    transform 0.2s var(--ease);
+}
+.grip:focus-visible {
+  outline: none;
+  box-shadow: var(--fsh-f);
+}
+
+/* la rejilla (.bento, .tile) */
+.bento {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 6px;
+}
+.tile {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  min-height: 132px;
+  padding: 16px;
+  border-radius: 24px;
+  min-width: 0;
+  text-align: left;
+  background: var(--fill);
+  box-shadow: var(--glass);
+  transition:
+    transform 0.1s ease-out,
+    background-color 0.15s;
+}
+.tile-big {
+  grid-column: 1 / -1;
+  min-height: 0;
+  padding: 18px;
+  background: var(--cardg);
+  box-shadow: none;
+}
+.tile .kicker {
+  width: 100%;
+}
+.tile-f2 {
+  font-weight: 500;
+  font-stretch: 125%;
+  font-size: 26px;
+  line-height: 30px;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.tile-f2-big {
+  font-size: 44px;
+  line-height: 48px;
+  margin-top: 6px;
+}
+.tile-u {
+  font-size: 15px;
+  margin-left: 3px;
+  letter-spacing: 0;
+}
+.tile-s {
+  margin-top: auto;
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--ink2);
+}
+.tile-s0 {
+  margin-top: 0;
+}
+.tile-st {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--ink2);
+}
+.tile .segs {
+  width: 100%;
+  margin: 6px 0 0;
+}
+.segs {
+  display: flex;
+  gap: 4px;
+}
+.segs i {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--trk);
+}
+.segs i.on {
+  background: var(--chrome);
+}
+.spk {
+  flex: none;
+  overflow: visible;
+}
+.spk path {
+  fill: none;
+  stroke: var(--ink2);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.tile-dias {
+  grid-column: 1 / -1;
+  min-height: 0;
+}
+.dstrip {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+  width: 100%;
+  margin-top: 4px;
+}
+.dk {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--fill2);
+  box-shadow: var(--glass);
+  transition:
+    transform 0.1s ease-out,
+    background-color 0.15s;
+}
+.dk b {
+  font-weight: 600;
+  font-stretch: 125%;
+  font-size: 20px;
+  line-height: 22px;
+}
+.dk span {
+  font-size: 11.5px;
+  line-height: 14px;
+  color: var(--ink2);
+  white-space: nowrap;
+}
+.tile:active,
+.dk:active,
+.xbtn:active {
+  transform: scale(0.97);
+}
+.tile-dias:active {
+  transform: none;
+}
+.tile:focus-visible,
+.dk:focus-visible,
+.xbtn:focus-visible {
+  outline: none;
+  box-shadow: var(--fsh-f);
+}
+@media (hover: hover) and (pointer: fine) {
+  .tile:hover,
+  .dk:hover,
+  .xbtn:hover {
+    background-color: var(--fill2);
+  }
+  .tile-big:hover {
+    background-color: transparent;
+  }
+  .tile-dias:hover {
+    background-color: var(--fill);
+  }
+  .grip:hover::before {
+    opacity: 0.95;
+  }
+}
+
+/* la entrada (.rise: 14 px, 70 ms de escalón) */
+.sube {
+  animation: tesela-sube 0.52s var(--ease) both;
+  animation-delay: calc(var(--i, 0) * 70ms);
+}
+@keyframes tesela-sube {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+
+/* la hoja del día (.grab, .ph, .xbtn, .acts) */
+.dia-hoja .grab {
+  position: relative;
+  height: 24px;
+  margin: -18px -20px 0;
+  touch-action: none;
+  cursor: grab;
+}
+.dia-hoja .grab::before {
+  content: "";
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  width: 38px;
+  height: 4px;
+  margin-left: -19px;
+  border-radius: 2px;
+  background: var(--hair2);
+}
+.dia-hoja .ph {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 4px;
+  touch-action: none;
+}
+.xbtn {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin: -6px -8px 0 0;
+  border-radius: 22px;
+  background: var(--fill);
+  color: var(--ink);
+  transition:
+    transform 0.1s ease-out,
+    background-color 0.15s;
+}
+.dia-hoja .acts {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  margin-top: 20px;
+}
+.dia-hoja [tabindex="-1"]::-webkit-scrollbar {
+  display: none;
+}
+.dia-hoja[data-fundido] > * {
+  animation: aparece 0.2s ease both;
+}
+.dia-hoja[data-sale] > * {
+  transition: opacity 0.18s ease;
+  opacity: 0 !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sube {
+    animation: aparece 0.2s ease both;
+    animation-delay: 0s;
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .hoja[data-tirable]::before {
+    background: #0b0b0e;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+/* SAYA-R2-4 · Sesión (la maqueta de la ronda 2). Todo cuelga de `.ses` (la pantalla)
+   o de `.ses-hoja` (las tres hojas, que se montan en un portal). Sin capa: gana a las
+   reglas de `@layer components` que comparten nombre (.stop, .chip, .prow, .badges…). */
+.ses,
+.ses-hoja {
+  --r24-fill: rgba(255, 255, 255, 0.07);
+  --r24-fill2: rgba(255, 255, 255, 0.12);
+  --r24-hair2: rgba(255, 255, 255, 0.35);
+  --r24-sbot: #0c0c0f;
+}
+
+/* Sesión va sin hoja de vidrio, como la maqueta: ni vidrio ni asa. */
+.ses > .hoja[data-propia]::before,
+.ses > .hoja[data-propia]::after {
+  display: none;
+}
+
+/* La cabeza. `.stop` ya es sticky (la página es la que se desplaza); se conserva su
+   área segura de arriba y no lleva márgenes laterales negativos (no está dentro del
+   relleno de la hoja). */
+.ses .stop {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  height: calc(58px + env(safe-area-inset-top));
+  margin: calc(-1 * env(safe-area-inset-top)) 0 0;
+  padding: env(safe-area-inset-top) calc(var(--pad) - 10px) 0;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  background: linear-gradient(180deg, var(--r24-sbot) 62%, transparent);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: none;
+}
+.ses .back {
+  height: 44px;
+  padding: 0 12px 0 6px;
+  border-radius: 22px;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--ink);
+  justify-self: start;
+}
+.ses .day {
+  font-weight: 600;
+  font-stretch: 125%;
+  font-size: 17px;
+  justify-self: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 170px;
+}
+.ses .ctr {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 15px;
+  color: var(--ink2);
+  font-variant-numeric: tabular-nums;
+  padding-right: 10px;
+  justify-self: end;
+}
+.ses .cdot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* Las fichas de ejercicio y el anillo que viaja con el deslizamiento. */
+.ses .chips {
+  position: relative;
+  display: flex;
+  gap: 8px;
+  height: auto;
+  margin: 0 calc(-1 * var(--pad));
+  padding: 16px var(--pad) 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  flex: none;
+}
+.ses .chip {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 22px;
+  background: var(--r24-fill);
+  box-shadow: none;
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--ink2);
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+.ses .chip.cur {
+  color: var(--ink);
+  background: var(--r24-fill2);
+}
+.ses .chip[data-hecho]::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 5px;
+  width: 4px;
+  height: 4px;
+  margin-left: -2px;
+  border-radius: 50%;
+  background: var(--ink2);
+}
+.ses .chip.add {
+  font-size: 20px;
+  font-weight: 400;
+}
+.ses .cring {
+  position: absolute;
+  z-index: 2;
+  top: 16px;
+  left: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 22px;
+  pointer-events: none;
+  will-change: transform;
+}
+.ses .chip:active {
+  transform: scale(0.97);
+}
+
+/* El pager y la tarjeta. */
+.ses .pg {
+  flex: none;
+  margin: 0 calc(-1 * var(--pad));
+  overflow: hidden;
+  touch-action: pan-y;
+}
+.ses .trk {
+  display: flex;
+  align-items: flex-start;
+  will-change: transform;
+}
+.ses .card {
+  flex: 0 0 100%;
+  padding: 0 var(--pad);
+  min-width: 0;
+}
+.ses .kick,
+.ses-hoja .kick {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  font-weight: 600;
+  font-size: 11px;
+  line-height: 14px;
+  font-stretch: 112%;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--ink2);
+}
+.ses .kick .r {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: none;
+}
+.ses .exk {
+  margin-top: 18px;
+}
+.ses .h2 {
+  font-weight: 600;
+  font-stretch: 125%;
+  font-size: 28px;
+  line-height: 1.12;
+  letter-spacing: -0.02em;
+  margin-top: 6px;
+}
+.ses .hk {
+  margin-top: 22px;
+}
+.ses .hist {
+  margin-top: 24px;
+}
+.ses .hist > :first-child {
+  margin-top: 0;
+}
+.ses .h3 {
+  font-weight: 600;
+  font-stretch: 125%;
+  font-size: 21px;
+  line-height: 1.2;
+  letter-spacing: -0.015em;
+}
+
+/* Los diales. */
+.ses .lbl {
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 600;
+  color: var(--ink2);
+}
+.ses .dial {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 16px;
+}
+.ses .dc {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px 8px 12px;
+  border-radius: 24px;
+  background: var(--r24-fill);
+  box-shadow: var(--glass);
+}
+.ses .dpm {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--r24-fill2);
+  font-size: 22px;
+  display: grid;
+  place-items: center;
+}
+.ses .dpm:active {
+  transform: scale(0.97);
+}
+.ses .dv {
+  position: relative;
+  width: 100%;
+  height: 84px;
+  display: grid;
+  place-items: center;
+  touch-action: none;
+  cursor: ns-resize;
+  border-radius: 16px;
+  outline: none;
+}
+.ses .dv:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: -2px;
+}
+.ses .dnum {
+  font-weight: 600;
+  font-stretch: 125%;
+  font-size: 58px;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+.ses .dnum.l4 {
+  font-size: 44px;
+}
+.ses .dnum.bw {
+  font-size: 20px;
+  font-weight: 500;
+  color: var(--ink2);
+}
+.ses .dv input {
+  position: absolute;
+  inset: 6px 4px;
+  height: 72px;
+  text-align: center;
+  background: var(--fbg);
+  box-shadow: var(--fsh-f);
+  border-radius: 14px;
+  font-weight: 600;
+  font-stretch: 125%;
+  font-size: 40px;
+  color: var(--ink);
+  outline: none;
+}
+.ses .dunit {
+  display: inline-flex;
+  gap: 6px;
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--ink2);
+  min-height: 22px;
+}
+
+/* «Anotar», las fichas de «Hoy» y la edición. */
+.ses .lchips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+.ses .lchip {
+  height: 44px;
+  padding: 0 14px;
+  border-radius: 22px;
+  background: var(--r24-fill);
+  box-shadow: var(--glass);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.ses .lchip:active {
+  transform: scale(0.97);
+}
+.ses .lchip .ix {
+  width: auto;
+  margin-right: 2px;
+  font-size: 12px;
+  color: var(--ink3);
+}
+.ses .lchip .warn {
+  width: 18px;
+  height: 18px;
+}
+.ses .lchip.miss {
+  box-shadow: inset 0 0 0 1.5px var(--amber);
+}
+.ses .lchip.ed {
+  box-shadow: var(--fsh-f);
+}
+.ses .lchip.popin {
+  animation: r24-popin 0.45s var(--ease) both;
+}
+@keyframes r24-popin {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+}
+.ses .ed3 {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+.ses .ed3 .btn {
+  flex: 1;
+}
+.ses .ed3 .btn2 {
+  height: 60px;
+  border-radius: 30px;
+}
+.ses .arw {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: var(--r24-fill);
+  box-shadow: var(--glass);
+  font-size: 24px;
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+.ses .ed3 .arw {
+  width: 60px;
+  height: 60px;
+  color: var(--red-t);
+}
+
+/* Los botones. `.btn` es el cromo; `.btn2`, el vidrio. */
+.ses .btn,
+.ses .btn2,
+.ses-hoja .btn,
+.ses-hoja .btn2 {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  min-height: 48px;
+  padding: 0 22px;
+  border-radius: 24px;
+  font-weight: 600;
+  font-size: 15px;
+  line-height: 20px;
+  font-stretch: 110%;
+}
+.ses .btn,
+.ses-hoja .btn {
+  background-color: #dcdfe5;
+  background-image: var(--chrome);
+  color: var(--accent-ink);
+  box-shadow:
+    inset 0 1px 0 #fff,
+    inset 0 -1px 0 rgba(0, 0, 0, 0.25),
+    0 10px 24px rgba(0, 0, 0, 0.45);
+}
+.ses .btn2,
+.ses-hoja .btn2 {
+  background: var(--r24-fill);
+  box-shadow: var(--glass);
+  color: var(--ink);
+}
+.ses .btn.big,
+.ses .btn2.big,
+.ses-hoja .btn.big,
+.ses-hoja .btn2.big {
+  min-height: 60px;
+  border-radius: 30px;
+  font-size: 17px;
+}
+.ses .w,
+.ses-hoja .w {
+  width: 100%;
+}
+.ses .btn:active,
+.ses .btn2:active,
+.ses-hoja .btn:active,
+.ses-hoja .btn2:active {
+  transform: scale(0.97);
+}
+.ses .tl,
+.ses-hoja .tl {
+  min-height: 44px;
+  font-size: 15px;
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  text-decoration-color: var(--r24-hair2);
+}
+.ses .tl.danger,
+.ses-hoja .tl.danger {
+  color: var(--red-t);
+}
+
+/* Los badges y «La pasada». */
+.ses .badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 18px;
+}
+.ses .badges > span {
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 13px;
+  background: var(--r24-fill);
+  font-size: 12.5px;
+  line-height: 26px;
+  color: var(--ink2);
+}
+.ses .pas {
+  margin-top: 10px;
+  padding: 8px 14px 10px;
+  border-radius: 18px;
+  background: var(--r24-fill);
+}
+.ses .phd {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 44px;
+}
+.ses .prow {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-height: 0;
+  padding: 4px 0;
+  border-top: 0;
+  font-size: 15px;
+  line-height: 21px;
+}
+.ses .prow .ix {
+  width: 24px;
+  font-size: 12px;
+  color: var(--ink3);
+}
+
+/* Nota y Quitar, y el error en línea. */
+.ses .note-t {
+  margin-top: 12px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: var(--r24-fill);
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--ink2);
+  white-space: pre-wrap;
+}
+.ses .lxa {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 16px;
+  margin-top: 10px;
+  margin-bottom: 8px;
+}
+.ses .errbox {
+  margin-top: 14px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 77, 94, 0.45);
+  background: rgba(255, 77, 94, 0.07);
+  font-size: 15px;
+  line-height: 21px;
+}
+.ses .es {
+  display: block;
+  margin-top: 6px;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--ink2);
+}
+
+/* La tira de abajo. */
+.ses .sbot {
+  position: sticky;
+  bottom: 0;
+  z-index: 4;
+  margin: auto calc(-1 * var(--pad)) 0;
+  padding: 12px var(--pad) calc(12px + env(safe-area-inset-bottom));
+  display: flex;
+  gap: 10px;
+  background: var(--r24-sbot);
+  box-shadow: none;
+}
+.ses .sbot::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -24px;
+  bottom: auto;
+  height: 24px;
+  pointer-events: none;
+  background: linear-gradient(0deg, var(--r24-sbot), transparent);
+}
+.ses .sbot .btn2 {
+  flex: 1;
+  min-height: 50px;
+  border-radius: 25px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.ses .sbot .btn2.sw {
+  flex: none;
+}
+
+/* El vacío y la entrada. */
+.ses .acts {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 20px;
+}
+.ses .rise {
+  animation: r24-rise 0.52s var(--ease) calc(var(--i, 0) * 70ms) both;
+}
+@keyframes r24-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+@keyframes r24-fade {
+  from {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ses .rise {
+    animation: r24-fade 0.2s ease both;
+  }
+  .ses .lchip.popin {
+    animation: r24-fade 0.2s ease both;
+  }
+}
+
+/* Las hojas (agregar, cambiar, nota). */
+.ses-hoja .tin {
+  width: 100%;
+  height: 52px;
+  border-radius: 16px;
+  padding: 0 16px;
+  background: var(--fbg);
+  box-shadow: var(--fsh);
+  font-size: 16px;
+  color: var(--ink);
+}
+.ses-hoja .tin:focus {
+  box-shadow: var(--fsh-f);
+  outline: none;
+}
+.ses-hoja textarea.tin {
+  height: 110px;
+  padding: 14px 16px;
+  resize: none;
+}
+.ses-hoja .r24-sub {
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--ink2);
+  margin-top: -4px;
+}
+.ses-hoja .row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 60px;
+  padding: 12px 0;
+  border-top: 1px solid var(--hair);
+  text-align: left;
+  isolation: isolate;
+}
+.ses-hoja .row:first-child {
+  border-top: 0;
+}
+.ses-hoja .row:active::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 3px -10px;
+  border-radius: 14px;
+  background: var(--r24-fill2);
+}
+.ses-hoja .row .m {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.ses-hoja .row .t {
+  font-size: 16px;
+  line-height: 22px;
+}
+.ses-hoja .row .s {
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--ink2);
+}
+.ses-hoja .row .v {
+  font-weight: 500;
+  font-size: 16px;
+  line-height: 22px;
+  font-stretch: 108%;
+  font-variant-numeric: tabular-nums;
+}
+.ses-hoja .sec {
+  margin-top: 30px;
+}
+.ses-hoja .sec.first {
+  margin-top: 22px;
+}
+.ses-hoja .acts {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+/* SAYA-R2-5 · Progreso «Semanas» (la maqueta de la ronda 2). Todo cuelga de `.pro` (la
+   pantalla) o de `.pro-hoja` (las dos hojas, que se montan en un portal). Los tokens
+   que el repo no tiene llevan prefijo `--r25-`. Sin acento, rojo ni verde (§10). */
+@layer components {
+  .pro,
+  .pro-hoja {
+    --r25-fill: rgba(255, 255, 255, 0.07);
+    --r25-fill2: rgba(255, 255, 255, 0.12);
+    --r25-hair2: rgba(255, 255, 255, 0.35);
+    --r25-trk: rgba(255, 255, 255, 0.12);
+    --r25-bar: rgba(244, 245, 248, 0.85);
+    --r25-bar2: rgba(244, 245, 248, 0.38);
+  }
+
+  .pro .sec {
+    margin-top: 30px;
+  }
+  .pro .sec.first {
+    margin-top: 22px;
+  }
+  .pro .kick {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    font-weight: 600;
+    font-size: 11px;
+    line-height: 14px;
+    font-stretch: 112%;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--ink2);
+  }
+  .pro .kick .r {
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: none;
+    text-align: right;
+  }
+  .pro .rise {
+    animation: r25-rise 0.52s var(--ease) calc(var(--i, 0) * 70ms) both;
+  }
+  @keyframes r25-rise {
+    from {
+      opacity: 0;
+      transform: translateY(14px);
+    }
+  }
+  @keyframes r25-fade {
+    from {
+      opacity: 0;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .pro .rise {
+      animation: r25-fade 0.2s ease both;
+    }
+  }
+
+  .pro .mut {
+    color: var(--ink3);
+  }
+  .pro .s {
+    font-size: 13px;
+    line-height: 18px;
+    color: var(--ink2);
+  }
+  .pro .foot {
+    margin-top: 14px;
+  }
+
+  /* Balance por semana */
+  .pro .readout {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin-top: 12px;
+    min-height: 46px;
+  }
+  .pro .readout .s {
+    white-space: nowrap;
+  }
+  .pro .readout .fig.mut {
+    color: var(--ink2);
+  }
+  .pro .fig {
+    display: block;
+    font-weight: 500;
+    font-stretch: 125%;
+    font-size: 42px;
+    line-height: 1.08;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+  }
+  .pro .bal {
+    position: relative;
+    height: 132px;
+    margin-top: 6px;
+    touch-action: pan-y;
+    cursor: pointer;
+    border-radius: 12px;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .pro .bal:focus-visible {
+    outline: 2px solid var(--ink);
+    outline-offset: 4px;
+  }
+  .pro .bal .z {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: var(--r25-hair2);
+  }
+  .pro .bal .bc {
+    position: absolute;
+    top: 0;
+    bottom: 18px;
+  }
+  .pro .bal .bc i {
+    position: absolute;
+    left: 18%;
+    right: 18%;
+    border-radius: 3px;
+    background: rgba(244, 245, 248, 0.75);
+    transition: opacity 0.15s ease;
+  }
+  .pro .bal .bc.n i {
+    opacity: 0.5;
+  }
+  .pro .bal .bc.dl i {
+    background: transparent !important;
+    box-shadow: inset 0 0 0 1.5px var(--r25-bar2);
+  }
+  .pro .bal .bc b {
+    position: absolute;
+    left: -6px;
+    right: -6px;
+    bottom: -18px;
+    text-align: center;
+    font-size: 11px;
+    line-height: 14px;
+    font-weight: 500;
+    color: var(--ink3);
+    white-space: nowrap;
+  }
+  .pro .bal.scrub .bc:not(.sel) i {
+    opacity: 0.32;
+  }
+  .pro .bal .bc.sel b {
+    color: var(--ink);
+  }
+  .pro .bal .cur {
+    position: absolute;
+    top: 0;
+    bottom: 18px;
+    left: 0;
+    width: 2px;
+    margin-left: -1px;
+    border-radius: 1px;
+    background: var(--ink);
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+  .pro .bal.scrub .cur {
+    opacity: 0.9;
+  }
+  .pro .efr,
+  .pro-hoja .efr {
+    margin-top: 10px;
+    height: 120px;
+    border-radius: 16px;
+    box-shadow: inset 0 0 0 1px var(--hair);
+    display: grid;
+    place-items: center;
+    color: var(--ink3);
+    font-size: 15px;
+  }
+  .pro-hoja .efr {
+    margin-top: 14px;
+  }
+
+  /* Las celdas de la semana */
+  .pro .wsl {
+    display: grid;
+    grid-template-columns: repeat(var(--r25-dias, 5), minmax(0, 1fr));
+    gap: 6px;
+    margin-top: 16px;
+  }
+  .pro .wc {
+    position: relative;
+    min-height: 80px;
+    padding: 10px 2px;
+    border-radius: 16px;
+    background: var(--r25-fill);
+    box-shadow: var(--glass);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+    min-width: 0;
+    transition:
+      transform 0.1s ease-out,
+      background-color 0.15s;
+  }
+  .pro .wc b {
+    font-weight: 500;
+    font-stretch: 125%;
+    font-size: 19px;
+    line-height: 24px;
+    font-variant-numeric: tabular-nums;
+  }
+  .pro .wc span {
+    font-size: 11.5px;
+    line-height: 15px;
+    color: var(--ink2);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+  }
+  .pro .wc.no {
+    background: none;
+    box-shadow: inset 0 0 0 1px var(--hair);
+  }
+  .pro .wc.no b,
+  .pro .wc b.mut {
+    color: var(--ink3);
+  }
+  .pro .wc:active {
+    transform: scale(0.97);
+  }
+  .pro .wc.no:active {
+    transform: none;
+  }
+
+  /* Estados */
+  .pro .est {
+    display: grid;
+    grid-template-columns: repeat(var(--r25-teselas, 4), minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .pro .est button {
+    min-height: 76px;
+    border-radius: 16px;
+    background: var(--r25-fill);
+    box-shadow: var(--glass);
+    padding: 10px;
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 4px;
+    transition:
+      transform 0.1s ease-out,
+      background-color 0.15s;
+    min-width: 0;
+  }
+  .pro .est b {
+    font-weight: 500;
+    font-stretch: 125%;
+    font-size: 24px;
+    line-height: 26px;
+    font-variant-numeric: tabular-nums;
+  }
+  .pro .est b.mut {
+    color: var(--ink3);
+  }
+  .pro .est span {
+    font-size: 11.5px;
+    line-height: 15px;
+    letter-spacing: -0.01em;
+    color: var(--ink2);
+  }
+  .pro .est button:active {
+    transform: scale(0.97);
+  }
+  .pro .est button:disabled {
+    background: none;
+    box-shadow: inset 0 0 0 1px var(--hair);
+    cursor: default;
+  }
+  .pro .est button:disabled:active {
+    transform: none;
+  }
+
+  /* Volumen por grupo */
+  .pro .vrows > .vrow:first-child {
+    border-top: 0;
+  }
+  .pro .vrow {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px 12px;
+    align-items: baseline;
+    width: 100%;
+    padding: 12px 0;
+    border-top: 1px solid var(--hair);
+    text-align: left;
+    position: relative;
+    isolation: isolate;
+  }
+  .pro .vrow::after {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    inset: 2px -10px;
+    border-radius: 14px;
+    background: var(--r25-fill);
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+  .pro .vrow:active::after {
+    opacity: 1;
+  }
+  .pro .vrow .t {
+    font-size: 16px;
+    line-height: 22px;
+  }
+  .pro .vrow .v {
+    font-weight: 500;
+    font-size: 16px;
+    line-height: 22px;
+    font-stretch: 108%;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    white-space: nowrap;
+  }
+  .pro .vbar {
+    grid-column: 1 / -1;
+    position: relative;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--r25-trk);
+    overflow: hidden;
+  }
+  .pro .vbar i,
+  .pro .vbar u {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    transform-origin: 0 50%;
+    will-change: transform;
+  }
+  .pro .vbar i {
+    background: var(--r25-bar);
+  }
+  .pro .vbar u {
+    background: var(--r25-bar2);
+  }
+  .pro .vbar.grow i,
+  .pro .vbar.grow u {
+    animation: r25-grow 0.8s var(--ease) 0.25s both;
+  }
+  @keyframes r25-grow {
+    from {
+      transform: scaleX(0);
+    }
+  }
+  .pro .leg {
+    display: flex;
+    gap: 16px;
+    margin-top: 12px;
+    font-size: 12px;
+    color: var(--ink2);
+  }
+  .pro .leg span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .pro .leg i {
+    width: 14px;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--r25-bar);
+  }
+  .pro .leg i.u {
+    background: var(--r25-bar2);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .pro .vbar.grow i,
+    .pro .vbar.grow u {
+      animation: none;
+    }
+  }
+
+  /* Las dos hojas (portal en body: fuera de `.pro`) */
+  .pro .r25-sub,
+  .pro-hoja .r25-sub {
+    font-size: 13px;
+    line-height: 18px;
+    color: var(--ink2);
+    margin-top: -4px;
+  }
+  .pro-hoja .rows {
+    margin-top: 14px;
+  }
+  .pro-hoja .rows > .row:first-child {
+    border-top: 0;
+  }
+  .pro-hoja .row {
+    position: relative;
+    isolation: isolate;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    min-height: 60px;
+    padding: 12px 0;
+    border-top: 1px solid var(--hair);
+    text-align: left;
+  }
+  .pro-hoja a.row::after {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    inset: 3px -10px;
+    border-radius: 14px;
+    background: var(--r25-fill);
+    opacity: 0;
+    transition: opacity 0.15s ease;
+  }
+  .pro-hoja a.row:active::after {
+    opacity: 1;
+    background: var(--r25-fill2);
+  }
+  .pro-hoja .row .m {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .pro-hoja .t {
+    font-size: 16px;
+    line-height: 22px;
+  }
+  .pro-hoja .s {
+    font-size: 13px;
+    line-height: 18px;
+    color: var(--ink2);
+  }
+  .pro-hoja .v {
+    font-weight: 500;
+    font-size: 16px;
+    line-height: 22px;
+    font-stretch: 108%;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    white-space: nowrap;
+  }
+  .pro-hoja .chev {
+    flex: none;
+    color: var(--ink3);
+    font-size: 22px;
+    line-height: 1;
+    margin-left: -4px;
+    transition: transform 0.2s var(--ease);
+  }
+  @media (hover: hover) {
+    .pro-hoja a.row:hover .chev {
+      transform: translateX(3px);
+    }
+  }
+}
+
+/* SAYA-R2-6 · el agente: la hoja, las preguntas, «Pensando…» (maqueta ronda 2) */
+@layer components {
+  .ag-qs {
+    display: grid;
+    gap: 8px;
+    margin-top: 16px;
+  }
+  .ag-q {
+    min-height: 54px;
+    padding: 12px 16px;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.07);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.16),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+    color: var(--color-ink);
+    font-size: 15px;
+    line-height: 21px;
+    text-align: left;
+    transition:
+      background-color 0.15s ease,
+      transform 0.15s ease;
+  }
+  @media (hover: hover) {
+    .ag-q:hover {
+      background: rgba(255, 255, 255, 0.12);
+    }
+  }
+  .ag-q:active {
+    transform: scale(0.97);
+  }
+  .ag-askf {
+    display: flex;
+    gap: 8px;
+    margin-top: 14px;
+  }
+  .ag-pensando {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    display: grid;
+    place-items: center;
+    width: 230px;
+    height: 66px;
+    margin: 34px auto 30px;
+    border-radius: 33px;
+    background: #07070b;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+  }
+  .ag-pensando b {
+    position: relative;
+    color: #fff;
+    font-weight: 600;
+    font-size: 17px;
+    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.7);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ag-q {
+      transition: none;
+    }
+    .ag-q:active {
+      transform: none;
+    }
+  }
+}
+
+/* SAYA-R2-6.W: fuera de capa, como el orbe */
+.ag-pensando > .liq {
+  position: absolute;
+  inset: -40% -10%;
+  filter: blur(9px) saturate(140%) brightness(0.58);
+}
+/* las cuatro gotas, en su orden: 3.2s, 2.7s, 3.6s, 4.1s de duración */
+.ag-pensando .liq i:nth-child(1) {
+  animation-duration: 3.2s;
+}
+.ag-pensando .liq i:nth-child(2) {
+  animation-duration: 2.7s;
+}
+.ag-pensando .liq i:nth-child(3) {
+  animation-duration: 3.6s;
+}
+.ag-pensando .liq i:nth-child(4) {
+  animation-duration: 4.1s;
+}
+@media (prefers-reduced-motion: reduce) {
+  /* `.liq i:nth-child(n)` del orbe pesa (0,2,1): el comodín solo (0,1,0) no le ganaría */
+  .ag-pensando *,
+  .ag-pensando .liq i:nth-child(n) {
+    animation: none;
   }
 }

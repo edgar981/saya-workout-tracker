@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
+import { ChevronRight } from "lucide-react";
 
+import { etiquetaUnidad, grupoDirecto } from "@/components/session/dial";
 import { Input } from "@/components/ui/input";
 import { listActiveExercises } from "@/lib/db/queries";
 import type { Exercise } from "@/lib/db/types";
@@ -34,20 +36,59 @@ export function ExercisePicker({
   inputId = "filtro-catalogo",
   placeholder = "Buscar…",
   className,
+  variante = "lista",
+  sufijo = "mas",
+  filtro,
 }: {
   excludeIds?: string[];
   onPick: (exercise: Exercise) => void;
   inputId?: string;
   placeholder?: string;
   className?: string;
+  /** `filas`: filas `.row` de las hojas de Sesión (sin campo propio: lo pone quien lo usa
+   *  y pasa su texto en `filtro`). `lista` (por omisión): la de siempre. */
+  variante?: "lista" | "filas";
+  /** Sólo en `filas`: el «+» de agregar o el chevron de cambiar. */
+  sufijo?: "mas" | "chevron";
+  filtro?: string;
 }) {
   const [filter, setFilter] = useState("");
   const catalog = useLiveQuery(() => listActiveExercises(), []);
 
-  const needle = filter.trim().toLowerCase();
+  const needle = (filtro ?? filter).trim().toLowerCase();
   const filtered = (catalog ?? []).filter(
     (e) => !excludeIds.includes(e.id) && e.nombre.toLowerCase().includes(needle),
   );
+
+  if (variante === "filas") {
+    return (
+      <div className={className}>
+        {filtered.length === 0 ? (
+          <p className="dek" style={{ padding: "16px 0" }}>
+            Nada coincide.
+          </p>
+        ) : (
+          filtered.map((exercise) => (
+            <button key={exercise.id} type="button" className="row" onClick={() => onPick(exercise)}>
+              <span className="m">
+                <span className="t">{exercise.nombre}</span>
+                <span className="s">
+                  {etiquetaUnidad(exercise)} · {grupoDirecto(exercise)}
+                </span>
+              </span>
+              {sufijo === "chevron" ? (
+                <ChevronRight size={22} aria-hidden="true" style={{ color: "var(--ink3)" }} />
+              ) : (
+                <span className="v" aria-hidden="true">
+                  +
+                </span>
+              )}
+            </button>
+          ))
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className={cn("flex flex-col", className)}>

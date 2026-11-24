@@ -90,6 +90,35 @@ function textoSeriesN(series: number): string {
   return `${series} ${series === 1 ? "serie" : "series"}`;
 }
 
+/** «9 nov» desde `YYYY-MM-DD` (la fecha de la tesela del peso). */
+export function fechaDiaMes(iso: string): string {
+  const [, m, d] = iso.split("-").map(Number);
+  return `${d} ${MESES[m - 1].slice(0, 3)}`;
+}
+
+/** «Jue, 5 nov» desde `YYYY-MM-DD`, leída como fecha local (la hoja del día). */
+export function fechaUltimaVez(iso: string): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  const f = new Date(y, m - 1, d);
+  return `${DIAS[f.getDay()].slice(0, 3)}, ${d} ${MESES[m - 1].slice(0, 3)}`;
+}
+
+/** «Day 1 · 10 series» (la tesela de la sesión abierta). */
+export function lineaSesionTesela(dia: string, series: number): string {
+  return `${dia} · ${textoSeriesN(series)}`;
+}
+
+/** El botón de la hoja del día: continuar, cerrar la abierta y empezar, o empezar. */
+export function textoBotonDia(o: {
+  mismoDia: boolean;
+  abierta: string | null;
+  nombreDia: string;
+}): string {
+  if (o.mismoDia) return "Continuar donde ibas →";
+  if (o.abierta !== null) return `Cerrar ${o.abierta} y empezar ${o.nombreDia}`;
+  return `Empezar ${o.nombreDia}`;
+}
+
 /** «4 / 5 hechos · 10 series»; sin total, «N serie(s)». */
 export function lineaProgreso(hechos: number, total: number, series: number): string {
   return total > 0
