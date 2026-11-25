@@ -285,7 +285,7 @@ export function DeudasSkeleton() {
     <div role="status" aria-busy="true">
       <span className="sr-only">Cargando…</span>
       <div aria-hidden="true">
-        <section className="sec">
+        <section className="sec mt-[30px]">
           <Sk className="h-[11px] w-[44%] rounded-[4px]" />
           {filas}
         </section>
