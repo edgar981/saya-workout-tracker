@@ -55,6 +55,7 @@ export default function DataScreen() {
   };
 
   const doExport = async () => {
+    if (pidiendoRef.current) return;
     setStatus({ kind: "working", label: "Exportando…" });
     setServidor({ kind: "idle" });
     try {
@@ -135,7 +136,12 @@ export default function DataScreen() {
               backend esté vivo.
             </p>
 
-            <Button variant="secondary" className="mt-3 w-full" onClick={() => void doExport()}>
+            <Button
+              variant="secondary"
+              className="mt-3 w-full"
+              aria-disabled={pidiendoServidor ? "true" : undefined}
+              onClick={() => void doExport()}
+            >
               Exportar
             </Button>
 
@@ -170,6 +176,19 @@ export default function DataScreen() {
               <p className="mt-3 text-sm">
                 Exportado a <span className="font-mono text-[12.5px]">{status.filename}</span>
               </p>
+            )}
+
+            {status.kind === "failed" && (
+              <ErrorEnLinea className="mt-3">
+                <p>No se importó.</p>
+                <p className="mt-0.5 block text-ink2">{status.outcome.error}</p>
+                {status.outcome.autoExportFilename && (
+                  <p className="mt-0.5 block text-ink2">
+                    El respaldo previo sí se descargó:{" "}
+                    <span className="font-mono">{status.outcome.autoExportFilename}</span>.
+                  </p>
+                )}
+              </ErrorEnLinea>
             )}
 
             {servidor.kind === "ok" && (
@@ -209,18 +228,6 @@ export default function DataScreen() {
               </div>
             )}
 
-            {status.kind === "failed" && (
-              <ErrorEnLinea className="mt-3">
-                <p>No se importó.</p>
-                <p className="mt-0.5 block text-ink2">{status.outcome.error}</p>
-                {status.outcome.autoExportFilename && (
-                  <p className="mt-0.5 block text-ink2">
-                    El respaldo previo sí se descargó:{" "}
-                    <span className="font-mono">{status.outcome.autoExportFilename}</span>.
-                  </p>
-                )}
-              </ErrorEnLinea>
-            )}
           </section>
 
           <section className="sec">
