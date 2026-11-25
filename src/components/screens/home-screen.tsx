@@ -60,6 +60,16 @@ import {
   semanaMesociclo,
   subtituloHoy,
 } from "@/lib/hoy";
+import { leerCuentas, leerDeudas } from "@/lib/dinero/cliente";
+import {
+  compactoCOP,
+  cuandoEs,
+  diaMesCorto,
+  disponible,
+  formatoCOP,
+  pagosDelMes,
+} from "@/lib/dinero/resumen";
+import type { CuentaDto, DeudaDto } from "@/lib/dinero/servidor";
 import { leer as leerTiempo } from "@/lib/tiempo/cliente";
 import {
   desdeParaLeer,
@@ -478,6 +488,21 @@ function Contenido({ vista }: { vista: HomeVista }) {
     return () => control.abort();
   }, []);
 
+  // Dinero también vive en el servidor, y Hoy tampoco lo espera: dos lecturas después de
+  // montar, cada tesela aparece sólo cuando llega su respuesta y no aparece si falla (N1 A).
+  const [cuentasDinero, setCuentasDinero] = useState<CuentaDto[] | null>(null);
+  const [deudasDinero, setDeudasDinero] = useState<DeudaDto[] | null>(null);
+  useEffect(() => {
+    const control = new AbortController();
+    void leerCuentas({ signal: control.signal }).then((r) => {
+      if (!control.signal.aborted && r.ok) setCuentasDinero(r.datos.cuentas);
+    });
+    void leerDeudas({ signal: control.signal }).then((r) => {
+      if (!control.signal.aborted && r.ok) setDeudasDinero(r.datos.deudas);
+    });
+    return () => control.abort();
+  }, []);
+
   // Una sola lectura del reloj para toda la pantalla. El contenido solo se
   // renderiza tras resolver el liveQuery (cliente): no hay desajuste de hidratación.
   const ahora = new Date();
@@ -528,6 +553,10 @@ function Contenido({ vista }: { vista: HomeVista }) {
   const peso = resumirPeso(pesos);
   const semanaTiempo =
     tiempo !== null && tiempo.primer_registro !== null ? resumen(tiempo, todayISO()) : null;
+  const hoyISO = todayISO();
+  const totalDisponible =
+    cuentasDinero !== null && cuentasDinero.length > 0 ? disponible(cuentasDinero) : null;
+  const proximoPago = deudasDinero !== null ? (pagosDelMes(deudasDinero, hoyISO)[0] ?? null) : null;
   const trazo = peso
     ? puntosSpark(
         peso.serie.slice(-SPARK_N).map((p) => p.valor),
@@ -565,7 +594,8 @@ function Contenido({ vista }: { vista: HomeVista }) {
         </Link>
       )}
 
-      {/* Sólo las áreas que existen. Disponible y Pago piden Dinero: no se pintan. */}
+      {/* Las teselas de lo que vive en el servidor (Aprender, Disponible, Pago) salen más abajo,
+          sólo cuando llega su lectura. */}
       <Link href="/cuerpo" className="tile sube" style={{ "--i": 2 } as CSSProperties}>
         <span className="kicker">Peso</span>
         <span className="tile-f2">
@@ -634,12 +664,33 @@ function Contenido({ vista }: { vista: HomeVista }) {
           </span>
         </Link>
       )}
+
+      {/* Disponible: sólo cuando llegan las cuentas y hay alguna (N1 A). */}
+      {totalDisponible !== null && (
+        <Link href="/dinero" className="tile sube" style={{ "--i": 4 } as CSSProperties}>
+          <span className="kicker">Disponible</span>
+          <span className="tile-f2">{compactoCOP(totalDisponible)}</span>
+          <span className="tile-s">{formatoCOP(totalDisponible)}</span>
+        </Link>
+      )}
+
+      {/* Pago: el próximo del mes, sólo cuando llegan las deudas y hay uno (N1 A). */}
+      {proximoPago && (
+        <Link href="/dinero" className="tile sube" style={{ "--i": 5 } as CSSProperties}>
+          <span className="kicker">Pago · {diaMesCorto(proximoPago.fecha)}</span>
+          <span className="tile-f2">{compactoCOP(proximoPago.valor)}</span>
+          <span className="tile-s">
+            {proximoPago.deuda.tipo === "tarjeta" ? "Tarjeta" : "Crédito"} ·{" "}
+            {cuandoEs(proximoPago.fecha, hoyISO)}
+          </span>
+        </Link>
+      )}
     </>
   );
 
   const dias =
     days.length > 0 ? (
-      <div className="tile tile-dias sube" style={{ "--i": mostrarSesion ? 4 : 1 } as CSSProperties}>
+      <div className="tile tile-dias sube" style={{ "--i": mostrarSesion ? 6 : 1 } as CSSProperties}>
         <span className="kicker">{mostrarSesion ? "Empezar otro día" : "Entrenar"}</span>
         <div className="dstrip">
           {days.map(({ day }, i) => {

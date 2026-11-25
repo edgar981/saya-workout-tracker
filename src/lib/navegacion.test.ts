@@ -10,17 +10,18 @@ import {
 } from "./navegacion";
 
 describe("áreas", () => {
-  it("existen Hoy, Cuerpo y Tiempo, en ese orden", () => {
-    expect(AREAS.map((a) => a.etiqueta)).toEqual(["Hoy", "Cuerpo", "Tiempo"]);
+  it("existen Hoy, Cuerpo, Dinero y Tiempo, en ese orden", () => {
+    expect(AREAS.map((a) => a.etiqueta)).toEqual(["Hoy", "Cuerpo", "Dinero", "Tiempo"]);
     expect(indiceDeArea("/")).toBe(0);
     expect(indiceDeArea("/cuerpo/")).toBe(1);
-    expect(indiceDeArea("/tiempo")).toBe(2);
+    expect(indiceDeArea("/dinero")).toBe(2);
+    expect(indiceDeArea("/tiempo")).toBe(3);
     expect(indiceDeArea("/historial")).toBeNull();
   });
 
   it("cada área trae su icono, de los cuatro", () => {
     for (const a of AREAS) expect(["hoy", "cuerpo", "dinero", "tiempo"]).toContain(a.icono);
-    expect(AREAS.map((a) => a.icono)).toEqual(["hoy", "cuerpo", "tiempo"]);
+    expect(AREAS.map((a) => a.icono)).toEqual(["hoy", "cuerpo", "dinero", "tiempo"]);
   });
 });
 
@@ -28,6 +29,7 @@ describe("nivelDeRuta", () => {
   const casos: [string, "area" | "sesion" | "empujada"][] = [
     ["/", "area"],
     ["/cuerpo", "area"],
+    ["/dinero", "area"],
     ["/tiempo", "area"],
     ["/sesion", "sesion"],
     ["/sesion/cerrar", "sesion"],
@@ -55,6 +57,7 @@ describe("etiquetaDeRuta", () => {
   const casos: [string, string][] = [
     ["/", "Hoy"],
     ["/cuerpo", "Cuerpo"],
+    ["/dinero", "Dinero"],
     ["/tiempo", "Tiempo"],
     ["/historial", "Historial"],
     ["/historial/abc", "Sesión"],
