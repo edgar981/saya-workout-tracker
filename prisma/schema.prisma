@@ -1,7 +1,9 @@
 // Respaldo automático a Postgres (DECISIONES.md §9). Primera vez que este
 // proyecto tiene backend. NO es sync: es un push de snapshots completos,
-// append-only. Dexie sigue siendo la única fuente de verdad; nada de la app lee
-// de aquí salvo el flujo explícito de restauración.
+// append-only. Dexie es la fuente de verdad del entrenamiento y Cuerpo, y
+// Snapshot es su respaldo: sólo el flujo explícito de restauración lo lee.
+// Dinero y Tiempo viven aquí, en sus siete tablas, como su única fuente
+// (DECISIONES.md §15).
 
 generator client {
   provider = "prisma-client-js"
@@ -118,4 +120,87 @@ model RateLimit {
   key         String @unique
   count       Int
   lastRequest BigInt
+}
+
+// Dinero y Tiempo (DECISIONES.md §15): su única copia vive aquí, no en Dexie.
+// Los ids los genera el teléfono (crypto.randomUUID) para que reintentar un
+// guardado no duplique. Pesos colombianos enteros (BigInt). Los `tipo` son texto
+// que valida el servidor, no enum. Nada derivado se guarda (§3.5).
+
+model Cuenta {
+  id        String        @id @db.Uuid
+  banco     String
+  tipo      String
+  ultimos4  String?
+  creada_en DateTime      @default(now()) @db.Timestamptz(6)
+  saldos    SaldoCuenta[]
+}
+
+model SaldoCuenta {
+  id         String   @id @db.Uuid
+  cuenta_id  String   @db.Uuid
+  cuenta     Cuenta   @relation(fields: [cuenta_id], references: [id], onDelete: Restrict)
+  valor      BigInt
+  anotado_en DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([cuenta_id, anotado_en])
+}
+
+model Deuda {
+  id            String       @id @db.Uuid
+  tipo          String
+  nombre        String
+  con_quien     String
+  tasa_ea       Decimal?     @db.Decimal(5, 2)
+  cuota         BigInt?
+  creada_en     DateTime     @default(now()) @db.Timestamptz(6)
+  cupo          BigInt?
+  monto_inicial BigInt?
+  ultimos4      String?
+  cuotas_total  Int?
+  dia_pago      Int?
+  primera_cuota DateTime?    @db.Date
+  saldos        SaldoDeuda[]
+  extractos     Extracto[]
+}
+
+model SaldoDeuda {
+  id         String   @id @db.Uuid
+  deuda_id   String   @db.Uuid
+  deuda      Deuda    @relation(fields: [deuda_id], references: [id], onDelete: Restrict)
+  valor      BigInt
+  anotado_en DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([deuda_id, anotado_en])
+}
+
+model Extracto {
+  id           String    @id @db.Uuid
+  deuda_id     String    @db.Uuid
+  deuda        Deuda     @relation(fields: [deuda_id], references: [id], onDelete: Restrict)
+  cierre       DateTime  @db.Date
+  intereses    BigInt
+  pago_minimo  BigInt?
+  fecha_limite DateTime? @db.Date
+  anotado_en   DateTime  @default(now()) @db.Timestamptz(6)
+
+  @@index([deuda_id, cierre])
+}
+
+model Tema {
+  id        String           @id @db.Uuid
+  nombre    String           @unique
+  creado_en DateTime         @default(now()) @db.Timestamptz(6)
+  registros RegistroTiempo[]
+}
+
+model RegistroTiempo {
+  id         String   @id @db.Uuid
+  tema_id    String   @db.Uuid
+  tema       Tema     @relation(fields: [tema_id], references: [id], onDelete: Restrict)
+  minutos    Int
+  fecha      DateTime @db.Date
+  anotado_en DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([fecha])
 }
