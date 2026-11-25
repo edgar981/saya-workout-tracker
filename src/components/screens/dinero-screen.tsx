@@ -5,10 +5,11 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import {
   CuentaSheet,
   DeudaSheet,
+  ExtractoSheet,
   SaldoSheet,
   type DuenoSaldo,
 } from "@/components/dinero-sheets";
-import { DineroSkeleton } from "@/components/skeletons";
+import { DeudasSkeleton, DineroSkeleton } from "@/components/skeletons";
 import { Button } from "@/components/ui/button";
 import { BloqueError, Vacio } from "@/components/ui/estados";
 import { Fila } from "@/components/ui/fila";
@@ -33,10 +34,15 @@ import {
   progresoDeuda,
   quedanDespuesDePagar,
 } from "@/lib/dinero/resumen";
-import type { CuentaDto, DeudaDto, SaldoAnotadoDto } from "@/lib/dinero/servidor";
+import type {
+  CuentaDto,
+  DeudaDto,
+  ExtractoAnotadoDto,
+  SaldoAnotadoDto,
+} from "@/lib/dinero/servidor";
 
 /** Cuánto dura el aviso. */
-const AVISO_MS = 3500;
+const AVISO_MS = 3200;
 
 /**
  * `deudas` es `null` cuando sólo ellas fallaron (`deudas-error`): las cuentas siguen.
@@ -47,7 +53,19 @@ type Estado =
   | { tipo: "error" }
   | { tipo: "datos"; cuentas: CuentaDto[]; deudas: DeudaDto[] | null };
 
-type HojaAbierta = { tipo: "saldo"; inicial: DuenoSaldo | null } | { tipo: "cuenta" } | { tipo: "deuda" } | null;
+type HojaAbierta =
+  | { tipo: "saldo"; inicial: DuenoSaldo | null }
+  | { tipo: "cuenta" }
+  | { tipo: "deuda" }
+  | { tipo: "extracto" }
+  | null;
+
+/** Las tarjetas y los créditos que se muestran, por `creada_en`: las deudas con extracto. */
+function conExtracto(visibles: readonly DeudaDto[]): DeudaDto[] {
+  return visibles
+    .filter((d) => d.tipo !== "personal")
+    .sort((a, b) => (a.creada_en < b.creada_en ? -1 : a.creada_en > b.creada_en ? 1 : 0));
+}
 
 const mayuscula = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
 
@@ -58,6 +76,8 @@ export default function DineroScreen() {
   const [hoy] = useState(() => todayISO());
   const [hoja, setHoja] = useState<HojaAbierta>(null);
   const [aviso, setAviso] = useState<string | null>(null);
+  // «Reintentar» de «No se pudieron leer tus deudas.»: mientras lee se ve un esqueleto.
+  const [leyendoDeudas, setLeyendoDeudas] = useState(false);
   const montado = useRef(true);
 
   useEffect(() => {
@@ -92,8 +112,11 @@ export default function DineroScreen() {
 
   /** Vuelve a leer sólo las deudas (`deudas-error`). */
   const reintentarDeudas = useCallback(() => {
+    setLeyendoDeudas(true);
     void leerDeudas().then((d) => {
-      if (!montado.current || !d.ok) return;
+      if (!montado.current) return;
+      setLeyendoDeudas(false);
+      if (!d.ok) return;
       setEstado((previo) =>
         previo.tipo === "datos" ? { ...previo, deudas: d.datos.deudas } : previo,
       );
@@ -118,6 +141,28 @@ export default function DineroScreen() {
         : { ...previo, deudas: [...previo.deudas, deuda] },
     );
     setAviso(`${deuda.nombre}: deuda agregada.`);
+  };
+
+  /** El extracto que devolvió el servidor, en su deuda: en `extractos` (reemplaza el del mismo
+   *  cierre) y como `extracto` si su cierre es el más reciente. */
+  const guardarExtracto = (e: ExtractoAnotadoDto, deuda: DeudaDto) => {
+    const { deuda_id, ...extracto } = e;
+    setEstado((previo) => {
+      if (previo.tipo !== "datos" || previo.deudas === null) return previo;
+      return {
+        ...previo,
+        deudas: previo.deudas.map((d) => {
+          if (d.id !== deuda_id) return d;
+          const extractos = [extracto, ...d.extractos.filter((x) => x.cierre !== extracto.cierre)].sort(
+            (a, b) =>
+              a.cierre < b.cierre ? 1 : a.cierre > b.cierre ? -1 : a.anotado_en < b.anotado_en ? 1 : -1,
+          );
+          const ultimo = d.extracto === null || extracto.cierre >= d.extracto.cierre ? extracto : d.extracto;
+          return { ...d, extracto: ultimo, extractos };
+        }),
+      };
+    });
+    setAviso(`${deuda.nombre}: extracto anotado.`);
   };
 
   const guardarSaldo = (s: SaldoAnotadoDto) => {
@@ -167,6 +212,7 @@ export default function DineroScreen() {
               hoy={hoy}
               abrir={setHoja}
               reintentarDeudas={reintentarDeudas}
+              leyendoDeudas={leyendoDeudas}
             />
           )}
         </main>
@@ -182,6 +228,12 @@ export default function DineroScreen() {
       />
       <CuentaSheet abierto={hoja?.tipo === "cuenta"} alCerrar={() => setHoja(null)} alGuardar={guardarCuenta} />
       <DeudaSheet abierto={hoja?.tipo === "deuda"} alCerrar={() => setHoja(null)} alGuardar={guardarDeuda} />
+      <ExtractoSheet
+        abierto={hoja?.tipo === "extracto"}
+        alCerrar={() => setHoja(null)}
+        deudas={conExtracto(visibles)}
+        alGuardar={guardarExtracto}
+      />
       {aviso !== null && <Aviso>{aviso}</Aviso>}
     </>
   );
@@ -213,17 +265,21 @@ function Contenido({
   hoy,
   abrir,
   reintentarDeudas,
+  leyendoDeudas,
 }: {
   cuentas: CuentaDto[];
   deudas: DeudaDto[] | null;
   hoy: string;
   abrir: (h: HojaAbierta) => void;
   reintentarDeudas: () => void;
+  leyendoDeudas: boolean;
 }) {
   const hayCuentas = cuentas.length > 0;
   const visibles = deudas === null ? [] : deudasVisibles(deudas);
   const pagos = pagosDelMes(visibles, hoy);
-  const intereses = interesesDelMes(visibles, hoy);
+  // Los intereses cuentan los extractos de TODAS las deudas, también una que ya está en 0.
+  const intereses = interesesDelMes(deudas ?? [], hoy);
+  const hayExtracto = visibles.some((d) => d.tipo !== "personal");
 
   const anotarEnCuenta = () =>
     abrir({ tipo: "saldo", inicial: { clase: "cuenta", id: cuentas[0].id } });
@@ -284,9 +340,13 @@ function Contenido({
       )}
 
       {deudas === null ? (
-        <Seccion titulo="Lo que debes">
-          <BloqueError titulo="No se pudieron leer tus deudas." alReintentar={reintentarDeudas} />
-        </Seccion>
+        leyendoDeudas ? (
+          <DeudasSkeleton />
+        ) : (
+          <Seccion titulo="Lo que debes">
+            <BloqueError titulo="No se pudieron leer tus deudas." alReintentar={reintentarDeudas} />
+          </Seccion>
+        )
       ) : visibles.length === 0 ? (
         <Seccion titulo="Lo que debes">
           <Vacio
@@ -306,19 +366,25 @@ function Contenido({
               <FilaDeuda key={d.id} deuda={d} hoy={hoy} alTocar={() => anotarEnDeuda(d.id)} />
             ))}
           </div>
-          {hayCuentas ? (
-            <Button className="mt-3 w-full" variant="secondary" onClick={() => abrir({ tipo: "deuda" })}>
-              Agregar deuda
+          {/* Sin cuentas, «Anotar saldo» va ancho completo encima del par (tres en una fila no caben a 375). */}
+          {!hayCuentas && (
+            <Button className="mt-3 w-full" variant="secondary" onClick={() => anotarEnDeuda(visibles[0].id)}>
+              Anotar saldo
             </Button>
-          ) : (
-            <div className="mt-3 flex gap-2.5">
-              <Button className="flex-1" variant="secondary" onClick={() => anotarEnDeuda(visibles[0].id)}>
-                Anotar saldo
+          )}
+          {hayExtracto ? (
+            <div className="acts2">
+              <Button variant="secondary" onClick={() => abrir({ tipo: "extracto" })}>
+                Anotar extracto
               </Button>
-              <Button className="flex-1" variant="secondary" onClick={() => abrir({ tipo: "deuda" })}>
+              <Button variant="secondary" onClick={() => abrir({ tipo: "deuda" })}>
                 Agregar deuda
               </Button>
             </div>
+          ) : (
+            <Button className="mt-3 w-full" variant="secondary" onClick={() => abrir({ tipo: "deuda" })}>
+              Agregar deuda
+            </Button>
           )}
         </Seccion>
       )}
@@ -327,7 +393,7 @@ function Contenido({
         <Seccion titulo={`Intereses de ${mesAnterior(hoy)}`} derecha={formatoCOP(intereses.total)}>
           <div>
             {intereses.filas.map((f) => (
-              <Fila key={f.deuda.id} titulo={nombreLargo(f.deuda)} valor={formatoCOP(f.valor)} />
+              <Fila key={f.extracto.id} titulo={nombreLargo(f.deuda)} valor={formatoCOP(f.valor)} />
             ))}
           </div>
         </Seccion>

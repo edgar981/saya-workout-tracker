@@ -9,6 +9,7 @@ const RUTAS = [
   ["src/app/api/dinero/cuentas/route.ts", ["GET", "POST"]],
   ["src/app/api/dinero/deudas/route.ts", ["GET", "POST"]],
   ["src/app/api/dinero/saldos/route.ts", ["POST"]],
+  ["src/app/api/dinero/extractos/route.ts", ["POST"]],
 ] as const;
 
 /** El texto de cada función exportada, con su nombre, de su `export` al siguiente (o al final). */
@@ -68,7 +69,7 @@ describe("los POST", () => {
   );
 
   it("hay un POST por ruta que lo declara", () => {
-    expect(posts).toHaveLength(3);
+    expect(posts).toHaveLength(4);
   });
 
   it.each(posts)("%s: el origen antes de leer el cuerpo, y el tope", (_archivo, f) => {

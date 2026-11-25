@@ -264,6 +264,27 @@ export function DineroSkeleton() {
   );
 }
 
+/** «Lo que debes» mientras «Reintentar» vuelve a leer las deudas: kicker, cifra, tres filas y la
+ *  fila de dos botones. Va dentro de la hoja de Dinero, en el lugar del bloque de error. */
+export function DeudasSkeleton() {
+  return (
+    <section className="sec" role="status" aria-busy="true">
+      <span className="sr-only">Cargando…</span>
+      <div aria-hidden="true">
+        <Sk className="h-[11px] w-[30%]" />
+        <Sk className="mt-4 h-8 w-[52%] rounded-[14px]" />
+        <Sk className="mt-[18px] h-4 w-full" />
+        <Sk className="mt-[22px] h-4 w-[86%]" />
+        <Sk className="mt-[22px] h-4 w-[94%]" />
+        <div className="mt-3 flex gap-2.5">
+          <Sk className="h-12 flex-1" />
+          <Sk className="h-12 flex-1" />
+        </div>
+      </div>
+    </section>
+  );
+}
+
 // ── /historial ──────────────────────────────────────────────────────────────
 export function HistorialSkeleton() {
   return (

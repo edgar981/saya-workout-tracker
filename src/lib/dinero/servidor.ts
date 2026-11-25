@@ -67,14 +67,18 @@ export interface AlmacenDinero {
   saldosCuentas(): Promise<FilaSaldoCuenta[]>;
   deudas(): Promise<FilaDeuda[]>;
   saldosDeudas(): Promise<FilaSaldoDeuda[]>;
-  /** Los extractos de las deudas (basta con el de `cierre` más reciente de cada una). */
-  extractos(): Promise<FilaExtracto[]>;
+  /**
+   * El extracto de `cierre` más reciente de cada deuda y todos los de `cierre >= desde`
+   * (el módulo deduplica por `id` y por par). `desde` es medianoche UTC.
+   */
+  extractos(desde: Date): Promise<FilaExtracto[]>;
 
   cuentaPorId(id: string): Promise<FilaCuenta | null>;
   ultimoSaldoDeCuenta(cuentaId: string): Promise<FilaSaldoCuenta | null>;
   deudaPorId(id: string): Promise<FilaDeuda | null>;
   ultimoSaldoDeDeuda(deudaId: string): Promise<FilaSaldoDeuda | null>;
   extractoDeDeuda(deudaId: string): Promise<FilaExtracto | null>;
+  extractoPorId(id: string): Promise<FilaExtracto | null>;
   saldoCuentaPorId(id: string): Promise<FilaSaldoCuenta | null>;
   saldoDeudaPorId(id: string): Promise<FilaSaldoDeuda | null>;
 
@@ -92,9 +96,24 @@ export interface AlmacenDinero {
       con_quien: string;
       tasa_ea: number | null;
       cuota: bigint | null;
+      cupo: bigint | null;
+      monto_inicial: bigint | null;
+      ultimos4: string | null;
+      cuotas_total: number | null;
+      dia_pago: number | null;
+      /** Medianoche UTC. */
+      primera_cuota: Date | null;
     };
     saldo: { id: string; valor: bigint };
   }): Promise<{ deuda: FilaDeuda; saldo: FilaSaldoDeuda }>;
+  crearExtracto(datos: {
+    id: string;
+    deuda_id: string;
+    cierre: Date;
+    intereses: bigint;
+    pago_minimo: bigint | null;
+    fecha_limite: Date | null;
+  }): Promise<FilaExtracto>;
   crearSaldoCuenta(datos: { id: string; cuenta_id: string; valor: bigint }): Promise<FilaSaldoCuenta>;
   crearSaldoDeuda(datos: { id: string; deuda_id: string; valor: bigint }): Promise<FilaSaldoDeuda>;
 }
@@ -125,6 +144,11 @@ export interface ExtractoDto {
   anotado_en: string;
 }
 
+/** Un extracto anotado: el `ExtractoDto` más la deuda a la que pertenece. */
+export interface ExtractoAnotadoDto extends ExtractoDto {
+  deuda_id: string;
+}
+
 export interface DeudaDto {
   id: string;
   tipo: string;
@@ -141,6 +165,8 @@ export interface DeudaDto {
   creada_en: string;
   saldo: SaldoDto | null;
   extracto: ExtractoDto | null;
+  /** Los de `cierre` desde el primer día del mes de hace dos meses, del más reciente al más antiguo. */
+  extractos: ExtractoDto[];
 }
 
 export interface SaldoAnotadoDto {
@@ -195,8 +221,7 @@ function cuentaDto(c: FilaCuenta, saldo: FilaSaldoCuenta | null): CuentaDto {
   };
 }
 
-function extractoDto(e: FilaExtracto | null): ExtractoDto | null {
-  if (!e) return null;
+function extractoPlano(e: FilaExtracto): ExtractoDto {
   return {
     id: e.id,
     cierre: deFecha(e.cierre),
@@ -207,7 +232,20 @@ function extractoDto(e: FilaExtracto | null): ExtractoDto | null {
   };
 }
 
-function deudaDto(d: FilaDeuda, saldo: FilaSaldoDeuda | null, extracto: FilaExtracto | null): DeudaDto {
+function extractoDto(e: FilaExtracto | null): ExtractoDto | null {
+  return e ? extractoPlano(e) : null;
+}
+
+function extractoAnotadoDto(e: FilaExtracto): ExtractoAnotadoDto {
+  return { ...extractoPlano(e), deuda_id: e.deuda_id };
+}
+
+function deudaDto(
+  d: FilaDeuda,
+  saldo: FilaSaldoDeuda | null,
+  extracto: FilaExtracto | null,
+  extractos: readonly FilaExtracto[] = [],
+): DeudaDto {
   return {
     id: d.id,
     tipo: d.tipo,
@@ -224,6 +262,7 @@ function deudaDto(d: FilaDeuda, saldo: FilaSaldoDeuda | null, extracto: FilaExtr
     creada_en: d.creada_en.toISOString(),
     saldo: saldoDto(saldo),
     extracto: extractoDto(extracto),
+    extractos: extractos.map(extractoPlano),
   };
 }
 
@@ -296,24 +335,44 @@ export async function leerCuentas(almacen: AlmacenDinero): Promise<Respuesta> {
   }
 }
 
-export async function leerDeudas(almacen: AlmacenDinero): Promise<Respuesta> {
+/** Medianoche UTC del primer día del mes de `ahora` menos dos meses. */
+function inicioDeLectura(ahora: Date): Date {
+  return new Date(Date.UTC(ahora.getUTCFullYear(), ahora.getUTCMonth() - 2, 1));
+}
+
+/** De cada par (deuda, cierre) conserva sólo el de `anotado_en` más reciente (y un `id` una sola vez). */
+function sinDuplicados(filas: readonly FilaExtracto[]): FilaExtracto[] {
+  const porId = new Map<string, FilaExtracto>();
+  for (const f of filas) porId.set(f.id, f);
+  const porPar = new Map<string, FilaExtracto>();
+  for (const f of porId.values()) {
+    const k = `${f.deuda_id}|${f.cierre.getTime()}`;
+    const previo = porPar.get(k);
+    if (!previo || f.anotado_en.getTime() >= previo.anotado_en.getTime()) porPar.set(k, f);
+  }
+  return [...porPar.values()];
+}
+
+const masNuevoPrimero = (a: FilaExtracto, b: FilaExtracto) =>
+  b.cierre.getTime() - a.cierre.getTime() || b.anotado_en.getTime() - a.anotado_en.getTime();
+
+export async function leerDeudas(almacen: AlmacenDinero, ahora: Date = new Date()): Promise<Respuesta> {
   try {
+    const desde = inicioDeLectura(ahora);
     const [deudas, saldos, extractos] = await Promise.all([
       almacen.deudas(),
       almacen.saldosDeudas(),
-      almacen.extractos(),
+      almacen.extractos(desde),
     ]);
     const porDeuda = agrupar(saldos, (s) => s.deuda_id);
-    const extractosPorDeuda = agrupar(extractos, (e) => e.deuda_id);
+    const extractosPorDeuda = agrupar(sinDuplicados(extractos), (e) => e.deuda_id);
     return {
       status: 200,
       cuerpo: {
         deudas: porCreada(deudas).map((d) => {
-          const ultimo = [...(extractosPorDeuda.get(d.id) ?? [])].sort(
-            (a, b) =>
-              a.cierre.getTime() - b.cierre.getTime() || a.anotado_en.getTime() - b.anotado_en.getTime(),
-          );
-          return deudaDto(d, masReciente(porDeuda.get(d.id) ?? []), ultimo[ultimo.length - 1] ?? null);
+          const todos = [...(extractosPorDeuda.get(d.id) ?? [])].sort(masNuevoPrimero);
+          const recientes = todos.filter((e) => e.cierre.getTime() >= desde.getTime());
+          return deudaDto(d, masReciente(porDeuda.get(d.id) ?? []), todos[0] ?? null, recientes);
         }),
       },
     };
@@ -390,8 +449,38 @@ async function deudaExistente(id: string, almacen: AlmacenDinero): Promise<Respu
     almacen.ultimoSaldoDeDeuda(id),
     almacen.extractoDeDeuda(id),
   ]);
-  return { status: 200, cuerpo: deudaDto(d, saldo, extracto) };
+  return { status: 200, cuerpo: deudaDto(d, saldo, extracto, extracto ? [extracto] : []) };
 }
+
+/** `YYYY-MM-DD` que es una fecha del calendario (no «2026-02-30») como medianoche UTC; si no, `null`. */
+function fechaCalendario(v: unknown): Date | null {
+  if (typeof v !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return null;
+  const d = new Date(`${v}T00:00:00.000Z`);
+  return Number.isNaN(d.getTime()) || deFecha(d) !== v ? null : d;
+}
+
+/** Ausente o `null` es `null`; con valor, el entero seguro mayor que 0; si no, `undefined` (inválido). */
+function enteroPositivoOpcional(v: unknown): number | null | undefined {
+  if (v === undefined || v === null) return null;
+  return enteroSeguro(v) && v > 0 ? v : undefined;
+}
+
+/** Ausente o `null` es `null`; con valor, un entero de `min` a `max`; si no, `undefined` (inválido). */
+function enteroEnRango(v: unknown, min: number, max: number): number | null | undefined {
+  if (v === undefined || v === null) return null;
+  return typeof v === "number" && Number.isInteger(v) && v >= min && v <= max ? v : undefined;
+}
+
+/** Los tipos que admiten cada uno de los campos opcionales de una deuda. */
+const ADMITE: Record<string, readonly string[]> = {
+  cuota: ["credito", "personal"],
+  cupo: ["tarjeta"],
+  ultimos4: ["tarjeta"],
+  monto_inicial: ["credito"],
+  cuotas_total: ["credito"],
+  dia_pago: ["credito"],
+  primera_cuota: ["credito"],
+};
 
 export async function crearDeuda(texto: string, almacen: AlmacenDinero): Promise<Respuesta> {
   const o = leerJson(texto);
@@ -420,6 +509,38 @@ export async function crearDeuda(texto: string, almacen: AlmacenDinero): Promise
   if (cuota !== null && (!enteroSeguro(cuota) || cuota <= 0)) {
     return mala("«cuota» debe ser un entero mayor que 0 o null.");
   }
+  const cupo = enteroPositivoOpcional(o.cupo);
+  if (cupo === undefined) return mala("«cupo» debe ser un entero mayor que 0 o null.");
+  const montoInicial = enteroPositivoOpcional(o.monto_inicial);
+  if (montoInicial === undefined) return mala("«monto_inicial» debe ser un entero mayor que 0 o null.");
+  const ultimos4 = o.ultimos4 ?? null;
+  if (!ultimos4Valido(ultimos4)) return mala("«ultimos4» debe ser cuatro dígitos o null.");
+  const cuotasTotal = enteroEnRango(o.cuotas_total, 1, 600);
+  if (cuotasTotal === undefined) return mala("«cuotas_total» debe ser un entero de 1 a 600 o null.");
+  const diaPago = enteroEnRango(o.dia_pago, 1, 31);
+  if (diaPago === undefined) return mala("«dia_pago» debe ser un entero de 1 a 31 o null.");
+  const primeraTexto = o.primera_cuota ?? null;
+  const primeraCuota = primeraTexto === null ? null : fechaCalendario(primeraTexto);
+  if (primeraTexto !== null && primeraCuota === null) {
+    return mala("«primera_cuota» debe ser una fecha YYYY-MM-DD o null.");
+  }
+
+  // Un campo con valor en un tipo que no lo admite: la hoja manda null lo que su tipo no muestra.
+  const conValor: Record<string, unknown> = {
+    cuota,
+    cupo,
+    ultimos4,
+    monto_inicial: montoInicial,
+    cuotas_total: cuotasTotal,
+    dia_pago: diaPago,
+    primera_cuota: primeraCuota,
+  };
+  for (const [campo, tipos] of Object.entries(ADMITE)) {
+    if (conValor[campo] !== null && !tipos.includes(tipo)) {
+      return mala(`«${campo}» no aplica a una deuda de tipo ${tipo}.`);
+    }
+  }
+
   const saldo = leerSaldoInicial(o.saldo);
   if (typeof saldo === "string") return mala(saldo);
 
@@ -435,10 +556,16 @@ export async function crearDeuda(texto: string, almacen: AlmacenDinero): Promise
         // Ya validados arriba: un número o null.
         tasa_ea: tasa_ea === null ? null : (tasa_ea as number),
         cuota: cuota === null ? null : BigInt(cuota as number),
+        cupo: cupo === null ? null : BigInt(cupo),
+        monto_inicial: montoInicial === null ? null : BigInt(montoInicial),
+        ultimos4: ultimos4,
+        cuotas_total: cuotasTotal,
+        dia_pago: diaPago,
+        primera_cuota: primeraCuota,
       },
       saldo: { id: saldo.id, valor: BigInt(saldo.valor) },
     });
-    return { status: 201, cuerpo: deudaDto(nueva.deuda, nueva.saldo, null) };
+    return { status: 201, cuerpo: deudaDto(nueva.deuda, nueva.saldo, null, []) };
   } catch (e) {
     const codigo = codigoDe(e);
     if (codigo === "P2023" || codigo === "P2003") return mala("Un id no es válido.");
@@ -446,6 +573,70 @@ export async function crearDeuda(texto: string, almacen: AlmacenDinero): Promise
       try {
         const ya = await deudaExistente(id, almacen);
         if (ya) return ya;
+        return mala("Un id ya está en uso.");
+      } catch {
+        /* cae al 503 */
+      }
+    }
+    return NO_DISPONIBLE;
+  }
+}
+
+/** Anota el extracto de una tarjeta o de un crédito. */
+export async function anotarExtracto(
+  texto: string,
+  almacen: AlmacenDinero,
+  ahora: Date = new Date(),
+): Promise<Respuesta> {
+  const o = leerJson(texto);
+  if (!o) return mala("El cuerpo debe ser un objeto JSON.");
+  const { id, deuda_id, intereses } = o;
+  if (!esUuid(id)) return mala("«id» debe ser un uuid.");
+  if (!esUuid(deuda_id)) return mala("«deuda_id» debe ser un uuid.");
+  const cierre = fechaCalendario(o.cierre);
+  if (cierre === null) return mala("«cierre» debe ser una fecha YYYY-MM-DD.");
+  // La hoja limita a hoy en la zona del teléfono; el día de margen cubre la zona.
+  const tope = Date.UTC(ahora.getUTCFullYear(), ahora.getUTCMonth(), ahora.getUTCDate() + 1);
+  if (cierre.getTime() > tope) return mala("«cierre» no puede ser posterior a hoy.");
+  if (!enteroSeguro(intereses) || intereses < 0) return mala("«intereses» debe ser un entero de 0 en adelante.");
+  const pagoMinimo = o.pago_minimo ?? null;
+  if (pagoMinimo !== null && (!enteroSeguro(pagoMinimo) || pagoMinimo < 0)) {
+    return mala("«pago_minimo» debe ser un entero de 0 en adelante o null.");
+  }
+  const limiteTexto = o.fecha_limite ?? null;
+  const fechaLimite = limiteTexto === null ? null : fechaCalendario(limiteTexto);
+  if (limiteTexto !== null && fechaLimite === null) {
+    return mala("«fecha_limite» debe ser una fecha YYYY-MM-DD o null.");
+  }
+  if (fechaLimite !== null && fechaLimite.getTime() < cierre.getTime()) {
+    return mala("«fecha_limite» no puede ser anterior al cierre.");
+  }
+
+  try {
+    const ya = await almacen.extractoPorId(id);
+    if (ya) return { status: 200, cuerpo: extractoAnotadoDto(ya) };
+    const deuda = await almacen.deudaPorId(deuda_id);
+    if (!deuda) return mala("La deuda no existe.");
+    if (deuda.tipo === "personal") return mala("Una deuda personal no lleva extracto.");
+    if (deuda.tipo === "credito" && (pagoMinimo !== null || fechaLimite !== null)) {
+      return mala("Un crédito no lleva «pago_minimo» ni «fecha_limite».");
+    }
+    const nuevo = await almacen.crearExtracto({
+      id,
+      deuda_id,
+      cierre,
+      intereses: BigInt(intereses),
+      pago_minimo: pagoMinimo === null ? null : BigInt(pagoMinimo as number),
+      fecha_limite: fechaLimite,
+    });
+    return { status: 201, cuerpo: extractoAnotadoDto(nuevo) };
+  } catch (e) {
+    const codigo = codigoDe(e);
+    if (codigo === "P2023" || codigo === "P2003") return mala("Un id no es válido.");
+    if (codigo === "P2002") {
+      try {
+        const ya = await almacen.extractoPorId(id);
+        if (ya) return { status: 200, cuerpo: extractoAnotadoDto(ya) };
         return mala("Un id ya está en uso.");
       } catch {
         /* cae al 503 */

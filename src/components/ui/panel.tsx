@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, type ReactNode } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
 import { paneles } from "@/lib/liquido";
@@ -28,19 +28,37 @@ export function Panel({
   titulo,
   children,
   className,
+  pie,
+  bloqueado = false,
+  alto,
 }: {
   abierto: boolean;
   alCerrar: () => void;
   titulo: ReactNode;
   children: ReactNode;
   className?: string;
+  /** Opcional: un pie fijo abajo (con su degradado encima); el cuerpo se desplaza sin barra. */
+  pie?: ReactNode;
+  /** Opcional: ni el velo, ni Escape, ni la × cierran el panel (guardando). */
+  bloqueado?: boolean;
+  /** Opcional: «pantalla» mide 90 % fijo; «contenido» toma su alto al abrir y lo conserva. */
+  alto?: "pantalla" | "contenido";
 }) {
   const idTitulo = useId();
   const panelRef = useRef<HTMLDivElement>(null);
   const alCerrarRef = useRef(alCerrar);
+  const bloqueadoRef = useRef(bloqueado);
   useEffect(() => {
     alCerrarRef.current = alCerrar;
-  }, [alCerrar]);
+    bloqueadoRef.current = bloqueado;
+  }, [alCerrar, bloqueado]);
+
+  // «contenido»: el alto con que abre queda fijo, aunque cambie lo de adentro.
+  useLayoutEffect(() => {
+    const panel = panelRef.current;
+    if (!abierto || alto !== "contenido" || !panel) return;
+    panel.style.height = `${panel.offsetHeight}px`;
+  }, [abierto, alto]);
 
   useEffect(() => {
     if (!abierto) return;
@@ -56,7 +74,7 @@ export function Panel({
     const alTeclear = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.stopPropagation();
-        alCerrarRef.current();
+        if (!bloqueadoRef.current) alCerrarRef.current();
         return;
       }
       if (e.key !== "Tab" || !panel) return;
@@ -92,14 +110,20 @@ export function Panel({
 
   return createPortal(
     <>
-      <div className="scrim" onClick={() => alCerrar()} aria-hidden="true" />
+      <div
+        className="scrim"
+        onClick={() => {
+          if (!bloqueado) alCerrar();
+        }}
+        aria-hidden="true"
+      />
       <div
         ref={panelRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby={idTitulo}
         tabIndex={-1}
-        className={cn("pane", className)}
+        className={cn("pane", alto === "pantalla" && "pane-alto", className)}
       >
         <div className="pane-cab">
           <h2 id={idTitulo} className="tit-3">
@@ -108,13 +132,17 @@ export function Panel({
           <button
             type="button"
             aria-label="Cerrar"
+            disabled={bloqueado}
             onClick={() => alCerrar()}
-            className="text-ink2 -mr-3 inline-flex size-11 shrink-0 items-center justify-center rounded-full text-2xl leading-none outline-none focus-visible:[box-shadow:var(--fsh-f)]"
+            className="pane-x text-ink2 -mr-3 inline-flex size-11 shrink-0 items-center justify-center rounded-full text-2xl leading-none outline-none focus-visible:[box-shadow:var(--fsh-f)] disabled:opacity-40"
           >
             <span aria-hidden="true">×</span>
           </button>
         </div>
-        <div className="pane-cuerpo">{children}</div>
+        <div className="pane-cuerpo" data-pie={pie != null ? "" : undefined}>
+          {children}
+        </div>
+        {pie != null && <div className="pane-pie">{pie}</div>}
       </div>
     </>,
     document.body,
