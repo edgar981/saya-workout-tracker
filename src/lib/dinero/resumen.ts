@@ -5,7 +5,7 @@
  * guarda: todo sale de las cuentas y las deudas que llegan del servidor.
  */
 
-import type { CuentaDto, DeudaDto } from "./servidor";
+import type { CuentaDto, DeudaDto, ExtractoDto } from "./servidor";
 
 const MESES = [
   "enero",
@@ -217,10 +217,15 @@ export function quedanDespuesDePagar(cuentas: readonly CuentaDto[], pagos: reado
 
 export interface FilaInteres {
   deuda: DeudaDto;
+  extracto: ExtractoDto;
   valor: number;
 }
 
-/** Los extractos con `cierre` en el mes anterior al de `hoy`: total y filas. */
+/**
+ * Cada extracto con `cierre` en el mes anterior al de `hoy`, de cualquier deuda de
+ * la lista (también una en 0, que ya no se muestra): total y una fila por extracto,
+ * de mayor a menor interés.
+ */
 export function interesesDelMes(
   deudas: readonly DeudaDto[],
   hoy: string,
@@ -228,10 +233,12 @@ export function interesesDelMes(
   const [a, m] = partes(hoy);
   const anterior = m === 1 ? `${String(a - 1).padStart(4, "0")}-12` : `${String(a).padStart(4, "0")}-${String(m - 1).padStart(2, "0")}`;
   const filas: FilaInteres[] = [];
-  for (const d of deudasVisibles(deudas)) {
-    const e = d.extracto;
-    if (e && e.cierre.slice(0, 7) === anterior) filas.push({ deuda: d, valor: e.intereses });
+  for (const d of deudas) {
+    for (const e of d.extractos) {
+      if (e.cierre.slice(0, 7) === anterior) filas.push({ deuda: d, extracto: e, valor: e.intereses });
+    }
   }
+  filas.sort((x, y) => y.valor - x.valor);
   return { total: filas.reduce((s, f) => s + f.valor, 0), filas };
 }
 
@@ -270,23 +277,48 @@ function mesDe(iso: string): [number, number] {
   return [a, m];
 }
 
-/** La línea bajo el nombre de una deuda. */
+/**
+ * La línea bajo el nombre de una deuda, sus partes unidas por « · » (la vacía se salta):
+ * una tarjeta, con quién, «···últimos4» y la tasa; un crédito, con quién, la tasa y la
+ * cuota; una personal, «Personal», la tasa y la cuota, o «Sin fecha ni interés» si no
+ * tiene ninguna de las dos.
+ */
 export function lineaDeuda(d: DeudaDto): string {
-  const base =
-    d.tipo === "personal" ? "Personal" : `${d.con_quien}${d.ultimos4 ? ` ···${d.ultimos4}` : ""}`;
-  const partesLinea: string[] = [];
-  if (base !== "") partesLinea.push(base);
-  if (d.tasa_ea !== null) partesLinea.push(formatoTasa(d.tasa_ea));
-  if (d.tipo === "credito" && d.cuota !== null) partesLinea.push(`cuota ${formatoCOP(d.cuota)}`);
-  if (d.tasa_ea === null && d.cuota === null && d.dia_pago === null) {
-    partesLinea.push("Sin fecha ni interés");
+  const tasa = d.tasa_ea !== null ? formatoTasa(d.tasa_ea) : "";
+  const cuota = d.cuota !== null ? `cuota ${formatoCOP(d.cuota)}` : "";
+  const lista: string[] = [];
+  if (d.tipo === "tarjeta") {
+    lista.push(`${d.con_quien}${d.ultimos4 ? ` ···${d.ultimos4}` : ""}`.trim(), tasa);
+  } else if (d.tipo === "credito") {
+    lista.push(d.con_quien, tasa, cuota);
+  } else {
+    lista.push("Personal", tasa, cuota);
+    if (tasa === "" && cuota === "") lista.push("Sin fecha ni interés");
   }
-  return partesLinea.join(" · ");
+  return lista.filter((p) => p !== "").join(" · ");
 }
 
-/** «Tarjeta Mastercard Bancolombia»: el nombre y con quién, con un espacio. */
+/** «Tarjeta Mastercard Bancolombia», «Crédito libre inversión Davivienda», «Préstamo de Andrés». */
 export function nombreLargo(d: DeudaDto): string {
-  return `${d.nombre} ${d.con_quien}`.trim();
+  const nombre = d.nombre.trim();
+  let base = nombre;
+  if (d.tipo === "tarjeta") {
+    base = /^tarjeta(\s|$)/i.test(nombre) ? nombre : `Tarjeta ${nombre}`;
+  } else if (d.tipo === "credito") {
+    if (/^cr[eé]dito(\s|$)/i.test(nombre)) {
+      base = nombre;
+    } else {
+      // La primera letra en minúscula, salvo una sigla (la segunda letra también es mayúscula).
+      const sigla = nombre.length > 1 && nombre[1] !== nombre[1].toLowerCase();
+      base = `Crédito ${sigla ? nombre : nombre.charAt(0).toLowerCase() + nombre.slice(1)}`;
+    }
+  }
+  const conQuien = d.con_quien.trim();
+  const yaEsta = nombre
+    .toLowerCase()
+    .split(/\s+/)
+    .includes(conQuien.toLowerCase());
+  return conQuien === "" || yaEsta ? base : `${base} ${conQuien}`;
 }
 
 /** «Ahorros ···4821»: el tipo y, con `ultimos4`, los cuatro. */

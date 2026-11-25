@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 
 import { Cabeza, Hoja } from "@/components/ui/hoja";
 import { cn } from "@/lib/utils";
@@ -23,8 +23,8 @@ import { cn } from "@/lib/utils";
  */
 
 /** Bloque de relleno en forma de píldora, con barrido. */
-function Sk({ className }: { className?: string }) {
-  return <div className={cn("sk", className)} />;
+function Sk({ className, style }: { className?: string; style?: CSSProperties }) {
+  return <div className={cn("sk", className)} style={style} />;
 }
 
 /** El mismo contenedor que usan las pantallas reales, para que el ancho, el
@@ -261,6 +261,45 @@ export function DineroSkeleton() {
         </main>
       </Hoja>
     </>
+  );
+}
+
+/** «Sale en» y «Lo que debes» mientras «Reintentar» vuelve a leer las deudas: la forma de las dos
+ *  secciones dibujadas (kicker y tres filas de dos líneas; la segunda, además, la cifra y la fila
+ *  de dos botones). Va dentro de la hoja de Dinero, en el lugar del bloque de error. */
+export function DeudasSkeleton() {
+  const filas = (
+    <div className="mt-2">
+      {["66%", "54%", "66%"].map((w, i) => (
+        <div key={i} className="fila gap-3">
+          <div className="min-w-0 flex-1">
+            <Sk className="h-[14px]" style={{ width: w }} />
+            <Sk className="mt-2 h-[11px] w-[36%]" />
+          </div>
+          <Sk className="h-[14px] w-14 shrink-0" />
+        </div>
+      ))}
+    </div>
+  );
+  return (
+    <div role="status" aria-busy="true">
+      <span className="sr-only">Cargando…</span>
+      <div aria-hidden="true">
+        <section className="sec mt-[30px]">
+          <Sk className="h-[11px] w-[44%] rounded-[4px]" />
+          {filas}
+        </section>
+        <section className="sec">
+          <Sk className="h-[11px] w-[38%] rounded-[4px]" />
+          <Sk className="mt-3 h-[34px] w-[52%] rounded-[10px]" />
+          {filas}
+          <div className="mt-3.5 flex gap-2.5">
+            <Sk className="h-12 flex-1 rounded-3xl" />
+            <Sk className="h-12 flex-1 rounded-3xl" />
+          </div>
+        </section>
+      </div>
+    </div>
   );
 }
 

@@ -21,7 +21,7 @@ import {
   progresoDeuda,
   quedanDespuesDePagar,
 } from "./resumen";
-import type { CuentaDto, DeudaDto } from "./servidor";
+import type { CuentaDto, DeudaDto, ExtractoDto } from "./servidor";
 
 const HOY = "2026-11-10";
 
@@ -56,7 +56,15 @@ const deuda = (o: Partial<DeudaDto>): DeudaDto => ({
   creada_en: "2026-01-01T00:00:00.000Z",
   saldo: null,
   extracto: null,
+  extractos: [],
   ...o,
+});
+
+/** Un `extracto` y, con él, su lista de `extractos` (como los lee el servidor). */
+const conExtractos = (d: DeudaDto, ...e: ExtractoDto[]): DeudaDto => ({
+  ...d,
+  extracto: e[0] ?? null,
+  extractos: e,
 });
 
 const CUENTAS = [
@@ -64,6 +72,15 @@ const CUENTAS = [
   cuenta("Nu", "Cuenta", 1250000),
   cuenta("Nequi", "Depósito", 186400),
 ];
+
+const EXTRACTO_T: ExtractoDto = {
+  id: "e1",
+  cierre: "2026-10-30",
+  intereses: 57900,
+  pago_minimo: 312000,
+  fecha_limite: "2026-11-15",
+  anotado_en: "2026-10-30T12:00:00.000Z",
+};
 
 const TARJETA = deuda({
   id: "t",
@@ -74,15 +91,18 @@ const TARJETA = deuda({
   tasa_ea: 26.4,
   cupo: 6000000,
   saldo: saldo(2940000),
-  extracto: {
-    id: "e1",
-    cierre: "2026-10-30",
-    intereses: 57900,
-    pago_minimo: 312000,
-    fecha_limite: "2026-11-15",
-    anotado_en: "2026-10-30T12:00:00.000Z",
-  },
+  extracto: EXTRACTO_T,
+  extractos: [EXTRACTO_T],
 });
+
+const EXTRACTO_C: ExtractoDto = {
+  id: "e2",
+  cierre: "2026-10-28",
+  intereses: 189400,
+  pago_minimo: null,
+  fecha_limite: null,
+  anotado_en: "2026-10-28T12:00:00.000Z",
+};
 
 const CREDITO = deuda({
   id: "c",
@@ -95,14 +115,8 @@ const CREDITO = deuda({
   primera_cuota: "2025-10-28",
   dia_pago: 28,
   saldo: saldo(12546900),
-  extracto: {
-    id: "e2",
-    cierre: "2026-10-28",
-    intereses: 189400,
-    pago_minimo: null,
-    fecha_limite: null,
-    anotado_en: "2026-10-28T12:00:00.000Z",
-  },
+  extracto: EXTRACTO_C,
+  extractos: [EXTRACTO_C],
 });
 
 const PERSONAL = deuda({
@@ -181,15 +195,35 @@ describe("las sumas", () => {
     expect(deudasVisibles([TARJETA, cero])).toEqual([TARJETA]);
     expect(loQueDebes([TARJETA, cero])).toBe(2940000);
     expect(pagosDelMes([cero], HOY)).toEqual([]);
-    expect(interesesDelMes([cero], HOY)).toEqual({ total: 0, filas: [] });
   });
-  it("los intereses de octubre", () => {
+  it("los intereses de octubre: una fila por extracto, de mayor a menor", () => {
     const r = interesesDelMes(DEUDAS, HOY);
     expect(r.total).toBe(247300);
-    expect(r.filas.map((f) => [nombreLargo(f.deuda), f.valor])).toEqual([
-      ["Tarjeta Mastercard Bancolombia", 57900],
-      ["Libre inversión Davivienda", 189400],
+    expect(r.filas.map((f) => [nombreLargo(f.deuda), f.valor, f.extracto.id])).toEqual([
+      ["Crédito libre inversión Davivienda", 189400, "e2"],
+      ["Tarjeta Mastercard Bancolombia", 57900, "e1"],
     ]);
+  });
+  it("los intereses cuentan una deuda en 0 aunque ya no se muestre", () => {
+    const cero = { ...CREDITO, saldo: saldo(0) };
+    expect(deudasVisibles([cero])).toEqual([]);
+    expect(interesesDelMes([cero], HOY)).toEqual({
+      total: 189400,
+      filas: [{ deuda: cero, extracto: EXTRACTO_C, valor: 189400 }],
+    });
+  });
+  it("el extracto de noviembre no quita el de octubre; dos de octubre dan dos filas", () => {
+    const nov: ExtractoDto = { ...EXTRACTO_T, id: "e3", cierre: "2026-11-05", intereses: 70000 };
+    const oct2: ExtractoDto = { ...EXTRACTO_T, id: "e4", cierre: "2026-10-02", intereses: 100 };
+    const t = conExtractos(TARJETA, nov, EXTRACTO_T, oct2);
+    expect(t.extracto?.id).toBe("e3");
+    const r = interesesDelMes([t, CREDITO], HOY);
+    expect(r.filas.map((f) => f.extracto.id)).toEqual(["e2", "e1", "e4"]);
+    expect(r.total).toBe(247300 + 100);
+  });
+  it("en enero, el mes anterior es diciembre", () => {
+    const dic: ExtractoDto = { ...EXTRACTO_T, id: "e5", cierre: "2026-12-30" };
+    expect(interesesDelMes([conExtractos(TARJETA, dic)], "2027-01-10").filas).toHaveLength(1);
   });
 });
 
@@ -239,6 +273,34 @@ describe("el progreso y las líneas", () => {
     expect(lineaDeuda(TARJETA)).toBe("Bancolombia ···7730 · 26,4 % E.A.");
     expect(lineaDeuda(CREDITO)).toBe("Davivienda · 18,9 % E.A. · cuota $645.600");
     expect(lineaDeuda(PERSONAL)).toBe("Personal · Sin fecha ni interés");
+  });
+  it("la línea de una deuda, caso por caso", () => {
+    expect(lineaDeuda(deuda({ tipo: "personal", cuota: 150000 }))).toBe("Personal · cuota $150.000");
+    expect(lineaDeuda(deuda({ tipo: "personal", tasa_ea: 12, cuota: 150000 }))).toBe(
+      "Personal · 12 % E.A. · cuota $150.000",
+    );
+    expect(lineaDeuda(deuda({ tipo: "tarjeta", con_quien: "Nu", ultimos4: "1846" }))).toBe("Nu ···1846");
+    expect(lineaDeuda(deuda({ tipo: "tarjeta", con_quien: "Nu" }))).toBe("Nu");
+    expect(lineaDeuda(deuda({ tipo: "tarjeta", con_quien: "", ultimos4: "1846" }))).toBe("···1846");
+    expect(lineaDeuda(deuda({ tipo: "tarjeta" }))).toBe("");
+    expect(lineaDeuda(deuda({ tipo: "credito", con_quien: "Davivienda", cuota: 645600 }))).toBe(
+      "Davivienda · cuota $645.600",
+    );
+  });
+  it("el nombre largo, caso por caso", () => {
+    const n = (tipo: string, nombre: string, con_quien: string) => nombreLargo(deuda({ tipo, nombre, con_quien }));
+    expect(n("tarjeta", "Mastercard", "Bancolombia")).toBe("Tarjeta Mastercard Bancolombia");
+    expect(n("tarjeta", "tarjeta oro", "Bancolombia")).toBe("tarjeta oro Bancolombia");
+    expect(n("tarjeta", "Tarjetas viejas", "X")).toBe("Tarjeta Tarjetas viejas X");
+    expect(n("tarjeta", "Nu", "Nu")).toBe("Tarjeta Nu");
+    expect(n("credito", "Libre inversión", "Davivienda")).toBe("Crédito libre inversión Davivienda");
+    expect(n("credito", "Vehículo", "Banco de Bogotá")).toBe("Crédito vehículo Banco de Bogotá");
+    expect(n("credito", "BBVA hipotecario", "")).toBe("Crédito BBVA hipotecario");
+    expect(n("credito", "Crédito de estudio", "ICETEX")).toBe("Crédito de estudio ICETEX");
+    expect(n("credito", "Credito vehículo", "X")).toBe("Credito vehículo X");
+    expect(n("credito", "Vehículo", "vehículo")).toBe("Crédito vehículo");
+    expect(n("personal", "Préstamo de Andrés", "Andrés")).toBe("Préstamo de Andrés");
+    expect(n("personal", "Préstamo", "Andrés")).toBe("Préstamo Andrés");
   });
   it("el nombre largo y la línea de una cuenta", () => {
     expect(nombreLargo(TARJETA)).toBe("Tarjeta Mastercard Bancolombia");

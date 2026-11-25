@@ -5,7 +5,7 @@
  * son el mismo `{ ok: false }`.
  */
 
-import type { CuentaDto, DeudaDto, SaldoAnotadoDto } from "./servidor";
+import type { CuentaDto, DeudaDto, ExtractoAnotadoDto, SaldoAnotadoDto } from "./servidor";
 
 /** Lo que espera el teléfono al servidor antes de rendirse. */
 export const ESPERA_DINERO_MS = 15000;
@@ -82,11 +82,33 @@ export function crearDeuda(
     con_quien: string;
     tasa_ea: number | null;
     cuota: number | null;
+    cupo: number | null;
+    monto_inicial: number | null;
+    ultimos4: string | null;
+    cuotas_total: number | null;
+    dia_pago: number | null;
+    /** `YYYY-MM-DD`. */
+    primera_cuota: string | null;
     saldo: { id: string; valor: number };
   },
   opciones: Opciones = {},
 ): Promise<Resultado<DeudaDto>> {
   return pedir("/api/dinero/deudas", post(deuda), opciones.fetch, opciones.signal);
+}
+
+export function anotarExtracto(
+  extracto: {
+    id: string;
+    deuda_id: string;
+    /** `YYYY-MM-DD`. */
+    cierre: string;
+    intereses: number;
+    pago_minimo: number | null;
+    fecha_limite: string | null;
+  },
+  opciones: Opciones = {},
+): Promise<Resultado<ExtractoAnotadoDto>> {
+  return pedir("/api/dinero/extractos", post(extracto), opciones.fetch, opciones.signal);
 }
 
 export function anotarSaldo(

@@ -664,6 +664,230 @@
     overscroll-behavior: contain;
     padding: 0 20px calc(22px + env(safe-area-inset-bottom));
   }
+  /* SAYA-DINERO-2 · las hojas de formulario de Dinero. Todo lo de abajo sólo aplica con las props
+     opcionales del Panel (`alto`, `pie`); sin ellas el panel pinta como siempre. */
+  .pane-alto {
+    height: 90%;
+  }
+  .pane-cuerpo[data-pie] {
+    padding: 2px 20px 24px;
+    scrollbar-width: none;
+  }
+  .pane-cuerpo[data-pie]::-webkit-scrollbar {
+    display: none;
+  }
+  .pane-pie {
+    position: relative;
+    flex-shrink: 0;
+    padding: 10px 20px calc(22px + env(safe-area-inset-bottom));
+    background: var(--panel-solido);
+  }
+  .pane-pie::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 100%;
+    height: 24px;
+    background: linear-gradient(to bottom, rgba(8, 8, 11, 0), var(--panel-solido));
+    pointer-events: none;
+  }
+  .fh-g {
+    margin-top: 20px;
+  }
+  .fh-g.fh-op {
+    margin-top: 28px;
+  }
+  .fl {
+    display: block;
+    margin-bottom: 9px;
+    font-size: 11px;
+    line-height: 14px;
+    font-weight: 600;
+    font-stretch: 112%;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: rgba(238, 240, 246, 0.78);
+  }
+  .fl-op {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .fl-op::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.11);
+  }
+  .fh-rej {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px 10px;
+  }
+  .fh-rej > div {
+    min-width: 0;
+  }
+  .lbl {
+    display: block;
+    margin-bottom: 8px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-size: 13px;
+    line-height: 18px;
+    font-weight: 600;
+    color: var(--ink2);
+  }
+  .fh-campos {
+    transition: opacity 0.15s var(--ease);
+  }
+  .fh-campos[data-guardando] {
+    opacity: 0.6;
+  }
+  .fh-campo {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-width: 0;
+    min-height: 52px;
+    border-radius: 16px;
+    background: var(--fbg);
+    box-shadow: var(--fsh);
+    transition: box-shadow 0.2s var(--ease);
+  }
+  .fh-campo:focus-within {
+    box-shadow: var(--fsh-f);
+  }
+  .fh-campo input {
+    flex: 1;
+    min-width: 0;
+    align-self: stretch;
+    padding: 0 16px;
+    background: transparent;
+    outline: none;
+    font-size: 16px;
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+  }
+  .fh-campo.fh-afijo {
+    padding: 0 14px;
+    gap: 8px;
+  }
+  .fh-campo.fh-afijo input {
+    padding: 0;
+  }
+  .fh-campo .fh-af {
+    flex-shrink: 0;
+    font-size: 15px;
+    color: var(--ink2);
+    font-variant-numeric: tabular-nums;
+  }
+  .fh-campo.fh-grande {
+    min-height: 68px;
+    border-radius: 20px;
+    padding: 0 18px;
+    gap: 6px;
+  }
+  .fh-campo.fh-grande input {
+    font-size: 30px;
+    font-weight: 600;
+  }
+  .fh-campo.fh-grande .fh-af {
+    font-size: 26px;
+  }
+  .fh-campo[data-invalido],
+  .fh-campo[data-invalido]:focus-within {
+    box-shadow: inset 0 0 0 1.5px #ff4d5e;
+  }
+  .fh-campo[data-invalido]::after {
+    content: "!";
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    width: 18px;
+    height: 18px;
+    margin: 0 14px 0 0;
+    border-radius: 9999px;
+    background: #ff4d5e;
+    font-size: 11px;
+    line-height: 1;
+    font-weight: 700;
+    color: #fff;
+  }
+  .fh-campo.fh-afijo[data-invalido]::after,
+  .fh-campo.fh-grande[data-invalido]::after {
+    margin-right: 0;
+  }
+  .fh-fecha {
+    justify-content: space-between;
+    gap: 8px;
+    padding: 0 16px;
+    font-size: 16px;
+    color: var(--ink);
+  }
+  .fh-fecha[data-vacio] > .fh-fv {
+    color: rgba(238, 240, 246, 0.66);
+  }
+  .fh-fecha .fh-fv {
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .fh-fecha .fh-ic {
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    color: var(--ink3);
+  }
+  .fh-fecha[data-invalido] .fh-ic {
+    display: none;
+  }
+  .fh-fecha[data-invalido]::after {
+    margin-right: 0;
+  }
+  .fh-fecha input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    opacity: 0;
+    color-scheme: dark;
+    cursor: pointer;
+  }
+  .fh-oculto {
+    visibility: hidden;
+  }
+  @media (hover: hover) {
+    .fh-campo:hover {
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.16),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+    }
+    .fh-campo:focus-within:hover {
+      box-shadow: var(--fsh-f);
+    }
+    .fh-campo[data-invalido]:hover {
+      box-shadow: inset 0 0 0 1.5px #ff4d5e;
+    }
+    .fh-form [data-slot="pildora"][aria-pressed="false"]:hover {
+      background: rgba(255, 255, 255, 0.09);
+    }
+    .pane-x:hover:not(:disabled) {
+      background: rgba(255, 255, 255, 0.08);
+    }
+    .pane-pie button:hover:not([aria-disabled="true"]):not(:disabled) {
+      filter: brightness(1.06);
+    }
+  }
+  .acts2 {
+    display: flex;
+    gap: 10px;
+    margin-top: 12px;
+  }
   .toast {
     position: fixed;
     left: 16px;
