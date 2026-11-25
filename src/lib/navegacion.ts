@@ -2,9 +2,9 @@
  * Reglas de navegación de Cromo líquido, PURAS: sin React ni `window`, para
  * probarlas en entorno `node`. El shell y la barra sólo las consumen.
  *
- * La navegación de las áreas es la barra de abajo, sólo con iconos (las áreas
- * que existen; Dinero entra cuando exista, con sólo agregarlo a `AREAS`). Las demás pantallas se «empujan» y llevan la píldora «‹ Área»; en
- * una sesión no hay navegación.
+ * La navegación de las áreas es la barra de abajo, sólo con iconos. Las demás
+ * pantallas se «empujan» y llevan la píldora «‹ Área»; en una sesión no hay
+ * navegación.
  */
 
 export type IconoArea = "hoy" | "cuerpo" | "dinero" | "tiempo";
@@ -19,6 +19,7 @@ export interface Area {
 export const AREAS: readonly Area[] = [
   { href: "/", etiqueta: "Hoy", icono: "hoy" },
   { href: "/cuerpo", etiqueta: "Cuerpo", icono: "cuerpo" },
+  { href: "/dinero", etiqueta: "Dinero", icono: "dinero" },
   { href: "/tiempo", etiqueta: "Tiempo", icono: "tiempo" },
 ];
 
@@ -49,6 +50,7 @@ export function nivelDeRuta(ruta: string): Nivel {
 const ETIQUETAS_FIJAS: Record<string, string> = {
   "/": "Hoy",
   "/cuerpo": "Cuerpo",
+  "/dinero": "Dinero",
   "/tiempo": "Tiempo",
   "/historial": "Historial",
   "/progreso": "Progreso",
