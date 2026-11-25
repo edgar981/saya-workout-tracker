@@ -196,6 +196,36 @@ export function CuerpoSkeleton() {
   );
 }
 
+// ── /tiempo ─────────────────────────────────────────────────────────────────
+/** Cabeza real y una hoja con la forma de la pantalla: kicker, cifra, la línea de
+ *  la típica, el botón y las filas de «Por tema». */
+export function TiempoSkeleton() {
+  return (
+    <>
+      <div className="px-4">
+        <Cabeza titulo="Tiempo" subtitulo="Aprender" ajustes />
+      </div>
+      <Hoja>
+        <main className="mx-auto w-full max-w-md p-4">
+          <div role="status" aria-busy="true">
+            <span className="sr-only">Cargando…</span>
+            <div aria-hidden="true">
+              <Sk className="h-[11px] w-[34%]" />
+              <Sk className="mt-4 h-[38px] w-[58%] rounded-[14px]" />
+              <Sk className="mt-[14px] h-4 w-[72%]" />
+              <Sk className="mt-3 h-12 w-full" />
+              <Sk className="mt-[30px] h-[11px] w-[22%]" />
+              <Sk className="mt-[18px] h-4 w-full" />
+              <Sk className="mt-[22px] h-4 w-[86%]" />
+              <Sk className="mt-[22px] h-4 w-[94%]" />
+            </div>
+          </div>
+        </main>
+      </Hoja>
+    </>
+  );
+}
+
 // ── /historial ──────────────────────────────────────────────────────────────
 export function HistorialSkeleton() {
   return (

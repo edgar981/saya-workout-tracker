@@ -29,6 +29,7 @@ import {
   listRoutineDays,
   listSessionSummaries,
   startSession,
+  todayISO,
   type SessionSummary,
 } from "@/lib/db/queries";
 import type { BodyweightLog, Mesociclo, RoutineDay, Session } from "@/lib/db/types";
@@ -59,6 +60,16 @@ import {
   semanaMesociclo,
   subtituloHoy,
 } from "@/lib/hoy";
+import { leer as leerTiempo } from "@/lib/tiempo/cliente";
+import {
+  desdeParaLeer,
+  escalaTesela,
+  formatoHM,
+  partesHM,
+  porcentajeDe,
+  resumen,
+  type DatosTiempo,
+} from "@/lib/tiempo/semana";
 import { useNavegando } from "@/lib/use-navegando";
 import { cn } from "@/lib/utils";
 
@@ -456,6 +467,17 @@ function Contenido({ vista }: { vista: HomeVista }) {
   // sesión: abre esta hoja. Es solo estado de UI; no escribe nada en Dexie.
   const [selectedDayId, setSelectedDayId] = useState<string | null>(null);
 
+  // Tiempo vive en el servidor: Hoy no lo espera. La lectura sale después de montar y
+  // la tesela «Aprender» aparece sólo si llega; si falla, no se muestra. Al desmontar se aborta.
+  const [tiempo, setTiempo] = useState<DatosTiempo | null>(null);
+  useEffect(() => {
+    const control = new AbortController();
+    void leerTiempo(desdeParaLeer(todayISO()), { signal: control.signal }).then((r) => {
+      if (!control.signal.aborted && r.ok) setTiempo(r.datos);
+    });
+    return () => control.abort();
+  }, []);
+
   // Una sola lectura del reloj para toda la pantalla. El contenido solo se
   // renderiza tras resolver el liveQuery (cliente): no hay desajuste de hidratación.
   const ahora = new Date();
@@ -504,6 +526,8 @@ function Contenido({ vista }: { vista: HomeVista }) {
   const semana = mesociclo?.iniciado_en ? semanaMesociclo(mesociclo.iniciado_en, ahora) : null;
   const subtitulo = subtituloHoy(mesociclo?.nombre ?? null, semana);
   const peso = resumirPeso(pesos);
+  const semanaTiempo =
+    tiempo !== null && tiempo.primer_registro !== null ? resumen(tiempo, todayISO()) : null;
   const trazo = peso
     ? puntosSpark(
         peso.serie.slice(-SPARK_N).map((p) => p.valor),
@@ -541,8 +565,7 @@ function Contenido({ vista }: { vista: HomeVista }) {
         </Link>
       )}
 
-      {/* Sólo las áreas que existen. Aprender, Disponible y Pago piden Tiempo y
-          Dinero: no se pintan. */}
+      {/* Sólo las áreas que existen. Disponible y Pago piden Dinero: no se pintan. */}
       <Link href="/cuerpo" className="tile sube" style={{ "--i": 2 } as CSSProperties}>
         <span className="kicker">Peso</span>
         <span className="tile-f2">
@@ -568,12 +591,55 @@ function Contenido({ vista }: { vista: HomeVista }) {
         )}
         {peso && <span className="tile-s">{fechaDiaMes(peso.ultimaFecha)}</span>}
       </Link>
+
+      {/* Aprender: sólo cuando llega la lectura del servidor y hay registros (N1 A). */}
+      {semanaTiempo && (
+        <Link href="/tiempo" className="tile sube" style={{ "--i": 3 } as CSSProperties}>
+          <span className="kicker">Aprender</span>
+          <span className="tile-f2">
+            {partesHM(semanaTiempo.minutos).map((p, i) => (
+              <span key={p.u}>
+                {i > 0 && " "}
+                {p.n}
+                <span className="tile-u">{p.u}</span>
+              </span>
+            ))}
+          </span>
+          <span className="med" aria-hidden="true">
+            <span
+              className="med-r"
+              style={{
+                width: `${porcentajeDe(
+                  semanaTiempo.minutos,
+                  escalaTesela(semanaTiempo.minutos, semanaTiempo.tipica),
+                )}%`,
+              }}
+            />
+            {semanaTiempo.tipica !== null && (
+              <span
+                className="med-m"
+                style={{
+                  left: `${porcentajeDe(
+                    semanaTiempo.tipica,
+                    escalaTesela(semanaTiempo.minutos, semanaTiempo.tipica),
+                  )}%`,
+                }}
+              />
+            )}
+          </span>
+          <span className="tile-s">
+            {semanaTiempo.tipica === null
+              ? "7 días"
+              : `7 días · típica ${formatoHM(semanaTiempo.tipica)}`}
+          </span>
+        </Link>
+      )}
     </>
   );
 
   const dias =
     days.length > 0 ? (
-      <div className="tile tile-dias sube" style={{ "--i": mostrarSesion ? 3 : 1 } as CSSProperties}>
+      <div className="tile tile-dias sube" style={{ "--i": mostrarSesion ? 4 : 1 } as CSSProperties}>
         <span className="kicker">{mostrarSesion ? "Empezar otro día" : "Entrenar"}</span>
         <div className="dstrip">
           {days.map(({ day }, i) => {
