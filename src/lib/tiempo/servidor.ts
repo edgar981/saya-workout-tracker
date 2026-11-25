@@ -25,6 +25,8 @@ export interface AlmacenTiempo {
   temas(): Promise<FilaTema[]>;
   registrosDesde(desde: Date): Promise<FilaRegistro[]>;
   primerRegistro(): Promise<Date | null>;
+  /** Todas las filas de las dos tablas, en una lectura coherente. */
+  todo(): Promise<{ temas: FilaTema[]; registros: FilaRegistro[] }>;
   temaPorId(id: string): Promise<FilaTema | null>;
   temaPorNombre(nombre: string): Promise<FilaTema | null>;
   crearTema(datos: { id: string; nombre: string }): Promise<FilaTema>;
@@ -161,6 +163,32 @@ export async function leerTiempo(
       primer_registro: primero ? deFecha(primero) : null,
     };
     return { status: 200, cuerpo };
+  } catch {
+    return NO_DISPONIBLE;
+  }
+}
+
+/** Todas las filas de Tiempo: la copia del owner (§15). */
+export async function exportarTiempo(almacen: AlmacenTiempo): Promise<Respuesta> {
+  try {
+    const t = await almacen.todo();
+    const cmp = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
+    return {
+      status: 200,
+      cuerpo: {
+        temas: [...t.temas]
+          .sort((a, b) => a.creado_en.getTime() - b.creado_en.getTime() || cmp(a.id, b.id))
+          .map((x) => ({ id: x.id, nombre: x.nombre, creado_en: x.creado_en.toISOString() })),
+        registros: [...t.registros]
+          .sort(
+            (a, b) =>
+              a.fecha.getTime() - b.fecha.getTime() ||
+              a.anotado_en.getTime() - b.anotado_en.getTime() ||
+              cmp(a.id, b.id),
+          )
+          .map(registroDto),
+      },
+    };
   } catch {
     return NO_DISPONIBLE;
   }

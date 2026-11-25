@@ -10,6 +10,7 @@ const RUTAS = [
   ["src/app/api/dinero/deudas/route.ts", ["GET", "POST"]],
   ["src/app/api/dinero/saldos/route.ts", ["POST"]],
   ["src/app/api/dinero/extractos/route.ts", ["POST"]],
+  ["src/app/api/dinero/exportar/route.ts", ["GET"]],
 ] as const;
 
 /** El texto de cada función exportada, con su nombre, de su `export` al siguiente (o al final). */

@@ -73,6 +73,17 @@ export const almacenDinero: AlmacenDinero = {
     ]);
     return [...ultimos, ...recientes];
   },
+  // Una sola transacción en forma de arreglo: una lectura coherente de las cinco tablas.
+  todo: async () => {
+    const [cuentas, saldosCuentas, deudas, saldosDeudas, extractos] = await prisma.$transaction([
+      prisma.cuenta.findMany({ select: CUENTA, orderBy: { creada_en: "asc" } }),
+      prisma.saldoCuenta.findMany({ select: SALDO_CUENTA, orderBy: { anotado_en: "asc" } }),
+      prisma.deuda.findMany({ select: DEUDA, orderBy: { creada_en: "asc" } }),
+      prisma.saldoDeuda.findMany({ select: SALDO_DEUDA, orderBy: { anotado_en: "asc" } }),
+      prisma.extracto.findMany({ select: EXTRACTO, orderBy: { anotado_en: "asc" } }),
+    ]);
+    return { cuentas, saldosCuentas, deudas: deudas.map(plana), saldosDeudas, extractos };
+  },
 
   cuentaPorId: (id) => prisma.cuenta.findUnique({ where: { id }, select: CUENTA }),
   ultimoSaldoDeCuenta: (cuentaId) =>

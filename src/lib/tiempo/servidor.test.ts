@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   crearRegistro,
   crearTema,
+  exportarTiempo,
   leerTiempo,
   origenPermitido,
   type AlmacenTiempo,
@@ -34,6 +35,7 @@ function almacen(
         "primerRegistro",
         registros.length ? new Date(Math.min(...registros.map((r) => r.fecha.getTime()))) : null,
       ),
+    todo: () => marca("todo", { temas: [...temas], registros: [...registros] }),
     temaPorId: (id) => marca("temaPorId", temas.find((t) => t.id === id) ?? null),
     temaPorNombre: (n) => marca("temaPorNombre", temas.find((t) => t.nombre === n) ?? null),
     crearTema: ({ id, nombre }) => {
@@ -232,6 +234,68 @@ describe("los errores del almacén", () => {
     const a = almacen();
     a.registroPorId = () => Promise.reject("texto");
     expect((await crearRegistro(JSON.stringify(reg), a)).status).toBe(503);
+  });
+});
+
+describe("exportarTiempo", () => {
+  const reg = (id: string, fecha: string, anotado: string, minutos = 30): FilaRegistro => ({
+    id,
+    tema_id: T1,
+    minutos,
+    fecha: new Date(`${fecha}T00:00:00Z`),
+    anotado_en: new Date(anotado),
+  });
+
+  it("vacío da 200 con arreglos vacíos", async () => {
+    expect(await exportarTiempo(almacen())).toEqual({
+      status: 200,
+      cuerpo: { temas: [], registros: [] },
+    });
+  });
+  it("la forma exacta de cada fila, con su fecha @db.Date y sus marcas ISO", async () => {
+    const r = await exportarTiempo(
+      almacen({
+        temas: [tema(T1, "Agentes")],
+        registros: [reg(R1, "2026-11-10", "2026-11-10T12:30:00Z", 90)],
+      }),
+    );
+    expect(r.status).toBe(200);
+    expect(r.cuerpo).toEqual({
+      temas: [{ id: T1, nombre: "Agentes", creado_en: "2026-11-01T00:00:00.000Z" }],
+      registros: [
+        {
+          id: R1,
+          tema_id: T1,
+          minutos: 90,
+          fecha: "2026-11-10",
+          anotado_en: "2026-11-10T12:30:00.000Z",
+        },
+      ],
+    });
+  });
+  it("el orden: temas por creado_en, registros por fecha y luego anotado_en", async () => {
+    const t2: FilaTema = { id: T2, nombre: "Zeta", creado_en: new Date("2026-10-01T00:00:00Z") };
+    const r = await exportarTiempo(
+      almacen({
+        temas: [tema(T1, "Agentes"), t2],
+        registros: [
+          reg(R2, "2026-11-10", "2026-11-10T13:00:00Z"),
+          reg(R1, "2026-11-10", "2026-11-10T12:00:00Z"),
+          reg("55555555-5555-4555-8555-555555555555", "2026-11-01", "2026-11-11T00:00:00Z"),
+        ],
+      }),
+    );
+    const c = r.cuerpo as { temas: { id: string }[]; registros: { id: string }[] };
+    expect(c.temas.map((x) => x.id)).toEqual([T2, T1]);
+    expect(c.registros.map((x) => x.id)).toEqual(["55555555-5555-4555-8555-555555555555", R1, R2]);
+  });
+  it("un almacén que lanza da 503", async () => {
+    const a = almacen();
+    a.todo = () => Promise.reject(new Error("boom"));
+    expect(await exportarTiempo(a)).toEqual({
+      status: 503,
+      cuerpo: { error: "No se pudo leer o guardar." },
+    });
   });
 });
 

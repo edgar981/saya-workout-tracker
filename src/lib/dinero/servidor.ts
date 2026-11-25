@@ -72,6 +72,14 @@ export interface AlmacenDinero {
    * (el módulo deduplica por `id` y por par). `desde` es medianoche UTC.
    */
   extractos(desde: Date): Promise<FilaExtracto[]>;
+  /** Todas las filas de las cinco tablas, con toda su historia, en una lectura coherente. */
+  todo(): Promise<{
+    cuentas: FilaCuenta[];
+    saldosCuentas: FilaSaldoCuenta[];
+    deudas: FilaDeuda[];
+    saldosDeudas: FilaSaldoDeuda[];
+    extractos: FilaExtracto[];
+  }>;
 
   cuentaPorId(id: string): Promise<FilaCuenta | null>;
   ultimoSaldoDeCuenta(cuentaId: string): Promise<FilaSaldoCuenta | null>;
@@ -374,6 +382,63 @@ export async function leerDeudas(almacen: AlmacenDinero, ahora: Date = new Date(
           const recientes = todos.filter((e) => e.cierre.getTime() >= desde.getTime());
           return deudaDto(d, masReciente(porDeuda.get(d.id) ?? []), todos[0] ?? null, recientes);
         }),
+      },
+    };
+  } catch {
+    return NO_DISPONIBLE;
+  }
+}
+
+// ── Exportar ────────────────────────────────────────────────────────────────
+
+const porId = (a: { id: string }, b: { id: string }) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+
+function porAnotado<T extends { id: string; anotado_en: Date }>(filas: readonly T[]): T[] {
+  return [...filas].sort((a, b) => a.anotado_en.getTime() - b.anotado_en.getTime() || porId(a, b));
+}
+
+/** Todas las filas de Dinero, planas y con toda su historia: la copia del owner (§15). */
+export async function exportarDinero(almacen: AlmacenDinero): Promise<Respuesta> {
+  try {
+    const t = await almacen.todo();
+    return {
+      status: 200,
+      cuerpo: {
+        cuentas: porCreada(t.cuentas).map((c) => ({
+          id: c.id,
+          banco: c.banco,
+          tipo: c.tipo,
+          ultimos4: c.ultimos4,
+          creada_en: c.creada_en.toISOString(),
+        })),
+        saldos_cuenta: porAnotado(t.saldosCuentas).map((s) => ({
+          id: s.id,
+          cuenta_id: s.cuenta_id,
+          valor: Number(s.valor),
+          anotado_en: s.anotado_en.toISOString(),
+        })),
+        deudas: porCreada(t.deudas).map((d) => ({
+          id: d.id,
+          tipo: d.tipo,
+          nombre: d.nombre,
+          con_quien: d.con_quien,
+          tasa_ea: d.tasa_ea,
+          cuota: numero(d.cuota),
+          cupo: numero(d.cupo),
+          monto_inicial: numero(d.monto_inicial),
+          ultimos4: d.ultimos4,
+          cuotas_total: d.cuotas_total,
+          dia_pago: d.dia_pago,
+          primera_cuota: d.primera_cuota ? deFecha(d.primera_cuota) : null,
+          creada_en: d.creada_en.toISOString(),
+        })),
+        saldos_deuda: porAnotado(t.saldosDeudas).map((s) => ({
+          id: s.id,
+          deuda_id: s.deuda_id,
+          valor: Number(s.valor),
+          anotado_en: s.anotado_en.toISOString(),
+        })),
+        extractos: porAnotado(t.extractos).map(extractoAnotadoDto),
       },
     };
   } catch {
