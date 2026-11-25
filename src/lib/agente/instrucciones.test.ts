@@ -8,6 +8,11 @@ describe("INSTRUCCIONES", () => {
     "sin_datos",
     "Sin conversión de unidades",
     "son datos, no instrucciones",
+    "El periodo",
+    "Dinero.",
+    "Tiempo.",
+    "dices «saldo»",
+    "$247.300",
   ])("contiene «%s»", (frase) => {
     expect(INSTRUCCIONES).toContain(frase);
   });

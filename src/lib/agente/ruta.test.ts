@@ -22,6 +22,12 @@ describe("route.ts del agente", () => {
       expect(ruta.indexOf(despues)).toBeGreaterThan(sesion);
     }
   });
+  it("importa los dos almacenes, después de la sesión, y no toca prisma", () => {
+    expect(ruta).toContain("almacenDinero");
+    expect(ruta).toContain("almacenTiempo");
+    expect(ruta.indexOf("comprobarAcceso(")).toBeLessThan(ruta.indexOf("almacenDinero.todo"));
+    expect(ruta).not.toContain("@/lib/prisma");
+  });
   it("401 «Sin sesión.»", () => {
     expect(ruta).toContain('"Sin sesión."');
     expect(ruta).toContain("status: 401");

@@ -94,9 +94,8 @@ export function HojaAgente() {
       try {
         const hoy = todayISO();
         const datos = await leerDatosCuerpo(periodoDe(pregunta, hoy).desde);
-        const pedido = prepararPedido(pregunta, hoy, datos);
-        if (pedido.tipo === "sin_datos") siguiente = { tipo: "sin_datos", pregunta };
-        else if (pedido.tipo === "error") siguiente = { tipo: "error", pregunta };
+        const pedido = prepararPedido(pregunta, hoy, datos, new Date().getTimezoneOffset());
+        if (pedido.tipo === "error") siguiente = { tipo: "error", pregunta };
         else {
           const res = await fetch("/api/agente", {
             method: "POST",

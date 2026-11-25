@@ -33,6 +33,24 @@ describe("periodoDe", () => {
   ])("%s", (q, desde, hasta) => {
     expect(periodoDe(q, HOY)).toEqual({ desde, hasta });
   });
+
+  it.each([
+    ["¿Cuánto pagué de intereses en octubre?", "2026-11-25", "2026-10-01", "2026-10-31"],
+    ["¿cuántas horas en noviembre?", "2026-11-25", "2026-11-01", "2026-11-25"],
+    ["¿qué pasó en diciembre?", "2026-11-25", "2025-12-01", "2025-12-31"],
+    ["¿qué pasó en febrero?", "2028-03-10", "2028-02-01", "2028-02-29"],
+    ["en setiembre", "2026-11-25", "2026-09-01", "2026-09-30"],
+    ["¿y en enero o en octubre?", "2026-11-25", "2026-01-01", "2026-01-31"],
+    ["¿y en octubre o en enero?", "2026-11-25", "2026-10-01", "2026-10-31"],
+    ["¿cuánto en octubre ayer?", "2026-11-25", "2026-10-01", "2026-10-31"],
+    ["¿cuánto este mes?", "2026-11-25", "2026-11-01", "2026-11-25"],
+    ["¿qué hice ayer?", "2026-11-25", "2026-11-24", "2026-11-24"],
+    ["¿y el mes pasado?", "2026-11-25", "2026-10-01", "2026-10-31"],
+    ["¿esta semana?", "2026-11-25", "2026-11-23", "2026-11-25"],
+    ["nada", "2026-11-25", "2026-10-29", "2026-11-25"],
+  ])("mes por nombre: %s (hoy %s)", (q, hoy, desde, hasta) => {
+    expect(periodoDe(q, hoy)).toEqual({ desde, hasta });
+  });
 });
 
 describe("temaDe", () => {
