@@ -82,10 +82,10 @@ describe("validarPedido", () => {
     expect(con.ok && con.pedido.desfase).toBe(300);
     const sin = validarPedido(pedido());
     expect(sin.ok && sin.pedido.desfase).toBe(0);
-    expect(validarPedido(pedido({ desfase: -720 })).ok).toBe(true);
-    expect(validarPedido(pedido({ desfase: 840 })).ok).toBe(true);
+    expect(validarPedido(pedido({ desfase: -840 })).ok).toBe(true);
+    expect(validarPedido(pedido({ desfase: 720 })).ok).toBe(true);
   });
-  it.each([900, -721, 1.5, "300", null])("desfase %s → 400", (desfase) => {
+  it.each([900, 721, -841, 1.5, "300", null])("desfase %s → 400", (desfase) => {
     const r = validarPedido(pedido({ desfase }));
     expect(!r.ok && r.status).toBe(400);
     expect(!r.ok && r.error).toBe("El desfase no es válido.");

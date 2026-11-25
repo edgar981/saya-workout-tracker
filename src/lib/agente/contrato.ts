@@ -69,8 +69,8 @@ export type FilaServidor =
   | FilaAgenteTema
   | FilaAgenteTiempo;
 
-export const DESFASE_MIN = -720;
-export const DESFASE_MAX = 840;
+export const DESFASE_MIN = -840;
+export const DESFASE_MAX = 720;
 /** `desfase`: minutos, como `getTimezoneOffset()`; opcional en el cable, siempre presente ya validado. */
 export type PedidoAgente = { pregunta: string; hoy: string; filas: FilaCuerpo[]; desfase?: number };
 export type PedidoValidado = PedidoAgente & { desfase: number };
