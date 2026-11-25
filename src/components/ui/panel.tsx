@@ -134,7 +134,10 @@ export function Panel({
             aria-label="Cerrar"
             disabled={bloqueado}
             onClick={() => alCerrar()}
-            className="pane-x text-ink2 -mr-3 inline-flex size-11 shrink-0 items-center justify-center rounded-full text-2xl leading-none outline-none focus-visible:[box-shadow:var(--fsh-f)] disabled:opacity-40"
+            className={cn(
+              "text-ink2 -mr-3 inline-flex size-11 shrink-0 items-center justify-center rounded-full text-2xl leading-none outline-none focus-visible:[box-shadow:var(--fsh-f)] disabled:opacity-40",
+              pie != null && "pane-x",
+            )}
           >
             <span aria-hidden="true">×</span>
           </button>

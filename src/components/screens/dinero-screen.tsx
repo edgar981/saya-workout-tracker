@@ -374,10 +374,18 @@ function Contenido({
           )}
           {hayExtracto ? (
             <div className="acts2">
-              <Button variant="secondary" onClick={() => abrir({ tipo: "extracto" })}>
+              <Button
+                variant="secondary"
+                className="flex-1 px-3"
+                onClick={() => abrir({ tipo: "extracto" })}
+              >
                 Anotar extracto
               </Button>
-              <Button variant="secondary" onClick={() => abrir({ tipo: "deuda" })}>
+              <Button
+                variant="secondary"
+                className="flex-1 px-3"
+                onClick={() => abrir({ tipo: "deuda" })}
+              >
                 Agregar deuda
               </Button>
             </div>
