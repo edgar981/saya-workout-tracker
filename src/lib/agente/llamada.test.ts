@@ -1,12 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { ESQUEMA_RESPUESTA, MAX_CUERPO_BYTES, MAX_PREGUNTA, type PedidoAgente } from "./contrato";
+import { ESQUEMA_RESPUESTA, MAX_CUERPO_BYTES, MAX_FILAS, MAX_PREGUNTA, type PedidoAgente } from "./contrato";
 import { INSTRUCCIONES } from "./instrucciones";
-import type { DatosServidor } from "./servidor";
+import { MAX_FILAS_SERVIDOR, type DatosServidor } from "./servidor";
 import {
   URL_MENSAJES,
   VERSION_API,
   atenderPedido,
   cuerpoDeLlamada,
+  nombresDeFilas,
   pedirRespuesta,
   type Fetch,
 } from "./llamada";
@@ -180,6 +181,71 @@ describe("atenderPedido", () => {
     const r = await atenderPedido({ ...base, leer: async () => muchos, clave: CLAVE, fetch });
     expect(r).toEqual({ status: 413, cuerpo: { error: "Demasiadas filas." } });
     expect(llamadas).toHaveLength(0);
+  });
+  it("exactamente MAX_FILAS_SERVIDOR filas del servidor → llama al modelo", async () => {
+    const { fetch, llamadas } = falso(() => mensaje([texto(maqueta)]));
+    const justos: DatosServidor = {
+      ...vacios,
+      tiempo: {
+        temas: Array.from({ length: MAX_FILAS_SERVIDOR }, (_, i) => ({ id: `t${i}`, nombre: `T${i}`, creado_en: new Date(0) })),
+        registros: [],
+      },
+    };
+    const r = await atenderPedido({ ...base, leer: async () => justos, clave: CLAVE, fetch });
+    expect(r.status).toBe(200);
+    expect(llamadas).toHaveLength(1);
+  });
+  it("pedido inválido (400) o con más de MAX_FILAS filas de Cuerpo (413) → no se lee", async () => {
+    const { fetch, llamadas } = falso(() => mensaje([texto(maqueta)]));
+    let lecturas = 0;
+    const leer = async () => {
+      lecturas += 1;
+      return vacios;
+    };
+    const invalido = JSON.stringify({ ...pedido, pregunta: "" });
+    const r400 = await atenderPedido({ ...base, texto: invalido, leer, clave: CLAVE, fetch });
+    expect(r400.status).toBe(400);
+    const muchas = JSON.stringify({ ...pedido, filas: Array.from({ length: MAX_FILAS + 1 }, () => pedido.filas[0]) });
+    const r413 = await atenderPedido({ ...base, texto: muchas, leer, clave: CLAVE, fetch });
+    expect(r413.status).toBe(413);
+    expect(lecturas).toBe(0);
+    expect(llamadas).toHaveLength(0);
+  });
+  describe("nombres que escribió la persona", () => {
+    const conDeuda = (nombre: string): DatosServidor => ({
+      ...conExtracto,
+      dinero: {
+        ...conExtracto.dinero,
+        deudas: [{ ...conExtracto.dinero.deudas[0], nombre }],
+      },
+    });
+    const con = (etiqueta: string) => ({ ...maqueta, desglose: [{ etiqueta, valor: "3" }] });
+    const pedirCon = (nombre: string, etiqueta: string) => {
+      const { fetch } = falso(() => mensaje([texto(con(etiqueta))]));
+      return atenderPedido({ ...base, leer: async () => conDeuda(nombre), clave: CLAVE, fetch });
+    };
+    it("la etiqueta igual al nombre de una deuda → 200", async () => {
+      const r = await pedirCon("Préstamo que debe Juan", "Préstamo que debe Juan");
+      expect(r.status).toBe(200);
+    });
+    it("la misma etiqueta con un consejo pegado → 502", async () => {
+      const r = await pedirCon("Préstamo que debe Juan", "Deberías pagar Préstamo que debe Juan");
+      expect(r.status).toBe(502);
+    });
+  });
+  it("nombresDeFilas junta los textos escritos por la persona", () => {
+    const n = nombresDeFilas(
+      [
+        { tipo: "peso", fecha: "2026-03-09", valor: 78.4, unidad: "KG" },
+        { tipo: "sesion", fecha: "2026-03-09", sesion: "Day 4", abierta: false, ejercicios: 1, series: 3 },
+      ],
+      [
+        { tipo: "cuenta", n: 1, banco: "Nu", clase: "Ahorros" },
+        { tipo: "tema", nombre: "Inglés" },
+        { tipo: "tiempo", fecha: "2026-03-09", tema: "Código", minutos: 5 },
+      ],
+    );
+    expect(n).toEqual(["Day 4", "Nu", "Nu · Ahorros", "Inglés", "Código"]);
   });
   it("sin filas de Cuerpo ni del servidor → 200 sin_datos sin llamar", async () => {
     const { fetch, llamadas } = falso(() => mensaje([texto(maqueta)]));

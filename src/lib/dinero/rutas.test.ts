@@ -96,4 +96,17 @@ describe("el módulo puro y el adaptador", () => {
     expect(t).not.toContain("catch");
     expect(t).not.toContain("console.");
   });
+  it("todo() lee los saldos y los extractos por anotado_en ascendente", () => {
+    const t = leer("src/app/api/dinero/almacen.ts");
+    const desde = t.indexOf("todo:");
+    const hasta = t.indexOf("]);", t.indexOf("$transaction", desde));
+    expect(desde).toBeGreaterThan(-1);
+    expect(hasta).toBeGreaterThan(desde);
+    const cuerpo = t.slice(desde, hasta);
+    for (const modelo of ["saldoCuenta", "saldoDeuda", "extracto"]) {
+      const linea = cuerpo.split("\n").filter((l) => l.includes(`prisma.${modelo}.findMany`));
+      expect(linea.length, modelo).toBe(1);
+      expect(linea[0], modelo).toContain('orderBy: { anotado_en: "asc" }');
+    }
+  });
 });

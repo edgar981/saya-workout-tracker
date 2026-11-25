@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from "react";
+import type { CSSProperties } from "react";
 
 import { Cabeza, Hoja } from "@/components/ui/hoja";
 import { cn } from "@/lib/utils";
@@ -25,59 +25,6 @@ import { cn } from "@/lib/utils";
 /** Bloque de relleno en forma de píldora, con barrido. */
 function Sk({ className, style }: { className?: string; style?: CSSProperties }) {
   return <div className={cn("sk", className)} style={style} />;
-}
-
-/** El mismo contenedor que usan las pantallas reales, para que el ancho, el
- *  padding y el min-height coincidan exactos. */
-function Screen({ className, children }: { className?: string; children: ReactNode }) {
-  return (
-    <main className={cn("mx-auto flex min-h-dvh w-full max-w-md flex-col p-4", className)}>
-      {children}
-    </main>
-  );
-}
-
-/** Cabecera con título. `title` fijo se pinta real (idéntico al final, sin salto);
- *  sin él, una barra para los títulos que dependen del dato. `chevron` deja el
- *  hueco del botón de volver: sólo lo conserva `/sesion/cerrar`, que sigue con el suyo
- *  (las demás lo perdieron: el «‹» ahora vive en la píldora del shell). */
-function Head({
-  title,
-  trailing,
-  chevron,
-}: {
-  title?: string;
-  trailing?: ReactNode;
-  chevron?: boolean;
-}) {
-  return (
-    <header className="flex items-center gap-2 pt-2">
-      {chevron && <div className="size-9 shrink-0" />}
-      {title ? (
-        <h1 className="text-lg font-semibold">{title}</h1>
-      ) : (
-        <Sk className="h-6 w-40" />
-      )}
-      {trailing}
-    </header>
-  );
-}
-
-/** Cabecera de dos líneas (título + subtítulo derivados del dato). */
-function HeadStacked() {
-  return (
-    <header className="flex items-center gap-2 pt-2">
-      <div className="min-w-0">
-        <Sk className="h-6 w-44" />
-        <Sk className="mt-1.5 h-3 w-28" />
-      </div>
-    </header>
-  );
-}
-
-/** Tarjeta con borde, igual que las tarjetas reales de las listas. */
-function Card({ className, children }: { className?: string; children?: ReactNode }) {
-  return <div className={cn("rounded-lg border p-3", className)}>{children}</div>;
 }
 
 // ── / (home) ────────────────────────────────────────────────────────────────

@@ -72,6 +72,11 @@ function mesNombrado(q: string): number | null {
   return mejor?.mes ?? null;
 }
 
+function primeroDelMesSiguiente(anio: number, mes: number): string {
+  const [a, m] = mes === 12 ? [anio + 1, 1] : [anio, mes + 1];
+  return `${String(a).padStart(4, "0")}-${String(m).padStart(2, "0")}-01`;
+}
+
 export function periodoDe(pregunta: string, hoy: string): Periodo {
   const q = normalizar(pregunta);
   const lunes = lunesDe(hoy);
@@ -90,9 +95,8 @@ export function periodoDe(pregunta: string, hoy: string): Periodo {
     const mesHoy = Number(hoy.slice(5, 7));
     const anio = Number(hoy.slice(0, 4)) - (mes > mesHoy ? 1 : 0);
     const desde = `${String(anio).padStart(4, "0")}-${String(mes).padStart(2, "0")}-01`;
-    if (mes === mesHoy && anio === Number(hoy.slice(0, 4))) return { desde, hasta: hoy };
-    const siguiente = mes === 12 ? `${String(anio + 1).padStart(4, "0")}-01-01` : `${String(anio).padStart(4, "0")}-${String(mes + 1).padStart(2, "0")}-01`;
-    return { desde, hasta: sumarDias(siguiente, -1) };
+    if (mes === mesHoy) return { desde, hasta: hoy };
+    return { desde, hasta: sumarDias(primeroDelMesSiguiente(anio, mes), -1) };
   }
   if (contiene(q, "ayer")) {
     const ayer = sumarDias(hoy, -1);
