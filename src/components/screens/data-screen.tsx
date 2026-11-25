@@ -8,6 +8,7 @@ import { ErrorEnLinea } from "@/components/ui/estados";
 import { Cabeza, Hoja } from "@/components/ui/hoja";
 import { BackupPanel } from "@/components/backup-panel";
 import { CuentaPanel } from "@/components/cuenta-panel";
+import { exportarServidor } from "@/lib/datos/exportar";
 import { exportNow, importBackup, type ImportOutcome } from "@/lib/db/backup";
 import { SCHEMA_VERSION, TABLE_NAMES, db } from "@/lib/db/db";
 import { checkIntegrity, type IntegrityReport } from "@/lib/db/integrity";
@@ -20,8 +21,13 @@ type Status =
   | { kind: "imported"; outcome: Extract<ImportOutcome, { ok: true }> }
   | { kind: "failed"; outcome: Extract<ImportOutcome, { ok: false }> };
 
+type EstadoServidor = { kind: "idle" } | { kind: "ok"; archivo: string } | { kind: "failed" };
+
 export default function DataScreen() {
   const [status, setStatus] = useState<Status>({ kind: "idle" });
+  const [servidor, setServidor] = useState<EstadoServidor>({ kind: "idle" });
+  const [pidiendoServidor, setPidiendoServidor] = useState(false);
+  const pidiendoRef = useRef(false);
   const [integridad, setIntegridad] = useState<IntegrityReport | null>(null);
   const [segmentos, setSegmentos] = useState<SegmentDiagnostic | null>(null);
   const [refrescarRespaldo, setRefrescarRespaldo] = useState(0);
@@ -34,8 +40,23 @@ export default function DataScreen() {
     return entries;
   }, []);
 
+  /** Sólo la parte del servidor (Dinero y Tiempo): un solo vuelo a la vez. */
+  const exportarDelServidor = async () => {
+    if (pidiendoRef.current) return;
+    pidiendoRef.current = true;
+    setPidiendoServidor(true);
+    try {
+      const r = await exportarServidor();
+      setServidor(r.ok ? { kind: "ok", archivo: r.archivo } : { kind: "failed" });
+    } finally {
+      pidiendoRef.current = false;
+      setPidiendoServidor(false);
+    }
+  };
+
   const doExport = async () => {
     setStatus({ kind: "working", label: "Exportando…" });
+    setServidor({ kind: "idle" });
     try {
       const result = await exportNow();
       setStatus({ kind: "exported", filename: result.filename });
@@ -49,6 +70,8 @@ export default function DataScreen() {
         },
       });
     }
+    // Salga como salga el de Dexie.
+    await exportarDelServidor();
   };
 
   const doImport = async (file: File) => {
@@ -147,6 +170,25 @@ export default function DataScreen() {
               <p className="mt-3 text-sm">
                 Exportado a <span className="font-mono text-[12.5px]">{status.filename}</span>
               </p>
+            )}
+
+            {servidor.kind === "ok" && (
+              <p className="mt-3 text-sm">
+                Exportado a <span className="font-mono text-[12.5px]">{servidor.archivo}</span>
+              </p>
+            )}
+
+            {servidor.kind === "failed" && (
+              <>
+                <ErrorEnLinea className="mt-3">Dinero y Tiempo no se exportaron.</ErrorEnLinea>
+                <Button
+                  variant="link"
+                  aria-disabled={pidiendoServidor ? "true" : undefined}
+                  onClick={() => void exportarDelServidor()}
+                >
+                  Reintentar
+                </Button>
+              </>
             )}
 
             {status.kind === "imported" && (

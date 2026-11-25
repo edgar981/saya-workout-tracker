@@ -6,6 +6,7 @@ import {
   anotarSaldo,
   crearCuenta,
   crearDeuda,
+  exportarDinero,
   leerCuentas,
   leerDeudas,
   origenPermitido,
@@ -60,6 +61,13 @@ function falso(inicial: Partial<Estado> = {}, falla?: () => unknown) {
       });
       return [...ultimos, ...e.extractos.filter((x) => x.cierre.getTime() >= desde.getTime())];
     },
+    todo: async () => ({
+      cuentas: [...e.cuentas],
+      saldosCuentas: [...e.saldosCuentas],
+      deudas: [...e.deudas],
+      saldosDeudas: [...e.saldosDeudas],
+      extractos: [...e.extractos],
+    }),
     extractoPorId: async (id) => e.extractos.find((x) => x.id === id) ?? null,
     crearExtracto: async (d) => {
       escribir();
@@ -659,5 +667,140 @@ describe("origenPermitido y el tope", () => {
   });
   it("el tope", () => {
     expect(MAX_CUERPO_DINERO_BYTES).toBe(4096);
+  });
+});
+
+describe("exportarDinero", () => {
+  const cuenta = (n: number, creada: string): FilaCuenta => ({
+    id: U(n),
+    banco: "Davivienda",
+    tipo: "Ahorros",
+    ultimos4: "4821",
+    creada_en: D(creada),
+  });
+  const saldoC = (n: number, cuentaId: number, valor: bigint, en: string): FilaSaldoCuenta => ({
+    id: U(n),
+    cuenta_id: U(cuentaId),
+    valor,
+    anotado_en: D(en),
+  });
+  const deuda: FilaDeuda = {
+    id: U(20),
+    tipo: "credito",
+    nombre: "Libre inversión",
+    con_quien: "Davivienda",
+    tasa_ea: 18.9,
+    cuota: 645600n,
+    cupo: null,
+    monto_inicial: 30000000n,
+    ultimos4: null,
+    cuotas_total: 48,
+    dia_pago: 5,
+    primera_cuota: D("2026-03-05T00:00:00Z"),
+    creada_en: D("2026-02-20T10:00:00Z"),
+  };
+
+  it("vacío da 200 con arreglos vacíos", async () => {
+    const { almacen } = falso();
+    expect(await exportarDinero(almacen)).toEqual({
+      status: 200,
+      cuerpo: { cuentas: [], saldos_cuenta: [], deudas: [], saldos_deuda: [], extractos: [] },
+    });
+  });
+
+  it("la forma exacta de cada fila: peso mayor que 2^31, fechas @db.Date, ultimos4, marcas ISO", async () => {
+    const extracto: FilaExtracto = {
+      id: U(30),
+      deuda_id: U(20),
+      cierre: D("2026-10-15T00:00:00Z"),
+      intereses: 123456n,
+      pago_minimo: null,
+      fecha_limite: D("2026-11-02T00:00:00Z"),
+      anotado_en: D("2026-10-16T08:00:00Z"),
+    };
+    const { almacen } = falso({
+      cuentas: [cuenta(1, "2026-11-01T00:00:00Z")],
+      saldosCuentas: [saldoC(2, 1, 5_000_000_000n, "2026-11-01T00:00:00Z")],
+      deudas: [deuda],
+      saldosDeudas: [
+        { id: U(21), deuda_id: U(20), valor: 12546900n, anotado_en: D("2026-11-01T00:00:00Z") },
+      ],
+      extractos: [extracto],
+    });
+    const r = await exportarDinero(almacen);
+    expect(r.status).toBe(200);
+    expect(r.cuerpo).toEqual({
+      cuentas: [
+        { id: U(1), banco: "Davivienda", tipo: "Ahorros", ultimos4: "4821", creada_en: "2026-11-01T00:00:00.000Z" },
+      ],
+      saldos_cuenta: [
+        { id: U(2), cuenta_id: U(1), valor: 5000000000, anotado_en: "2026-11-01T00:00:00.000Z" },
+      ],
+      deudas: [
+        {
+          id: U(20),
+          tipo: "credito",
+          nombre: "Libre inversión",
+          con_quien: "Davivienda",
+          tasa_ea: 18.9,
+          cuota: 645600,
+          cupo: null,
+          monto_inicial: 30000000,
+          ultimos4: null,
+          cuotas_total: 48,
+          dia_pago: 5,
+          primera_cuota: "2026-03-05",
+          creada_en: "2026-02-20T10:00:00.000Z",
+        },
+      ],
+      saldos_deuda: [
+        { id: U(21), deuda_id: U(20), valor: 12546900, anotado_en: "2026-11-01T00:00:00.000Z" },
+      ],
+      extractos: [
+        {
+          id: U(30),
+          deuda_id: U(20),
+          cierre: "2026-10-15",
+          intereses: 123456,
+          pago_minimo: null,
+          fecha_limite: "2026-11-02",
+          anotado_en: "2026-10-16T08:00:00.000Z",
+        },
+      ],
+    });
+  });
+
+  it("toda la historia: 2 saldos de una misma cuenta salen los 2, en orden de anotado_en", async () => {
+    const { almacen } = falso({
+      cuentas: [cuenta(1, "2026-11-01T00:00:00Z")],
+      saldosCuentas: [
+        saldoC(3, 1, 200n, "2026-11-05T00:00:00Z"),
+        saldoC(2, 1, 100n, "2026-11-01T00:00:00Z"),
+      ],
+    });
+    const c = (await exportarDinero(almacen)).cuerpo as { saldos_cuenta: { id: string; valor: number }[] };
+    expect(c.saldos_cuenta.map((s) => [s.id, s.valor])).toEqual([
+      [U(2), 100],
+      [U(3), 200],
+    ]);
+  });
+
+  it("cuentas y deudas por creada_en ascendente", async () => {
+    const { almacen } = falso({
+      cuentas: [cuenta(2, "2026-11-05T00:00:00Z"), cuenta(1, "2026-11-01T00:00:00Z")],
+      deudas: [{ ...deuda, id: U(22), creada_en: D("2026-12-01T00:00:00Z") }, deuda],
+    });
+    const c = (await exportarDinero(almacen)).cuerpo as { cuentas: { id: string }[]; deudas: { id: string }[] };
+    expect(c.cuentas.map((x) => x.id)).toEqual([U(1), U(2)]);
+    expect(c.deudas.map((x) => x.id)).toEqual([U(20), U(22)]);
+  });
+
+  it("un almacén que lanza da 503", async () => {
+    const { almacen } = falso();
+    almacen.todo = () => Promise.reject(new Error("boom"));
+    expect(await exportarDinero(almacen)).toEqual({
+      status: 503,
+      cuerpo: { error: "No se pudo leer o guardar." },
+    });
   });
 });

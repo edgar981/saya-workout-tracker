@@ -27,6 +27,17 @@ export const almacenTiempo: AlmacenTiempo = {
     const r = await prisma.registroTiempo.aggregate({ _min: { fecha: true } });
     return r._min.fecha;
   },
+  // Una sola transacción en forma de arreglo: una lectura coherente de las dos tablas.
+  todo: async () => {
+    const [temas, registros] = await prisma.$transaction([
+      prisma.tema.findMany({ select: TEMA, orderBy: { creado_en: "asc" } }),
+      prisma.registroTiempo.findMany({
+        select: REGISTRO,
+        orderBy: [{ fecha: "asc" }, { anotado_en: "asc" }],
+      }),
+    ]);
+    return { temas, registros };
+  },
   temaPorId: (id) => prisma.tema.findUnique({ where: { id }, select: TEMA }),
   temaPorNombre: (nombre) => prisma.tema.findUnique({ where: { nombre }, select: TEMA }),
   crearTema: ({ id, nombre }) => prisma.tema.create({ data: { id, nombre }, select: TEMA }),

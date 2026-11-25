@@ -9,6 +9,7 @@ const RUTAS = [
   ["src/app/api/tiempo/route.ts", ["GET"]],
   ["src/app/api/tiempo/temas/route.ts", ["POST"]],
   ["src/app/api/tiempo/registros/route.ts", ["POST"]],
+  ["src/app/api/tiempo/exportar/route.ts", ["GET"]],
 ] as const;
 
 /** El texto de cada función exportada, de su `export` al siguiente (o al final). */
