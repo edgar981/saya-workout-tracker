@@ -22,7 +22,7 @@ El registro actual vive en un archivo de Notes con notación libre. Funciona par
 | # | Decisión | Razón | Confianza |
 |---|---|---|---|
 | D1 | **No migrar el histórico** del archivo de Notes | Datos sin fecha y con pesos faltantes contaminan cualquier análisis de progresión, que es el único valor de la app | [Certain] |
-| D2 | **Local-first** (IndexedDB fuente de verdad, push a Postgres como respaldo) | No hay señal en el gym; un guardado fallido a mitad de sesión mata la adopción. El respaldo no es opcional porque **cada migración de esquema de Dexie corre contra la única copia de los datos** — no por el desalojo de Safari (§6). Retrofittear esto es reescritura completa | [Likely] |
+| D2 | **Local-first** (IndexedDB fuente de verdad, push a Postgres como respaldo) | No hay señal en el gym; un guardado fallido a mitad de sesión mata la adopción. El respaldo no es opcional porque **cada migración de esquema de Dexie corre contra la única copia de los datos** — no por el desalojo de Safari (§6). Retrofittear esto es reescritura completa. Dinero y Tiempo no: viven en el servidor (§15). | [Likely] |
 | D3 | **Autosave por serie**, no por sesión | Sin transacción "guardar entrenamiento" al final que se pueda perder | [Certain] |
 | D4 | **Snapshot de unidad en cada serie** | Si mañana cambia el `unit_type` de un ejercicio, el histórico no debe mutar | [Certain] |
 | D5 | **Sin conversión entre unidades** | `disc` de una máquina no es convertible a kg sin calibrar esa máquina. Se compara dentro de la misma unidad o no se compara | [Certain] |
@@ -271,8 +271,8 @@ El export de recuperación y el export para compartir no son la misma cosa y no 
 Mismo core que ya manejas, más una pieza:
 
 - Next.js 16 / React 19 / Tailwind v4 / shadcn/ui
-- **Dexie (IndexedDB) como fuente de verdad** ← pieza nueva
-- Prisma / Neon Postgres como respaldo, vía un endpoint de push
+- **Dexie (IndexedDB) como fuente de verdad** para el entrenamiento y Cuerpo; Dinero y Tiempo, Postgres (§15) ← pieza nueva
+- Prisma / Neon Postgres como respaldo, vía un endpoint de push, y como fuente de Dinero y Tiempo (§15)
 - Vercel Hobby, PWA instalable
 
 Sincronización: un solo usuario, last-write-wins por `id`. Sin CRDTs, sin resolución de conflictos.
@@ -318,7 +318,7 @@ No hay tercer resultado. Si en 4 semanas la app no reemplazó al archivo de text
 
 Añade la pieza que §6 anticipaba: un push de snapshots a un backend. Se construyó porque el riesgo que **sí** se materializó no fue el que justificaba el local-first. La tesis de D2/§6 era la migración de esquema contra la única copia. Eso nunca rompió nada. Lo que rompió fue el desalojo: se desinstaló la PWA de la pantalla de inicio y iOS borró IndexedDB con ella — dos días de entrenamientos perdidos. La nota de §6 lo tenía como "riesgo de borde"; en la práctica fue el que costó datos.
 
-La conclusión no es abandonar el local-first. Dexie sigue siendo la fuente de verdad y la app sigue operando completa sin señal. Lo que faltaba era que perder el teléfono, desinstalar la app o borrar datos del sitio costara cero.
+La conclusión no es abandonar el local-first. Dexie sigue siendo la fuente de verdad del entrenamiento y el entrenamiento sigue operando completo sin señal. Dinero y Tiempo no van en el snapshot: viven en Postgres (§15). Lo que faltaba era que perder el teléfono, desinstalar la app o borrar datos del sitio costara cero.
 
 **Es respaldo, no sync.** Sin seguimiento de cambios, sin merge, sin resolución de conflictos, sin segundo dispositivo. Un push de snapshot completo (las nueve tablas, el mismo objeto que exporta /datos) al cerrar una sesión. La restauración es manual y explícita: se descarga un snapshot y entra por el mismo import de /datos — reemplazo total, auto-export previo, rechazo por schema_version distinto. Ningún camino automático escribe en Dexie desde el servidor.
 
@@ -328,7 +328,7 @@ La conclusión no es abandonar el local-first. Dexie sigue siendo la fuente de v
 
 *El login de §14 reemplaza este modelo; sigue vigente hasta que termine la transición de §14.*
 
-**Lo que no cambia.** Sin `version(3)` de Dexie. El export/import a archivo sigue existiendo tal cual — es la copia que no depende de que el backend esté vivo. La app prerenderiza estática; solo las rutas `/api/snapshot` son dinámicas (Node runtime, Prisma/Neon).
+**Lo que no cambia.** Sin `version(3)` de Dexie. El export/import a archivo sigue existiendo tal cual — es la copia que no depende de que el backend esté vivo. La app prerenderiza estática; solo las rutas `/api/snapshot`, `/api/dinero/*` y `/api/tiempo/*` son dinámicas (Node runtime, Prisma/Neon).
 
 ## 10. Piel — tokens, color y fuentes
 
@@ -534,11 +534,11 @@ Edgar decidió el login el 2026-11-09, tras una investigación de solo lectura d
 repo (SAYA-LOGIN-1) y una comparación de librerías. Este asiento escribe lo
 decidido; la implementación llega en otros slices que lo citan.
 
-**Qué protege el login: sólo lo que vive en el servidor.** La app sigue abriendo
-y registrando sin sesión y sin señal (§6, §9). La comprobación va en las rutas de
+**Qué protege el login: sólo lo que vive en el servidor.** El entrenamiento sigue
+abriéndose y registrándose sin sesión y sin señal (§6, §9). La comprobación va en las rutas de
 la API, en cada route handler; no hay un `proxy` delante de las páginas. La razón,
-medida: ninguna página lee el servidor (lo que muestra cada pantalla sale de
-Dexie), y el service worker guarda en cache cualquier respuesta de una navegación,
+medida: ninguna página del entrenamiento lee el servidor (lo que muestra cada una sale
+de Dexie; Dinero y Tiempo, desde 2026-11-24, leen sus rutas: §15), y el service worker guarda en cache cualquier respuesta de una navegación,
 así que una redirección a una pantalla de entrada podría quedar en el cache y
 abrirse sin red en lugar de la app.
 
@@ -572,3 +572,72 @@ en cada bundle construido, así que lo único que lo apaga es dejar de aceptarlo
 
 **Tier 1.** Edgar aprobó el 2026-11-09 que `prisma/migrations/`, `src/lib/auth/` y
 `src/app/api/auth/` entren a la lista de `CLAUDE.md`.
+
+---
+
+## 15. Dinero y Tiempo en el servidor (SAYA-DATOS-2, 2026-11-24)
+
+Edgar decidió el 2026-11-24 que los datos de Dinero y Tiempo viven en el servidor
+y no en el teléfono. Sus palabras:
+
+- 20:43: «The data should live in the server instead of my phone.»
+- 21:07: «SAYA-27: go with every recommendation and start stage 2»
+
+Este asiento escribe el esquema y las reglas; las rutas y las pantallas llegan en
+otros slices que lo citan.
+
+**Dónde viven.** En Neon, detrás del login del único correo permitido (§14), en
+siete modelos de Prisma:
+
+- `Cuenta`: una cuenta de banco (banco, tipo, últimos 4 dígitos).
+- `SaldoCuenta`: un saldo anotado de una cuenta, con su fecha.
+- `Deuda`: una deuda (tarjeta, crédito o personal; lo valida el servidor), con
+  con quién, tasa, cuota y los datos opcionales de cada tipo.
+- `SaldoDeuda`: un saldo anotado de una deuda, con su fecha.
+- `Extracto`: el extracto de una deuda (cierre, intereses, pago mínimo y fecha
+  límite).
+- `Tema`: un tema en el que Edgar gasta tiempo, con nombre único.
+- `RegistroTiempo`: minutos de un tema en una fecha.
+
+Los ids los genera el teléfono, para que reintentar un guardado no lo duplique.
+Los pesos son colombianos enteros (`BigInt`), sin decimales. Nada derivado se
+guarda (§3.5): ni el disponible, ni lo que debes, ni la semana, ni la típica.
+
+**La migración `2_dinero_tiempo` sólo crea tablas.** No toca `Snapshot` ni las
+cuentas, así que revertir el código no pide revertir la base. La aplica Edgar con
+un runbook, primero en la rama `preview` de Neon y en producción el día de `main`.
+Ningún build migra.
+
+**Las rutas**, todas con la sesión comprobada primero (sin sesión, 401 antes de
+leer el cuerpo o tocar la base):
+
+- `GET /api/tiempo`
+- `POST /api/tiempo/temas`
+- `POST /api/tiempo/registros`
+- `GET /api/dinero/cuentas`
+- `GET /api/dinero/deudas`
+- `POST /api/dinero/cuentas`
+- `POST /api/dinero/deudas`
+- `POST /api/dinero/saldos`
+- `POST /api/dinero/extractos`
+
+**Sin señal (N1, A).** Dinero y Tiempo funcionan sólo con red; sin red, sin sesión
+o con la base caída, la pantalla muestra su estado de error dibujado con
+«Reintentar». No hay copia local ni cola de escrituras. Hoy pinta lo del
+entrenamiento sin esperar a la red.
+
+**Tier 1 (N2, A).** `src/app/api/dinero/`, `src/app/api/tiempo/`,
+`src/lib/dinero/servidor.ts` y `src/lib/tiempo/servidor.ts` entran a la lista de
+`CLAUDE.md`; la ruta del agente no.
+
+**Una copia (N3, B).** «Exportar» en `/datos` también bajará Dinero y Tiempo, en
+un JSON aparte.
+
+**Las reglas.** La semana son los últimos 7 días hasta hoy. La típica es el
+promedio de las 4 ventanas de 7 días anteriores, contando las que quedaron en 0 y
+sin contar las anteriores al primer registro (sin ninguna, no hay típica). Sin
+archivar: una deuda en 0 no se muestra en «Lo que debes». Sólo pesos colombianos
+enteros.
+
+**El costo que él eligió.** Si la rama `preview` de Neon se recrea desde
+producción, copia su dinero real al preview.

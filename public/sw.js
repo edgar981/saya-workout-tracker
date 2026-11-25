@@ -2,8 +2,10 @@
  * Service worker a mano, sin dependencias.
  *
  * El objetivo no es rendimiento: es que la app abra y opere con el teléfono en
- * modo avión, porque en el gym no hay señal (D2). Los datos ya viven en
- * IndexedDB; lo único que falta cachear es el shell.
+ * modo avión, porque en el gym no hay señal (D2). Los datos del entrenamiento
+ * ya viven en IndexedDB; Dinero y Tiempo viven en el servidor y sin señal
+ * muestran su estado de error (DECISIONES §15). Lo único que falta cachear es
+ * el shell.
  *
  * Estrategias:
  *   - navegaciones: red primero, cache como respaldo. Así un deploy nuevo se
@@ -19,7 +21,7 @@
  * entra a mitad de entrenamiento.
  */
 
-const CACHE = "saya-shell-v6";
+const CACHE = "saya-shell-v7";
 const APP_SHELL = [
   "/",
   "/sesion",
@@ -29,6 +31,8 @@ const APP_SHELL = [
   "/catalogo",
   "/historial",
   "/progreso",
+  "/dinero",
+  "/tiempo",
   "/manifest.webmanifest",
 ];
 
