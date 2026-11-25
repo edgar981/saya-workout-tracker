@@ -73,12 +73,16 @@ export function esConsejo(texto: string): boolean {
   return PATRON.test(normalizar(texto));
 }
 
-export function respuestaConConsejo(r: RespuestaAgente): boolean {
+/**
+ * `nombres`: textos que la persona escribió (una deuda, un banco, un tema). Una etiqueta
+ * exactamente igual a uno (sin tildes ni mayúsculas) no se revisa; todo lo demás sí.
+ */
+export function respuestaConConsejo(r: RespuestaAgente, nombres: readonly string[] = []): boolean {
   if (r.estado === "sin_datos") return false;
-  const textos = [
-    r.cifra,
-    r.unidad,
-    ...r.desglose.flatMap((d) => [d.etiqueta, d.valor]),
-  ];
+  const propios = new Set(nombres.map((n) => normalizar(n).trim()));
+  const etiquetas = r.desglose
+    .map((d) => d.etiqueta)
+    .filter((e) => !propios.has(normalizar(e).trim()));
+  const textos = [r.cifra, r.unidad, ...r.desglose.map((d) => d.valor), ...etiquetas];
   return textos.some(esConsejo);
 }

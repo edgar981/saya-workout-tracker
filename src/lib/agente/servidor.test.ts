@@ -148,6 +148,29 @@ describe("filasDelServidor", () => {
     ]);
   });
 
+  it("un saldo con fecha local igual a desde es del periodo; el «último anterior» es el de antes", () => {
+    const d: DatosServidor = {
+      ...datos,
+      dinero: {
+        ...datos.dinero,
+        cuentas: [datos.dinero.cuentas[1]],
+        saldosCuentas: [
+          { id: "a", cuenta_id: "c-a", valor: BigInt(1), anotado_en: Z("2026-09-20T15:00:00Z") },
+          { id: "b", cuenta_id: "c-a", valor: BigInt(2), anotado_en: Z("2026-09-30T15:00:00Z") },
+          { id: "c", cuenta_id: "c-a", valor: BigInt(3), anotado_en: Z("2026-10-01T15:00:00Z") },
+        ],
+        deudas: [],
+        saldosDeudas: [],
+        extractos: [],
+      },
+    };
+    const f = filasDelServidor(d, OCT, 300).filter((x) => x.tipo === "saldo_cuenta");
+    expect(f).toEqual([
+      { tipo: "saldo_cuenta", cuenta: 1, fecha: "2026-09-30", valor: 2 },
+      { tipo: "saldo_cuenta", cuenta: 1, fecha: "2026-10-01", valor: 3 },
+    ]);
+  });
+
   it("nunca sale ultimos4, ningún id ni marcas de tiempo", () => {
     const json = JSON.stringify(filas);
     expect(json).not.toContain("4821");

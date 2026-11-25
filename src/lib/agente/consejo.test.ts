@@ -108,6 +108,30 @@ describe("respuestaConConsejo", () => {
   it("una clave «fuente» de más no se mira", () => {
     expect(respuestaConConsejo({ ...base, fuente: "Hoy toca Day 3" } as typeof base)).toBe(false);
   });
+  describe("nombres que escribió la persona", () => {
+    const NOMBRE = "Crédito para evitar mora";
+    const con = (etiqueta: string, valor = "3") => ({ ...base, desglose: [{ etiqueta, valor }] });
+    it("una etiqueta igual a un nombre pasa", () => {
+      expect(respuestaConConsejo(con(NOMBRE), [NOMBRE])).toBe(false);
+    });
+    it("sin nombres, la misma etiqueta sigue bloqueada", () => {
+      expect(respuestaConConsejo(con(NOMBRE))).toBe(true);
+    });
+    it("una etiqueta que sólo contiene el nombre se revisa entera", () => {
+      expect(respuestaConConsejo(con(`${NOMBRE}, deberías pagarla`), [NOMBRE])).toBe(true);
+    });
+    it("un valor igual a un nombre se revisa igual", () => {
+      expect(respuestaConConsejo(con("Weighted Dips", NOMBRE), [NOMBRE])).toBe(true);
+    });
+    it("la cifra y la unidad se revisan igual", () => {
+      expect(respuestaConConsejo({ ...base, cifra: NOMBRE }, [NOMBRE])).toBe(true);
+      expect(respuestaConConsejo({ ...base, unidad: NOMBRE }, [NOMBRE])).toBe(true);
+    });
+    it("tildes y mayúsculas no importan en la igualdad", () => {
+      expect(respuestaConConsejo(con("CREDITO PARA EVITAR MORA"), [NOMBRE])).toBe(false);
+      expect(respuestaConConsejo(con(NOMBRE), ["credito para evitar mora"])).toBe(false);
+    });
+  });
   it("sin_datos nunca es consejo", () => {
     expect(respuestaConConsejo({ estado: "sin_datos" })).toBe(false);
   });

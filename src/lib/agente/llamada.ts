@@ -4,6 +4,7 @@ import {
   validarPedido,
   validarRespuesta,
   type ErrorAgente,
+  type FilaCuerpo,
   type FilaServidor,
   type PedidoAgente,
   type RespuestaAgente,
@@ -109,6 +110,22 @@ export async function pedirRespuesta(a: {
   return { ok: true, respuesta: v.respuesta };
 }
 
+/** Los textos que la persona escribió y que viajan en las filas: sus etiquetas legítimas en la respuesta. */
+export function nombresDeFilas(cuerpo: FilaCuerpo[], servidor: FilaServidor[]): string[] {
+  const n: string[] = [];
+  for (const f of cuerpo) {
+    if (f.tipo === "serie") n.push(f.ejercicio, f.sesion);
+    else if (f.tipo === "sesion") n.push(f.sesion);
+  }
+  for (const f of servidor) {
+    if (f.tipo === "cuenta") n.push(f.banco, `${f.banco} · ${f.clase}`);
+    else if (f.tipo === "deuda") n.push(f.nombre, f.con_quien);
+    else if (f.tipo === "tema") n.push(f.nombre);
+    else if (f.tipo === "tiempo") n.push(f.tema);
+  }
+  return n;
+}
+
 /** Todo lo que la ruta hace después de comprobar la sesión. */
 export async function atenderPedido(a: {
   clave: string | undefined;
@@ -153,7 +170,7 @@ export async function atenderPedido(a: {
     filas,
     fetch: a.fetch,
   });
-  if (!r.ok || respuestaConConsejo(r.respuesta)) {
+  if (!r.ok || respuestaConConsejo(r.respuesta, nombresDeFilas(pedido.pedido.filas, filas))) {
     return { status: 502, cuerpo: { error: "No se pudo responder." } };
   }
   return { status: 200, cuerpo: r.respuesta };
