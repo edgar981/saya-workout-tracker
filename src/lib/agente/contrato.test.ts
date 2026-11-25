@@ -77,6 +77,23 @@ describe("validarPedido", () => {
     const lista = validarPedido([]);
     expect(!lista.ok && lista.status).toBe(400);
   });
+  it("desfase 300 → válido; sin desfase → válido con 0", () => {
+    const con = validarPedido(pedido({ desfase: 300 }));
+    expect(con.ok && con.pedido.desfase).toBe(300);
+    const sin = validarPedido(pedido());
+    expect(sin.ok && sin.pedido.desfase).toBe(0);
+    expect(validarPedido(pedido({ desfase: -840 })).ok).toBe(true);
+    expect(validarPedido(pedido({ desfase: 720 })).ok).toBe(true);
+  });
+  it.each([900, 721, -841, 1.5, "300", null])("desfase %s → 400", (desfase) => {
+    const r = validarPedido(pedido({ desfase }));
+    expect(!r.ok && r.status).toBe(400);
+    expect(!r.ok && r.error).toBe("El desfase no es válido.");
+  });
+  it("con desfase, una clave de más → 400", () => {
+    const r = validarPedido({ ...pedido({ desfase: 300 }), extra: 1 });
+    expect(!r.ok && r.status).toBe(400);
+  });
   it("los errores no repiten la pregunta", () => {
     const r = validarPedido(pedido({ hoy: "x" }));
     expect(!r.ok && r.error).not.toContain("series de pecho");

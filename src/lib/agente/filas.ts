@@ -56,6 +56,22 @@ function contiene(texto: string, frase: string): boolean {
   return frase.length > 0 && ` ${texto} `.includes(` ${frase} `);
 }
 
+const MESES = [
+  "enero", "febrero", "marzo", "abril", "mayo", "junio", "julio",
+  "agosto", "septiembre", "octubre", "noviembre", "diciembre",
+];
+
+/** El primer mes por su nombre que aparece en el texto (ya normalizado), 1–12; `setiembre` es septiembre. */
+function mesNombrado(q: string): number | null {
+  let mejor: { mes: number; pos: number } | null = null;
+  const nombres: [string, number][] = [...MESES.map((n, i): [string, number] => [n, i + 1]), ["setiembre", 9]];
+  for (const [nombre, mes] of nombres) {
+    const pos = ` ${q} `.indexOf(` ${nombre} `);
+    if (pos >= 0 && (mejor === null || pos < mejor.pos)) mejor = { mes, pos };
+  }
+  return mejor?.mes ?? null;
+}
+
 export function periodoDe(pregunta: string, hoy: string): Periodo {
   const q = normalizar(pregunta);
   const lunes = lunesDe(hoy);
@@ -69,6 +85,15 @@ export function periodoDe(pregunta: string, hoy: string): Periodo {
     return { desde: `${hasta.slice(0, 7)}-01`, hasta };
   }
   if (contiene(q, "este mes")) return { desde: primeroDeMes, hasta: hoy };
+  const mes = mesNombrado(q);
+  if (mes !== null) {
+    const mesHoy = Number(hoy.slice(5, 7));
+    const anio = Number(hoy.slice(0, 4)) - (mes > mesHoy ? 1 : 0);
+    const desde = `${String(anio).padStart(4, "0")}-${String(mes).padStart(2, "0")}-01`;
+    if (mes === mesHoy && anio === Number(hoy.slice(0, 4))) return { desde, hasta: hoy };
+    const siguiente = mes === 12 ? `${String(anio + 1).padStart(4, "0")}-01-01` : `${String(anio).padStart(4, "0")}-${String(mes + 1).padStart(2, "0")}-01`;
+    return { desde, hasta: sumarDias(siguiente, -1) };
+  }
   if (contiene(q, "ayer")) {
     const ayer = sumarDias(hoy, -1);
     return { desde: ayer, hasta: ayer };

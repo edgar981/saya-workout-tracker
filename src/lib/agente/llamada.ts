@@ -4,9 +4,12 @@ import {
   validarPedido,
   validarRespuesta,
   type ErrorAgente,
+  type FilaServidor,
   type PedidoAgente,
   type RespuestaAgente,
 } from "./contrato";
+import { periodoDe, type Periodo } from "./filas";
+import { MAX_FILAS_SERVIDOR, filasDelServidor, type DatosServidor } from "./servidor";
 import { respuestaConConsejo } from "./consejo";
 import { INSTRUCCIONES } from "./instrucciones";
 
@@ -20,7 +23,11 @@ export type Fetch = (url: string, init: RequestInit) => Promise<Response>;
 export type MotivoFallo = "red" | "api" | "rechazo" | "corte" | "forma";
 
 /** El pedido a Claude, exactamente: sin thinking, temperature, stream, tools ni prellenado. */
-export function cuerpoDeLlamada(modelo: string, pedido: PedidoAgente): Record<string, unknown> {
+export function cuerpoDeLlamada(
+  modelo: string,
+  pedido: PedidoAgente,
+  extra: { periodo: Periodo; filas: FilaServidor[] },
+): Record<string, unknown> {
   return {
     model: modelo,
     max_tokens: MAX_TOKENS,
@@ -28,7 +35,12 @@ export function cuerpoDeLlamada(modelo: string, pedido: PedidoAgente): Record<st
     messages: [
       {
         role: "user",
-        content: JSON.stringify({ hoy: pedido.hoy, pregunta: pedido.pregunta, filas: pedido.filas }),
+        content: JSON.stringify({
+          hoy: pedido.hoy,
+          periodo: extra.periodo,
+          pregunta: pedido.pregunta,
+          filas: [...pedido.filas, ...extra.filas],
+        }),
       },
     ],
     output_config: {
@@ -42,6 +54,8 @@ export async function pedirRespuesta(a: {
   clave: string;
   modelo: string;
   pedido: PedidoAgente;
+  periodo: Periodo;
+  filas: FilaServidor[];
   fetch: Fetch;
 }): Promise<{ ok: true; respuesta: RespuestaAgente } | { ok: false; motivo: MotivoFallo }> {
   let res: Response;
@@ -53,7 +67,7 @@ export async function pedirRespuesta(a: {
         "x-api-key": a.clave,
         "anthropic-version": VERSION_API,
       },
-      body: JSON.stringify(cuerpoDeLlamada(a.modelo, a.pedido)),
+      body: JSON.stringify(cuerpoDeLlamada(a.modelo, a.pedido, { periodo: a.periodo, filas: a.filas })),
       signal: AbortSignal.timeout(ESPERA_MS),
     });
   } catch {
@@ -101,6 +115,7 @@ export async function atenderPedido(a: {
   modelo: string;
   texto: string;
   fetch: Fetch;
+  leer: () => Promise<DatosServidor>;
 }): Promise<{ status: number; cuerpo: RespuestaAgente | ErrorAgente }> {
   if (!a.clave) return { status: 503, cuerpo: { error: "Sin llave." } };
   if (new TextEncoder().encode(a.texto).length > MAX_CUERPO_BYTES) {
@@ -115,10 +130,27 @@ export async function atenderPedido(a: {
   const pedido = validarPedido(raw);
   if (!pedido.ok) return { status: pedido.status, cuerpo: { error: pedido.error } };
 
+  const periodo = periodoDe(pedido.pedido.pregunta, pedido.pedido.hoy);
+  let datos: DatosServidor;
+  try {
+    datos = await a.leer();
+  } catch {
+    return { status: 503, cuerpo: { error: "No se pudo leer." } };
+  }
+  const filas = filasDelServidor(datos, periodo, pedido.pedido.desfase);
+  if (filas.length > MAX_FILAS_SERVIDOR) {
+    return { status: 413, cuerpo: { error: "Demasiadas filas." } };
+  }
+  if (pedido.pedido.filas.length === 0 && filas.length === 0) {
+    return { status: 200, cuerpo: { estado: "sin_datos" } };
+  }
+
   const r = await pedirRespuesta({
     clave: a.clave,
     modelo: a.modelo,
     pedido: pedido.pedido,
+    periodo,
+    filas,
     fetch: a.fetch,
   });
   if (!r.ok || respuestaConConsejo(r.respuesta)) {

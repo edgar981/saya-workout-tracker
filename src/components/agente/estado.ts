@@ -24,12 +24,13 @@ export function prepararPedido(
   pregunta: string,
   hoy: string,
   datos: DatosCuerpo,
-): { tipo: "sin_datos" } | { tipo: "error" } | { tipo: "pedido"; texto: string } {
+  desfase: number,
+): { tipo: "error" } | { tipo: "pedido"; texto: string } {
   const p = pregunta.trim();
+  // Sin filas de Cuerpo también se manda: Dinero y Tiempo los lee la ruta, y quien dice «sin datos» es el servidor.
   const filas = elegirFilas(p, hoy, datos);
-  if (filas.length === 0) return { tipo: "sin_datos" };
   if (filas.length > MAX_FILAS) return { tipo: "error" };
-  const pedido: PedidoAgente = { pregunta: p, hoy, filas };
+  const pedido: PedidoAgente = { pregunta: p, hoy, filas, desfase };
   if (!validarPedido(pedido).ok) return { tipo: "error" };
   const texto = JSON.stringify(pedido);
   if (new TextEncoder().encode(texto).length > MAX_CUERPO_BYTES) return { tipo: "error" };

@@ -2,6 +2,8 @@ import { comprobarAcceso, conCookies } from "@/lib/backup/server-auth";
 import { MAX_CUERPO_BYTES } from "@/lib/agente/contrato";
 import { atenderPedido } from "@/lib/agente/llamada";
 import { modeloDe } from "@/lib/agente/modelo";
+import { almacenDinero } from "@/app/api/dinero/almacen";
+import { almacenTiempo } from "@/app/api/tiempo/almacen";
 
 // Lee el entorno y la sesión: nunca se prerenderiza ni se cachea.
 export const runtime = "nodejs";
@@ -31,6 +33,10 @@ export async function POST(req: Request): Promise<Response> {
     modelo: modeloDe({ ANTHROPIC_MODEL: process.env.ANTHROPIC_MODEL }),
     texto,
     fetch,
+    leer: async () => {
+      const [dinero, tiempo] = await Promise.all([almacenDinero.todo(), almacenTiempo.todo()]);
+      return { dinero, tiempo };
+    },
   });
   return conCookies(Response.json(cuerpo, { status }), acceso);
 }

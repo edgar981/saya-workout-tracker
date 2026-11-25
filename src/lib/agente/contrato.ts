@@ -31,7 +31,49 @@ export type FilaSesion = {
   series: number;
 };
 export type FilaCuerpo = FilaSerie | FilaPeso | FilaSesion;
-export type PedidoAgente = { pregunta: string; hoy: string; filas: FilaCuerpo[] };
+
+// Las filas que la ruta arma desde Postgres (Dinero y Tiempo): nunca `ultimos4` ni ids ni marcas de tiempo.
+export type FilaAgenteCuenta = { tipo: "cuenta"; n: number; banco: string; clase: string };
+export type FilaAgenteSaldoCuenta = { tipo: "saldo_cuenta"; cuenta: number; fecha: string; valor: number };
+export type FilaAgenteDeuda = {
+  tipo: "deuda";
+  n: number;
+  clase: string;
+  nombre: string;
+  con_quien: string;
+  tasa_ea: number | null;
+  cuota: number | null;
+  cupo: number | null;
+  monto_inicial: number | null;
+  cuotas_total: number | null;
+  dia_pago: number | null;
+  primera_cuota: string | null;
+};
+export type FilaAgenteSaldoDeuda = { tipo: "saldo_deuda"; deuda: number; fecha: string; valor: number };
+export type FilaAgenteExtracto = {
+  tipo: "extracto";
+  deuda: number;
+  cierre: string;
+  intereses: number;
+  pago_minimo: number | null;
+  fecha_limite: string | null;
+};
+export type FilaAgenteTema = { tipo: "tema"; nombre: string };
+export type FilaAgenteTiempo = { tipo: "tiempo"; fecha: string; tema: string; minutos: number };
+export type FilaServidor =
+  | FilaAgenteCuenta
+  | FilaAgenteSaldoCuenta
+  | FilaAgenteDeuda
+  | FilaAgenteSaldoDeuda
+  | FilaAgenteExtracto
+  | FilaAgenteTema
+  | FilaAgenteTiempo;
+
+export const DESFASE_MIN = -840;
+export const DESFASE_MAX = 720;
+/** `desfase`: minutos, como `getTimezoneOffset()`; opcional en el cable, siempre presente ya validado. */
+export type PedidoAgente = { pregunta: string; hoy: string; filas: FilaCuerpo[]; desfase?: number };
+export type PedidoValidado = PedidoAgente & { desfase: number };
 
 export type RespuestaAgente =
   | {
@@ -44,7 +86,7 @@ export type RespuestaAgente =
 export type ErrorAgente = { error: string };
 
 export type ResultadoPedido =
-  | { ok: true; pedido: PedidoAgente }
+  | { ok: true; pedido: PedidoValidado }
   | { ok: false; status: 400 | 413; error: string };
 
 type Obj = Record<string, unknown>;
@@ -136,7 +178,13 @@ function esFilaValida(v: unknown): boolean {
 const malo = (error: string): ResultadoPedido => ({ ok: false, status: 400, error });
 
 export function validarPedido(raw: unknown): ResultadoPedido {
-  if (!esObjeto(raw) || !clavesExactas(raw, ["pregunta", "hoy", "filas"])) {
+  if (
+    !esObjeto(raw) ||
+    !(
+      clavesExactas(raw, ["pregunta", "hoy", "filas"]) ||
+      clavesExactas(raw, ["pregunta", "hoy", "filas", "desfase"])
+    )
+  ) {
     return malo("El pedido no tiene la forma esperada.");
   }
   if (!esTexto(raw.pregunta)) return malo("La pregunta no es texto.");
@@ -149,9 +197,17 @@ export function validarPedido(raw: unknown): ResultadoPedido {
     return { ok: false, status: 413, error: "Demasiadas filas." };
   }
   if (!raw.filas.every(esFilaValida)) return malo("Una fila no tiene la forma esperada.");
+  let desfase = 0;
+  if ("desfase" in raw) {
+    const d = raw.desfase;
+    if (typeof d !== "number" || !Number.isInteger(d) || d < DESFASE_MIN || d > DESFASE_MAX) {
+      return malo("El desfase no es válido.");
+    }
+    desfase = d;
+  }
   return {
     ok: true,
-    pedido: { pregunta, hoy: raw.hoy, filas: raw.filas as FilaCuerpo[] },
+    pedido: { pregunta, hoy: raw.hoy, filas: raw.filas as FilaCuerpo[], desfase },
   };
 }
 

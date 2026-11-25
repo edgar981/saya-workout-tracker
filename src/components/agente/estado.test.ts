@@ -28,23 +28,30 @@ const pesos = (n: number): DatosCuerpo["pesos"] =>
   Array.from({ length: n }, (_, i) => ({ id: `p${i}`, fecha: "2026-03-05", valor: 80, unidad: "KG" as const }));
 
 describe("prepararPedido", () => {
-  it("sin tema → sin_datos", () => {
-    expect(prepararPedido("¿Cuánto gasté?", HOY, vacio)).toEqual({ tipo: "sin_datos" });
+  const pedidoVacio = (pregunta: string) => ({
+    tipo: "pedido",
+    texto: JSON.stringify({ pregunta, hoy: HOY, filas: [], desfase: 300 }),
   });
-  it("con tema pero sin filas → sin_datos", () => {
-    expect(prepararPedido("¿Cuánto pesé este mes?", HOY, vacio)).toEqual({ tipo: "sin_datos" });
+  it("sin tema → pedido con filas vacías", () => {
+    expect(prepararPedido("¿Cuánto gasté?", HOY, vacio, 300)).toEqual(pedidoVacio("¿Cuánto gasté?"));
+  });
+  it("con tema pero sin filas → pedido con filas vacías", () => {
+    expect(prepararPedido("¿Cuánto pesé este mes?", HOY, vacio, 300)).toEqual(
+      pedidoVacio("¿Cuánto pesé este mes?"),
+    );
   });
   it("demasiadas filas → error", () => {
-    const r = prepararPedido("¿Cuánto pesé este mes?", HOY, { ...vacio, pesos: pesos(MAX_FILAS + 1) });
+    const r = prepararPedido("¿Cuánto pesé este mes?", HOY, { ...vacio, pesos: pesos(MAX_FILAS + 1) }, 300);
     expect(r).toEqual({ tipo: "error" });
   });
   it("con filas → pedido", () => {
-    const r = prepararPedido("  ¿Cuánto pesé este mes?  ", HOY, { ...vacio, pesos: pesos(2) });
+    const r = prepararPedido("  ¿Cuánto pesé este mes?  ", HOY, { ...vacio, pesos: pesos(2) }, 300);
     expect(r.tipo).toBe("pedido");
     if (r.tipo !== "pedido") return;
     const p = JSON.parse(r.texto);
     expect(p.pregunta).toBe("¿Cuánto pesé este mes?");
     expect(p.hoy).toBe(HOY);
+    expect(p.desfase).toBe(300);
     expect(p.filas).toHaveLength(2);
   });
   it("una fila que el contrato rechaza (series negativo) → error, no se manda", () => {
@@ -52,7 +59,7 @@ describe("prepararPedido", () => {
       { tipo: "sesion", fecha: "2026-03-10", sesion: "Day 1", abierta: false, ejercicios: 1, series: -1 },
     ];
     try {
-      expect(prepararPedido("¿Cuántas sesiones hice este mes?", HOY, vacio)).toEqual({ tipo: "error" });
+      expect(prepararPedido("¿Cuántas sesiones hice este mes?", HOY, vacio, 300)).toEqual({ tipo: "error" });
     } finally {
       forzada.filas = null;
     }
@@ -71,7 +78,7 @@ describe("prepararPedido", () => {
       tag_ids: [],
     }));
     const dias = [{ id: "d", nombre: "x".repeat(400), orden: 1, mesociclo_id: "m" }];
-    const r = prepararPedido("¿Cuántas sesiones hice este mes?", HOY, { ...vacio, sesiones, dias });
+    const r = prepararPedido("¿Cuántas sesiones hice este mes?", HOY, { ...vacio, sesiones, dias }, 300);
     expect(r).toEqual({ tipo: "error" });
   });
 });
