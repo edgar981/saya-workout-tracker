@@ -3,8 +3,7 @@
  * probarlas en entorno `node`. El shell y la barra sólo las consumen.
  *
  * La navegación de las áreas es la barra de abajo, sólo con iconos (las áreas
- * que existen; Dinero y Tiempo entran cuando existan, con sólo agregarlos a
- * `AREAS`). Las demás pantallas se «empujan» y llevan la píldora «‹ Área»; en
+ * que existen; Dinero entra cuando exista, con sólo agregarlo a `AREAS`). Las demás pantallas se «empujan» y llevan la píldora «‹ Área»; en
  * una sesión no hay navegación.
  */
 
@@ -20,6 +19,7 @@ export interface Area {
 export const AREAS: readonly Area[] = [
   { href: "/", etiqueta: "Hoy", icono: "hoy" },
   { href: "/cuerpo", etiqueta: "Cuerpo", icono: "cuerpo" },
+  { href: "/tiempo", etiqueta: "Tiempo", icono: "tiempo" },
 ];
 
 export type Nivel = "area" | "sesion" | "empujada";
@@ -49,6 +49,7 @@ export function nivelDeRuta(ruta: string): Nivel {
 const ETIQUETAS_FIJAS: Record<string, string> = {
   "/": "Hoy",
   "/cuerpo": "Cuerpo",
+  "/tiempo": "Tiempo",
   "/historial": "Historial",
   "/progreso": "Progreso",
   "/ajustes": "Ajustes",
